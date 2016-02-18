@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <fstream>
 
-#include "boost/interprocess/sync/interprocess_mutex.hpp"
+//#include "boost/interprocess/sync/interprocess_mutex.hpp"
 
 #define CHSIZE 128
 #define CHPOWER  7

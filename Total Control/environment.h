@@ -33,7 +33,7 @@ public:
     
     Environment();
     void loadnextchunk();
-    void draw(ShaderTerrain*);
+    void draw(ShaderVNC*);
     void cluein(double,double,double);
     Structure* getStruct(std::string targetid);
     void checkup();
