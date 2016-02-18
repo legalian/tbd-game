@@ -75,7 +75,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * geometry_file_path
     
     GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
     GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-    GLuint GeometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
+    GLuint GeometryShaderID = glCreateShader(GL_GEOMETRY_SHADER_EXT);
     
     GLint Result = GL_FALSE;
     int InfoLogLength = 0;
@@ -84,11 +84,17 @@ GLuint LoadShaders(const char * vertex_file_path,const char * geometry_file_path
     LoadSingleShader(FragmentShaderID, fragment_file_path, Result, InfoLogLength);
     LoadSingleShader(GeometryShaderID, geometry_file_path, Result, InfoLogLength);
     
+    
     printf("Linking program\n");
     GLuint ProgramID = glCreateProgram();
     glAttachShader(ProgramID, VertexShaderID);
     glAttachShader(ProgramID, FragmentShaderID);
     glAttachShader(ProgramID, GeometryShaderID);
+    
+    glProgramParameteriEXT(ProgramID, GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
+    glProgramParameteriEXT(ProgramID, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLES);
+    glProgramParameteriEXT(ProgramID, GL_GEOMETRY_VERTICES_OUT_EXT, 3);
+    
     glLinkProgram(ProgramID);
     
     glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);

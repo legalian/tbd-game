@@ -163,7 +163,7 @@ void Structure::load(Location po,Generator* resource) {
             portions.insert ( std::pair<Location,PortionPointer>(po,PortionPointer(new SolidPortion(solidid))));
         } else {
             DetailedPortion* myportion = new DetailedPortion();
-            myFile.read((char*)&(myportion->data),sizeof(int)*128*128*128);
+            myFile.read((char*)&(myportion->data),sizeof(int)*CHSIZE*CHSIZE*CHSIZE);
             portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(myportion)));
             voxPortion(po);
         }
@@ -299,44 +299,50 @@ void Structure::voxSnippets(Location po) {
 
 void Structure::voxPortion(Location portion) {
     GeomTerrain geom;
-    GLfloat afCubeValue[8];
-    GLfloat scCubeValue[8];
+//    GLfloat afCubeValue[8];
+//    GLfloat scCubeValue[8];
 //    std::vector<glm::vec3> triangles;
     PortionPointer sampler = portions[portion];
-    
+    glm::mat4 manipulator = glm::mat4(1);
     for (int xi=0;xi<CHSIZE-1;xi++) {
+        std::cout<<"layer"<<xi<<"complete\n";
         for (int yi=0;yi<CHSIZE-1;yi++) {
             for (int zi=0;zi<CHSIZE-1;zi++) {
-                int xt = portion.x*CHSIZE+xi;
-                int yt = portion.y*CHSIZE+yi;
-                int zt = portion.z*CHSIZE+zi;
-                std::vector<glm::vec3> triangles = std::vector<glm::vec3>();
-                for(int iVertex = 0; iVertex < 8; iVertex++) {
-                    unsigned int code = sampler->getAt(xi+a2fVertexOffset[iVertex][0],yi+a2fVertexOffset[iVertex][1],zi+a2fVertexOffset[iVertex][2]);
-                    afCubeValue[iVertex] = 0;
-                    scCubeValue[iVertex] = 0;
-                    if (code == 4) {
-                        scCubeValue[iVertex] = .25;
-                    } else if (code == 5) {
-                        scCubeValue[iVertex] = .15;
-                    } else if (code == 3) {
-                        afCubeValue[iVertex] = 1.0;
-                    } else if (code == 2) {
-                        afCubeValue[iVertex] = 2.0/3.0;
-                    } else if (code == 1) {
-                        afCubeValue[iVertex] = 1.0/3.0;
-                    }
-                }
-                MarchCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, afCubeValue,triangles);
-                SolidCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, scCubeValue,triangles);
+                manipulator[3][0] = xi+portion.x*CHSIZE;
+                manipulator[3][1] = yi+portion.y*CHSIZE;
+                manipulator[3][2] = zi+portion.z*CHSIZE;
+                addmarch(manipulator, &geom.indexed_normals, &geom.indexed_normals,&geom.indexed_reference);
                 
-                
-                for (int ivert = 0;ivert<triangles.size();ivert++) {
-//                    std::cout<<"output";
-                    geom.addVert(triangles[ivert]);
-                }
-                geom.assumeNormals();
-//                addmarch(xt, yt, zt, &geom);
+//                int xt = portion.x*CHSIZE+xi;
+//                int yt = portion.y*CHSIZE+yi;
+//                int zt = portion.z*CHSIZE+zi;
+//                std::vector<glm::vec3> triangles = std::vector<glm::vec3>();
+//                for(int iVertex = 0; iVertex < 8; iVertex++) {
+//                    unsigned int code = sampler->getAt(xi+a2fVertexOffset[iVertex][0],yi+a2fVertexOffset[iVertex][1],zi+a2fVertexOffset[iVertex][2]);
+//                    afCubeValue[iVertex] = 0;
+//                    scCubeValue[iVertex] = 0;
+//                    if (code == 4) {
+//                        scCubeValue[iVertex] = .25;
+//                    } else if (code == 5) {
+//                        scCubeValue[iVertex] = .15;
+//                    } else if (code == 3) {
+//                        afCubeValue[iVertex] = 1.0;
+//                    } else if (code == 2) {
+//                        afCubeValue[iVertex] = 2.0/3.0;
+//                    } else if (code == 1) {
+//                        afCubeValue[iVertex] = 1.0/3.0;
+//                    }
+//                }
+//                MarchCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, afCubeValue,triangles);
+//                SolidCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, scCubeValue,triangles);
+//                
+//                
+//                for (int ivert = 0;ivert<triangles.size();ivert++) {
+////                    std::cout<<"output";
+//                    geom.addVert(triangles[ivert]);
+//                }
+//                geom.assumeNormals();
+////                addmarch(xt, yt, zt, &geom);
             }
         }
     }
@@ -348,6 +354,8 @@ void Structure::voxPortion(Location portion) {
 void Structure::voxXskirt(int x, int y, int z) {
     //    Geom* geom = &geoms[Location(x,y,z)];
     GeomTerrain* geom = createOrGet(Location(x,y,z));
+    glm::mat4 manipulator = glm::mat4(1);
+    manipulator[3][0] = x*CHSIZE+CHSIZE-1;
     if (getLodAt(x,y,z)>getLodAt(x+1,y,z)) {
         
     } else if (getLodAt(x,y,z)<getLodAt(x+1,y,z)) {
@@ -355,7 +363,9 @@ void Structure::voxXskirt(int x, int y, int z) {
     } else {
         for (int yi=0;yi<CHSIZE-1;yi++) {
             for (int zi=0;zi<CHSIZE-1;zi++) {
-                addmarch(x*CHSIZE+CHSIZE-1,y*CHSIZE+yi,z*CHSIZE+zi, geom);
+                manipulator[3][1] = y*CHSIZE+yi;
+                manipulator[3][2] = z*CHSIZE+zi;
+                addmarch(manipulator, &geom->indexed_normals, &geom->indexed_normals,&geom->indexed_reference);
             }
         }
     }
@@ -364,6 +374,8 @@ void Structure::voxXskirt(int x, int y, int z) {
 void Structure::voxYskirt(int x, int y, int z) {
     //    Geom* geom = &geoms[Location(x,y,z)];
     GeomTerrain* geom = createOrGet(Location(x,y,z));
+    glm::mat4 manipulator = glm::mat4(1);
+    manipulator[3][1] = y*CHSIZE+CHSIZE-1;
     if (getLodAt(x,y,z)>getLodAt(x,y+1,z)) {
         
     } else if (getLodAt(x,y,z)<getLodAt(x,y+1,z)) {
@@ -371,7 +383,9 @@ void Structure::voxYskirt(int x, int y, int z) {
     } else {
         for (int xi=0;xi<CHSIZE-1;xi++) {
             for (int zi=0;zi<CHSIZE-1;zi++) {
-                addmarch(x*CHSIZE+xi,y*CHSIZE+CHSIZE-1,z*CHSIZE+zi, geom);
+                manipulator[3][0] = x*CHSIZE+xi;
+                manipulator[3][2] = z*CHSIZE+zi;
+                addmarch(manipulator, &geom->indexed_normals, &geom->indexed_normals,&geom->indexed_reference);
             }
         }
     }
@@ -379,6 +393,9 @@ void Structure::voxYskirt(int x, int y, int z) {
 }
 void Structure::voxZskirt(int x, int y, int z) {
     GeomTerrain* geom = createOrGet(Location(x,y,z));
+    glm::mat4 manipulator = glm::mat4(1);
+    manipulator[3][2] = z*CHSIZE+CHSIZE-1;
+    
     if (getLodAt(x,y,z)>getLodAt(x,y,z+1)) {
         
     } else if (getLodAt(x,y,z)<getLodAt(x,y,z+1)) {
@@ -386,7 +403,9 @@ void Structure::voxZskirt(int x, int y, int z) {
     } else {
         for (int xi=0;xi<CHSIZE-1;xi++) {
             for (int yi=0;yi<CHSIZE-1;yi++) {
-                addmarch(x*CHSIZE+xi,y*CHSIZE+yi,z*CHSIZE+CHSIZE-1, geom);
+                manipulator[3][0] = x*CHSIZE+xi;
+                manipulator[3][1] = y*CHSIZE+yi;
+                addmarch(manipulator, &geom->indexed_normals, &geom->indexed_normals,&geom->indexed_reference);
             }
         }
     }
@@ -395,60 +414,84 @@ void Structure::voxZskirt(int x, int y, int z) {
 void Structure::voxXrow(int x, int y, int z) {
 //    Geom* geom = &geoms[Location(x,y,z)];
     GeomTerrain* geom = createOrGet(Location(x,y,z));
+    
+    glm::mat4 manipulator = glm::mat4(1);
+    manipulator[3][1] = y*CHSIZE+CHSIZE-1;
+    manipulator[3][2] = z*CHSIZE+CHSIZE-1;
     for (int ix=0;ix<CHSIZE-1;ix++) {
-        addmarch(x*CHSIZE+ix,y*CHSIZE+CHSIZE-1,z*CHSIZE+CHSIZE-1, geom);
+        manipulator[3][0] = x*CHSIZE+ix;
+        addmarch(manipulator, &geom->indexed_normals, &geom->indexed_normals,&geom->indexed_reference);
     }
     geom->changed = true;//rebake();
 }
 void Structure::voxYrow(int x, int y, int z) {
     //    Geom* geom = &geoms[Location(x,y,z)];
     GeomTerrain* geom = createOrGet(Location(x,y,z));
+    
+    glm::mat4 manipulator = glm::mat4(1);
+    manipulator[3][0] = x*CHSIZE+CHSIZE-1;
+    manipulator[3][2] = z*CHSIZE+CHSIZE-1;
     for (int iy=0;iy<CHSIZE-1;iy++) {
-        addmarch(x*CHSIZE+CHSIZE-1,y*CHSIZE+iy,z*CHSIZE+CHSIZE-1, geom);
+        manipulator[3][1] = y*CHSIZE+iy;
+        addmarch(manipulator, &geom->indexed_normals, &geom->indexed_normals,&geom->indexed_reference);
     }
     geom->changed = true;//rebake();
 }
 void Structure::voxZrow(int x, int y, int z) {
     //    Geom* geom = &geoms[Location(x,y,z)];
     GeomTerrain* geom = createOrGet(Location(x,y,z));
+    
+    glm::mat4 manipulator = glm::mat4(1);
+    manipulator[3][0] = x*CHSIZE+CHSIZE-1;
+    manipulator[3][1] = y*CHSIZE+CHSIZE-1;
     for (int iz=0;iz<CHSIZE-1;iz++) {
-        addmarch(x*CHSIZE+CHSIZE-1,y*CHSIZE+CHSIZE-1,z*CHSIZE+iz, geom);
+        manipulator[3][2] = z*CHSIZE+iz;
+        addmarch(manipulator, &geom->indexed_normals, &geom->indexed_normals,&geom->indexed_reference);
     }
     geom->changed = true;//rebake();
 }
 void Structure::voxXYZcorner(int x, int y, int z) {
     //    Geom* geom = &geoms[Location(x,y,z)];
     GeomTerrain* geom = createOrGet(Location(x,y,z));
-    addmarch(x*CHSIZE+CHSIZE-1,y*CHSIZE+CHSIZE-1,z*CHSIZE+CHSIZE-1, geom);
+    glm::mat4 manipulator = glm::mat4(1);
+    manipulator[3][0] = x*CHSIZE+CHSIZE-1;
+    manipulator[3][1] = y*CHSIZE+CHSIZE-1;
+    manipulator[3][2] = z*CHSIZE+CHSIZE-1;
+    addmarch(manipulator, &geom->indexed_normals, &geom->indexed_normals,&geom->indexed_reference);
     geom->changed = true;//rebake();
 }
-void Structure::addmarch(int x, int y, int z,GeomTerrain* addto) {
-    GLfloat afCubeValue[8];
-    GLfloat scCubeValue[8];
+void Structure::addmarch(glm::mat4 location,std::vector<glm::vec3>* vertbuffer,std::vector<glm::vec3>* normalbuffer, std::vector<unsigned int>* referencebuffer) {
+//    GLfloat afCubeValue[8];
+//    GLfloat scCubeValue[8];
+    unsigned int cubeValue[8];
     std::vector<glm::vec3> triangles = std::vector<glm::vec3>();
+    std::vector<unsigned int> reference = std::vector<unsigned int>();
     
+    glm::vec4 target = location*glm::vec4(0,0,0,1);
     for(int iVertex = 0; iVertex < 8; iVertex++) {
-        unsigned int code = getAt(x+a2fVertexOffset[iVertex][0],y+a2fVertexOffset[iVertex][1],z+a2fVertexOffset[iVertex][2]);
-        afCubeValue[iVertex] = 0;
-        scCubeValue[iVertex] = 0;
-        if (code == 4) {
-            scCubeValue[iVertex] = .25;
-        } else if (code == 5) {
-            scCubeValue[iVertex] = .15;
-        } else if (code == 3) {
-            afCubeValue[iVertex] = 1.0;
-        } else if (code == 2) {
-            afCubeValue[iVertex] = 2.0/3.0;
-        } else if (code == 1) {
-            afCubeValue[iVertex] = 1.0/3.0;
-        }
+        unsigned int code = getAt(target.x+a2fVertexOffset[iVertex][0],target.y+a2fVertexOffset[iVertex][1],target.z+a2fVertexOffset[iVertex][2]);
+        cubeValue[iVertex] = code;
     }
-    MarchCube(x,y,z, afCubeValue,triangles);
-    SolidCube(x,y,z, scCubeValue,triangles);
-    for (int ivert = 0;ivert<triangles.size();ivert++) {
-        addto->addVert(triangles[ivert]);
+    MarchCube(cubeValue,triangles,reference);
+    SolidCube(cubeValue,triangles,reference);
+    for (int i=0;i<triangles.size();i++) {
+        glm::vec3 endresult;
+        endresult = glm::vec3(location*glm::vec4(triangles[i],1));
+        
+        glm::vec3 trinormal = glm::normalize(glm::cross(triangles[i+1]-triangles[i+0],triangles[i+2]-triangles[i+0]));
+        normalbuffer->push_back(trinormal);
+        normalbuffer->push_back(trinormal);
+        normalbuffer->push_back(trinormal);
+        
+        
     }
-    addto->assumeNormals();
+    referencebuffer->insert(referencebuffer->end(),reference.begin(),reference.end());
+//    vertbuffer->insert(vertbuffer->end(),triangles.begin(),triangles.end());
+    
+//    for (int ivert = 0;ivert<triangles.size();ivert++) {
+//        addto->addVert(triangles[ivert]);
+//    }
+//    addto->assumeNormals();
 }
 //void voxYskirt(int x, int y, int z,Structure sampler) {
 //
@@ -459,9 +502,20 @@ void Structure::addmarch(int x, int y, int z,GeomTerrain* addto) {
 
 
 
-void MarchCube(int fX, int fY, int fZ, GLfloat* afCubeValue,std::vector<glm::vec3> &triangles)
+void MarchCube(unsigned int* cubeIDs,std::vector<glm::vec3> &triangles, std::vector<unsigned int> &reference)
 {
+    float afCubeValue[8];
+    for (int i=0;i<8;i++) {
+        if (cubeIDs[i] == 3) {
+            afCubeValue[i] = 1.0;
+        } else if (cubeIDs[i] == 2) {
+            afCubeValue[i] = 2.0/3.0;
+        } else if (cubeIDs[i] == 1) {
+            afCubeValue[i] = 1.0/3.0;
+        }
+    }
     glm::vec3 asEdgeVertex[12];
+    unsigned int workbackwards[12];
 //    std::vector<glm::vec3> triangles;
     
     int iFlagIndex = 0;
@@ -486,12 +540,14 @@ void MarchCube(int fX, int fY, int fZ, GLfloat* afCubeValue,std::vector<glm::vec
             GLfloat offset;
             if (afCubeValue[e1]>afCubeValue[e2]) {
                 offset = afCubeValue[e1];
+                workbackwards[iEdge] = cubeIDs[e1];
             } else {
                 offset = 1-afCubeValue[e2];
+                workbackwards[iEdge] = cubeIDs[e2];
             }
-            asEdgeVertex[iEdge].x = fX + a2fVertexOffset[e1][0] + a2fEdgeDirection[iEdge][0]*offset;
-            asEdgeVertex[iEdge].y = fY + a2fVertexOffset[e1][1] + a2fEdgeDirection[iEdge][1]*offset;
-            asEdgeVertex[iEdge].z = fZ + a2fVertexOffset[e1][2] + a2fEdgeDirection[iEdge][2]*offset;
+            asEdgeVertex[iEdge].x = a2fVertexOffset[e1][0] + a2fEdgeDirection[iEdge][0]*offset;
+            asEdgeVertex[iEdge].y = a2fVertexOffset[e1][1] + a2fEdgeDirection[iEdge][1]*offset;
+            asEdgeVertex[iEdge].z = a2fVertexOffset[e1][2] + a2fEdgeDirection[iEdge][2]*offset;
         }
     }
     
@@ -499,12 +555,27 @@ void MarchCube(int fX, int fY, int fZ, GLfloat* afCubeValue,std::vector<glm::vec
         if (a2iTriangleConnectionTable[iFlagIndex][iTriangle] == -1) {
             break;
         }
+        reference.push_back(workbackwards[a2iTriangleConnectionTable[iFlagIndex][iTriangle]]);
+        reference.push_back(workbackwards[a2iTriangleConnectionTable[iFlagIndex][iTriangle+1]]);
+        reference.push_back(workbackwards[a2iTriangleConnectionTable[iFlagIndex][iTriangle+2]]);
         triangles.push_back(asEdgeVertex[a2iTriangleConnectionTable[iFlagIndex][iTriangle]]);
         triangles.push_back(asEdgeVertex[a2iTriangleConnectionTable[iFlagIndex][iTriangle+1]]);
         triangles.push_back(asEdgeVertex[a2iTriangleConnectionTable[iFlagIndex][iTriangle+2]]);
     };
 }
-void SolidCube(int fX, int fY, int fZ,GLfloat* scCubeValue,std::vector<glm::vec3> &triangles) {
+void SolidCube(unsigned int* cubeIDs,std::vector<glm::vec3> &triangles, std::vector<unsigned int> &reference) {
+    int fX = 0;
+    int fY = 0;
+    int fZ = 0;
+    float scCubeValue[8];
+    for (int i=0;i<8;i++) {
+        if (cubeIDs[i] == 4) {
+            scCubeValue[i] = .25;
+        } else if (cubeIDs[i] == 5) {
+            scCubeValue[i] = .15;
+        }
+    }
+    
     if (scCubeValue[0]==0 and scCubeValue[1]==0 and scCubeValue[2]==0 and scCubeValue[3]==0 and
         scCubeValue[4]==0 and scCubeValue[5]==0 and scCubeValue[6]==0 and scCubeValue[7]==0) {
         return;
@@ -513,18 +584,20 @@ void SolidCube(int fX, int fY, int fZ,GLfloat* scCubeValue,std::vector<glm::vec3
         if (scCubeValue[0]>scCubeValue[axistoa2f[iface]]) {
             for (int i=0;i<6;i++) {
                 glm::vec3 t;
-                t.x = fX+scVertexOffset[scFaceIndexes[iface][i]][0]*scCubeValue[0];
-                t.y = fY+scVertexOffset[scFaceIndexes[iface][i]][1]*scCubeValue[0];
-                t.z = fZ+scVertexOffset[scFaceIndexes[iface][i]][2]*scCubeValue[0];
+                t.x = scVertexOffset[scFaceIndexes[iface][i]][0]*scCubeValue[0];
+                t.y = scVertexOffset[scFaceIndexes[iface][i]][1]*scCubeValue[0];
+                t.z = scVertexOffset[scFaceIndexes[iface][i]][2]*scCubeValue[0];
                 triangles.push_back(t);
+                reference.push_back(cubeIDs[0]);
             }
         } else if (scCubeValue[0]<scCubeValue[axistoa2f[iface]]) {
             for (int i=0;i<6;i++) {
                 glm::vec3 t;
-                t.x = fX+a2fVertexOffset[axistoa2f[iface]][0]+scVertexOffset[scFaceIndexes[iface+3][i]][0]*scCubeValue[axistoa2f[iface]];
-                t.y = fY+a2fVertexOffset[axistoa2f[iface]][1]+scVertexOffset[scFaceIndexes[iface+3][i]][1]*scCubeValue[axistoa2f[iface]];
-                t.z = fZ+a2fVertexOffset[axistoa2f[iface]][2]+scVertexOffset[scFaceIndexes[iface+3][i]][2]*scCubeValue[axistoa2f[iface]];
+                t.x = a2fVertexOffset[axistoa2f[iface]][0]+scVertexOffset[scFaceIndexes[iface+3][i]][0]*scCubeValue[axistoa2f[iface]];
+                t.y = a2fVertexOffset[axistoa2f[iface]][1]+scVertexOffset[scFaceIndexes[iface+3][i]][1]*scCubeValue[axistoa2f[iface]];
+                t.z = a2fVertexOffset[axistoa2f[iface]][2]+scVertexOffset[scFaceIndexes[iface+3][i]][2]*scCubeValue[axistoa2f[iface]];
                 triangles.push_back(t);
+                reference.push_back(cubeIDs[axistoa2f[iface]]);
             }
         }
     }
@@ -545,6 +618,7 @@ void SolidCube(int fX, int fY, int fZ,GLfloat* scCubeValue,std::vector<glm::vec3
             int find[] = {0,1,3,0,3,2};
             for (int i=0;i<6;i++) {
                 triangles.push_back(face[find[i]]);
+//                reference.push_back();
             }
         }
     } else {

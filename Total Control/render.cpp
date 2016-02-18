@@ -255,7 +255,7 @@ void ShaderTerrain::draw(GeomTerrain* geom) {
         
         
         glBindBuffer(GL_ARRAY_BUFFER, geom->referencebuffer);
-                glVertexAttribPointer(referenceID, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (void*)0);
+                glVertexAttribPointer(referenceID, 1, GL_FLOAT, GL_FALSE, 0, (void*)0);
 //        glBindBuffer(GL_ARRAY_BUFFER, geom->normalbuffer);
 //        glVertexAttribPointer(vertexcolorID, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
         

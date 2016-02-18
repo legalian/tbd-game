@@ -29,10 +29,10 @@
 #include "texture.h"
 
 class Geom {
-protected:
+public:
     std::vector<glm::vec3> indexed_vertices;
     std::vector<glm::vec3> indexed_normals;
-public:
+
     GLuint vertexbuffer;
     GLuint normalbuffer;
     glm::mat4* matrix;// = glm::mat4(1.0f);
@@ -51,9 +51,8 @@ public:
     void rebake();
 };
 class GeomVNC : public Geom {
-private:
-    std::vector<glm::vec3> indexed_colors;
 public:
+    std::vector<glm::vec3> indexed_colors;
     GLuint colorbuffer;
     void addColor(double,double,double);
     void addColor(glm::vec3);
@@ -61,9 +60,8 @@ public:
     void unbake();
 };
 class GeomTerrain : public Geom {
-private:
-    std::vector<unsigned int> indexed_reference;
 public:
+    std::vector<unsigned int> indexed_reference;
     GLuint referencebuffer;
     void addReference(unsigned int);
     void bake();

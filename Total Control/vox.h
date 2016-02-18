@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <fstream>
 
-#include "boost/interprocess/sync/interprocess_mutex.hpp"
+//#include "boost/interprocess/sync/interprocess_mutex.hpp"
 
 #define CHSIZE 128
 #define CHPOWER  7
@@ -96,10 +96,12 @@ public:
     void voxYrow(int,int,int);
     void voxZrow(int,int,int);
     void voxXYZcorner(int,int,int);
-    void addmarch(int,int,int,GeomTerrain*);
+//    void addmarch(int,int,int,GeomTerrain*);
+    void addmarch(glm::mat4,std::vector<glm::vec3>*,std::vector<glm::vec3>*,std::vector<unsigned int>*);
+    
 };
 
-void MarchCube(int,int,int,GLfloat*,std::vector<glm::vec3>&);
-void SolidCube(int,int,int,GLfloat*,std::vector<glm::vec3>&);
+void MarchCube(unsigned int*,std::vector<glm::vec3>&,std::vector<unsigned int>&);
+void SolidCube(unsigned int*,std::vector<glm::vec3>&,std::vector<unsigned int>&);
 
 #endif /* defined(__Total_Control__vox__) */

@@ -2,15 +2,25 @@
 
 attribute vec3 vertexPosition_modelspace;
 attribute vec3 vertexNormal_modelspace;
-//attribute uint reference;
+//attribute float reference;
 
 
-varying vec3 Geomvertex;
-varying vec3 Geomnormal;
 //flat out Geomreference;
 
-uniform sampler2D textureAtlas;
+//varying VertexData
+//{
+//    vec3 Geomvertex;
+//    vec3 Geomnormal;
+//};
+//out VertexData gl_out[3];
+//varying VertexData
+//{
+//};
+varying vec3 vertextoGeom;
+varying vec3 normaltoGeom;
+//varying float referencetoGeom;
 
+uniform sampler2D textureAtlas;
 uniform mat4 MVP;
 
 void main(){
@@ -19,8 +29,9 @@ void main(){
     
     //    fragmentColor = vertexColor;
 //    normalColor = (vertexNormal_modelspace+1)/2.0;
-    Geomvertex = vertexPosition_modelspace;
-    Geomnormal = vertexNormal_modelspace;
+    vertextoGeom = vertexPosition_modelspace;
+    normaltoGeom = vertexNormal_modelspace;
+//    referencetoGeom = reference;
     //UV = vertexUV;
     
 }
