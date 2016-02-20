@@ -25,7 +25,7 @@ void main()
         Fragvertex = Geomvertex[i];
         Fragnormal = Geomnormal[i];
 //        Fragreference = vec3(Geomreference[0],Geomreference[1],Geomreference[2]);
-        Fragbarysian = vec3(int(i==0),int(i==1),int(i==2));
+        //Fragbarysian = vec3(int(i==0),int(i==1),int(i==2));
         
         EmitVertex();
     }

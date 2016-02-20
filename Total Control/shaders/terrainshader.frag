@@ -15,8 +15,8 @@ uniform sampler2D textureAtlas;
 
 void main()
 {
-//    gl_FragColor = vec4(texture2D( textureAtlas, Geomvertex.xz/2.0 ).rgb, 1);
+    gl_FragColor = vec4(texture2D( textureAtlas, Fragvertex.xz/2.0 ).rgb, 1);
     
-    gl_FragColor = vec4(Fragbarysian.rgb, 1);
+//    gl_FragColor = vec4(Fragbarysian.rgb, 1);
     
 }

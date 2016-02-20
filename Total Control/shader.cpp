@@ -89,6 +89,9 @@ GLuint LoadShaders(const char * vertex_file_path,const char * geometry_file_path
     glAttachShader(ProgramID, VertexShaderID);
     glAttachShader(ProgramID, FragmentShaderID);
     glAttachShader(ProgramID, GeometryShaderID);
+    glProgramParameteriEXT(ProgramID, GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
+    glProgramParameteriEXT(ProgramID, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLES);
+    glProgramParameteriEXT(ProgramID, GL_GEOMETRY_VERTICES_OUT_EXT, 3);
     glLinkProgram(ProgramID);
     
     glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);

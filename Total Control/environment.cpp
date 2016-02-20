@@ -98,7 +98,7 @@ void Environment::loadnextchunk() {
 }
 
 
-void Environment::draw(ShaderVNC* shader) {
+void Environment::draw(ShaderTerrain* shader) {
     glm::vec4 thisvert;
 //    bool hitplanes[6] = {false,false,false,false,false,false};
     for (int k=0;k<structures.size();k++) {

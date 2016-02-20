@@ -78,7 +78,7 @@ int main()
 {
     initialize();
     
-    ShaderVNC shader;
+    ShaderTerrain shader;
     shader.mountshaders();
     
 
