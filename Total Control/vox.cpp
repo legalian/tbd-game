@@ -43,6 +43,7 @@ bool operator== (const Location& l, const Location& r) {
     if (l.z!=r.z) {return false;}
     return true;
 }
+
 unsigned int Portion::getAt(int x, int y, int z) {
     throw;
     return 1;
@@ -56,6 +57,57 @@ unsigned int SolidPortion::getAt(int x, int y, int z) {
 SolidPortion::SolidPortion(unsigned int fill) {
     fillId = fill;
 }
+unsigned int ComplexPortion::getAt(int x, int y, int z) {
+    if (x<depths[0]) {return defaults[0];}
+    if (y<depths[1]) {return defaults[1];}
+    if (z<depths[2]) {return defaults[2];}
+    if (x>depths[3]) {return defaults[3];}
+    if (y>depths[4]) {return defaults[4];}
+    if (z>depths[5]) {return defaults[5];}
+    return data[(x-depths[0]) + (y-depths[1])*(depths[3]-depths[0]) + (z-depths[2])*(depths[4]-depths[1])];
+}
+ComplexPortion::ComplexPortion(unsigned int dat[CHSIZE][CHSIZE][CHSIZE]) {
+    //    data = new unsigned int[(depths[3]-depths[0])*(depths[4]-depths[1])*(depths[5]-depths[2])];
+    defaults[0] = dat[0][0][0];
+    defaults[1] = dat[0][0][0];
+    defaults[2] = dat[0][0][0];
+    defaults[3] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
+    defaults[4] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
+    defaults[5] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
+    bool solidsofar[] = {true,true,true,true,true,true};
+    int x,y,z;
+    for (int i=0;i<CHSIZE*CHSIZE*CHSIZE;i++) {
+        x = i%CHSIZE;
+        y = (i/CHSIZE)%CHSIZE;
+        z = i/(CHSIZE*CHSIZE);
+        
+        if (dat[x][y][z]!=defaults[0]) {
+            solidsofar[0] = false;
+            depths[0] = z;
+        }
+        if (dat[x][z][y]!=defaults[1]) {
+            solidsofar[1] = false;
+            depths[1] = z;
+        }
+        if (dat[z][x][y]!=defaults[2]) {
+            solidsofar[2] = false;
+            depths[2] = z;
+        }
+        if (dat[x][y][CHSIZE-z]!=defaults[0]) {
+            solidsofar[0] = false;
+            depths[0] = z;
+        }
+        if (dat[x][CHSIZE-z][y]!=defaults[1]) {
+            solidsofar[1] = false;
+            depths[1] = z;
+        }
+        if (dat[CHSIZE-z][x][y]!=defaults[2]) {
+            solidsofar[2] = false;
+            depths[2] = z;
+        }
+    }
+}
+
 
 
 PortionPointer::PortionPointer(Portion* init) {
@@ -170,29 +222,35 @@ void Structure::load(Location po,Generator* resource) {
         myFile.close();
         
     } else {
-        DetailedPortion* myportion = resource->terrain_update(this,po);
+        ComplexPortion* myportion = resource->terrain_update(this,po);
     //    std::cout<<"load called";
-        unsigned int solidId = 0;
-        int usingsolid = 0;//0 for unset, 1 for using, 2 for killed
+//        unsigned int solidId = 0;
+//        int usingsolid = 0;//0 for unset, 1 for using, 2 for killed
+//        ComplexPortion* supersimp = new ComplexPortion();
         
-        for (int xi=0;xi<CHSIZE;xi++) {
-            for (int yi=0;yi<CHSIZE;yi++) {
-                for (int zi=0;zi<CHSIZE;zi++) {
-                    if (usingsolid == 0) {
-                        solidId = myportion->data[xi][yi][zi];
-                        usingsolid = 1;
-                    } else if (usingsolid == 1) {
-                        if (solidId != myportion->data[xi][yi][zi]) {
-                            usingsolid = 2;
-                        }
-                    }
-                    
-                }
-            }
-        }
+//        for (int xi=0;xi<CHSIZE;xi++) {
+//            for (int yi=0;yi<CHSIZE;yi++) {
+//                for (int zi=0;zi<CHSIZE;zi++) {
+//                    if (usingsolid == 0) {
+//                        solidId = myportion->data[xi][yi][zi];
+//                        usingsolid = 1;
+//                    } else if (usingsolid == 1) {
+//                        if (solidId != myportion->data[xi][yi][zi]) {
+//                            usingsolid = 2;
+//                        }
+//                    }
+//                    
+//                }
+//            }
+//        }
+    
         
         std::ofstream myFile(filename, std::ios::out | std::ios::binary);
-        if (usingsolid == 1) {
+        if (true) {
+            
+        }
+        else if (false) {
+            int solidId = 0;
             portions.insert ( std::pair<Location,PortionPointer>(po,PortionPointer(new SolidPortion(solidId))) );
             delete myportion;
             char info[1] = {'s'};

@@ -54,6 +54,15 @@ public:
     unsigned int data[CHSIZE][CHSIZE][CHSIZE];
     unsigned int getAt(int,int,int) override;
 };
+class ComplexPortion : public Portion {
+public:
+    ComplexPortion(unsigned int pointto[CHSIZE][CHSIZE][CHSIZE]);
+    ~ComplexPortion();
+    int depths[6] = {0,0,0,CHSIZE,CHSIZE,CHSIZE};
+    unsigned int defaults[6];
+    unsigned int* data;
+    unsigned int getAt(int,int,int) override;
+};
 class PortionPointer {
 private:
     Portion* pointer;
