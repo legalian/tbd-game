@@ -43,6 +43,7 @@ bool operator== (const Location& l, const Location& r) {
     if (l.z!=r.z) {return false;}
     return true;
 }
+
 unsigned int Portion::getAt(int x, int y, int z) {
     throw;
     return 1;
@@ -53,9 +54,71 @@ unsigned int DetailedPortion::getAt(int x, int y, int z) {
 unsigned int SolidPortion::getAt(int x, int y, int z) {
     return fillId;
 }
+unsigned int ComplexPortion::getAt(int x, int y, int z) {
+    if (x<depths[0]) {return defaults[0];}
+    if (y<depths[1]) {return defaults[1];}
+    if (z<depths[2]) {return defaults[2];}
+    if (x>depths[3]) {return defaults[3];}
+    if (y>depths[4]) {return defaults[4];}
+    if (z>depths[5]) {return defaults[5];}
+    return data[(x-depths[0]) + (1+depths[3]-depths[0])*( (y-depths[1]) + (1+depths[4]-depths[1])*(z-depths[2]) )];
+}
+
+std::pair<Location,Location> Portion::voxbounds() {
+    throw;
+    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
+}
+std::pair<Location,Location> SolidPortion::voxbounds() {
+    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
+}
+std::pair<Location,Location> DetailedPortion::voxbounds() {
+    return std::pair<Location,Location>(Location(0,0,0),(Location(CHSIZE-1,CHSIZE-1,CHSIZE-1)));
+}
+std::pair<Location,Location> ComplexPortion::voxbounds() {
+    return std::pair<Location,Location>(Location(std::max(depths[0]-1,0),std::max(depths[1]-1,0),std::max(depths[2]-1,0)),(Location(std::min(depths[3]+1,CHSIZE-1),std::min(depths[4]+1,CHSIZE-1),std::min(depths[5]+1,CHSIZE-1))));
+}
+bool Portion::tryvox() {
+    throw;
+    return false;
+}
+bool SolidPortion::tryvox() {
+    return false;
+}
+bool DetailedPortion::tryvox() {
+    return true;
+}
+bool ComplexPortion::tryvox() {
+    return true;
+}
+
 SolidPortion::SolidPortion(unsigned int fill) {
     fillId = fill;
 }
+ComplexPortion::~ComplexPortion() {
+    delete [] data;
+}
+
+//unsigned int* Portion::solidface(int face) {
+//    return NULL;
+//}
+//unsigned int* ComplexPortion::solidface(int face) {
+//    if (face<3) {
+//        if (depths[face] == 0) {
+//            return NULL;
+//        } else {
+//            return &(defaults[face]);
+//        }
+//    } else {
+//        if (depths[face] == CHSIZE-1) {
+//            return NULL;
+//        } else {
+//            return &(defaults[face]);
+//        }
+//    }
+//}
+//unsigned int* SolidPortion::solidface(int face) {
+//    return &fillId;
+//}
 
 
 PortionPointer::PortionPointer(Portion* init) {
@@ -122,7 +185,8 @@ unsigned int Structure::getAt(int x,int y,int z) {
     return sampler->getAt((x&(CHSIZE-1)),(y&(CHSIZE-1)),z&(CHSIZE-1));
 }
 unsigned int Structure::getLodAt(int x, int y, int z) {
-    return portions[Location(x,y,z)]->lod;
+    PortionPointer yupperoo =portions[Location(x,y,z)];
+    return yupperoo->lod;
 }
 
 void Structure::refreshqueue() {
@@ -161,53 +225,114 @@ void Structure::load(Location po,Generator* resource) {
             unsigned int solidid;
             myFile.read((char*)&solidid,sizeof(unsigned int));
             portions.insert ( std::pair<Location,PortionPointer>(po,PortionPointer(new SolidPortion(solidid))));
-        } else {
+        } else if (info[0] == 'c') {
+            ComplexPortion* myportion = new ComplexPortion();
+            myFile.read((char*)&(myportion->defaults),sizeof(int)*6);
+            myFile.read((char*)&(myportion->depths),sizeof(int)*6);
+            int size = (1+myportion->depths[3]-myportion->depths[0])*(1+myportion->depths[4]-myportion->depths[1])*(1+myportion->depths[5]-myportion->depths[2]);
+            myportion->data = new unsigned int[size];
+            myFile.read((char*)myportion->data,sizeof(unsigned int)*size);
+            portions.insert ( std::pair<Location,PortionPointer>(po,PortionPointer(myportion)));
+        } else if (info[0] == 'd') {
             DetailedPortion* myportion = new DetailedPortion();
-            myFile.read((char*)&(myportion->data),sizeof(int)*128*128*128);
+            myFile.read((char*)&(myportion->data),sizeof(unsigned int)*CHSIZE*CHSIZE*CHSIZE);
             portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(myportion)));
-            voxPortion(po);
+        } else {
+            throw;
         }
         myFile.close();
         
     } else {
-        DetailedPortion* myportion = resource->terrain_update(this,po);
-    //    std::cout<<"load called";
-        unsigned int solidId = 0;
-        int usingsolid = 0;//0 for unset, 1 for using, 2 for killed
+        int (*dat)[CHSIZE][CHSIZE] = resource->terrain_update(this,po);
         
-        for (int xi=0;xi<CHSIZE;xi++) {
-            for (int yi=0;yi<CHSIZE;yi++) {
-                for (int zi=0;zi<CHSIZE;zi++) {
-                    if (usingsolid == 0) {
-                        solidId = myportion->data[xi][yi][zi];
-                        usingsolid = 1;
-                    } else if (usingsolid == 1) {
-                        if (solidId != myportion->data[xi][yi][zi]) {
-                            usingsolid = 2;
+        ComplexPortion* tenguess = new ComplexPortion();
+        tenguess->defaults[0] = dat[0][0][0];
+        tenguess->defaults[1] = dat[0][0][0];
+        tenguess->defaults[2] = dat[0][0][0];
+        tenguess->defaults[3] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
+        tenguess->defaults[4] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
+        tenguess->defaults[5] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
+        bool solidsofar[] = {true,true,true,true,true,true};
+        for (int z=0;z<CHSIZE;z++) {
+            for (int x=0;x<CHSIZE;x++) {
+                for (int y=0;y<CHSIZE;y++) {
+                    if (dat[z][x][y]!=tenguess->defaults[0]) {
+                        if (solidsofar[0]) {
+                            tenguess->depths[0] = z;
                         }
+                        solidsofar[0] = false;
                     }
-                    
+                    if (dat[x][z][y]!=tenguess->defaults[1]) {
+                        if (solidsofar[1]) {
+                            tenguess->depths[1] = z;
+                        }
+                        solidsofar[1] = false;
+                    }
+                    if (dat[x][y][z]!=tenguess->defaults[2]) {
+                        if (solidsofar[2]) {
+                            tenguess->depths[2] = z;
+                        }
+                        solidsofar[2] = false;
+                    }
+                    if (dat[CHSIZE-1-z][x][y]!=tenguess->defaults[3]) {
+                        if (solidsofar[3]) {
+                            tenguess->depths[3] = CHSIZE-1-z;
+                        }
+                        solidsofar[3] = false;
+                    }
+                    if (dat[x][CHSIZE-1-z][y]!=tenguess->defaults[4]) {
+                        if (solidsofar[4]) {
+                            tenguess->depths[4] = CHSIZE-1-z;
+                        }
+                        solidsofar[4] = false;
+                    }
+                    if (dat[x][y][CHSIZE-1-z]!=tenguess->defaults[5]) {
+                        if (solidsofar[5]) {
+                            tenguess->depths[5] = CHSIZE-1-z;
+                        }
+                        solidsofar[5] = false;
+                    }
                 }
             }
         }
-        
         std::ofstream myFile(filename, std::ios::out | std::ios::binary);
-        if (usingsolid == 1) {
+        if (solidsofar[0]) {
+            int solidId = dat[0][0][0];
             portions.insert ( std::pair<Location,PortionPointer>(po,PortionPointer(new SolidPortion(solidId))) );
-            delete myportion;
             char info[1] = {'s'};
             myFile.write(info,1);
             myFile.write((char*)&solidId,sizeof(unsigned int));
+            delete tenguess;
+        } else if (false) {
+//            portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(new DetailedPortion(dat))));
+//            char info[1] = {'d'};
+//            myFile.write(info,1);
+//            myFile.write((char*)dat,sizeof(unsigned int)*CHSIZE*CHSIZE*CHSIZE);
         } else {
-            portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(myportion)));
-            char info[1] = {'d'};
+            portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(tenguess)));
+            char info[1] = {'c'};
             myFile.write(info,1);
-            myFile.write((char*)&(myportion->data),sizeof(int)*128*128*128);
-            voxPortion(po);
+//            std::cout<<"aoerugj\n";
+            myFile.write((char*)tenguess->defaults,sizeof(unsigned int)*6);
+            myFile.write((char*)tenguess->depths,sizeof(int)*6);
+            int size = (1+tenguess->depths[3]-tenguess->depths[0])*(1+tenguess->depths[4]-tenguess->depths[1])*(1+tenguess->depths[5]-tenguess->depths[2]);
+            tenguess->data = new unsigned int[size];
+            int index=0;
+            for (int z = tenguess->depths[2];z<=tenguess->depths[5];z++) {
+                for (int y = tenguess->depths[1];y<=tenguess->depths[4];y++) {
+                    for (int x = tenguess->depths[0];x<=tenguess->depths[3];x++) {
+                        tenguess->data[index] = dat[x][y][z];
+                        index++;
+                    }
+                }
+            }
+            myFile.write((char*)(tenguess->data),sizeof(unsigned int)*size);
         }
+        delete[] dat;
         myFile.close();
     }
-//    delete myportion;
+    //    delete myportion;
+    voxPortion(po);
     voxSnippets(po);
 }
 void Structure::voxSnippets(Location po) {
@@ -298,15 +423,16 @@ void Structure::voxSnippets(Location po) {
 }
 
 void Structure::voxPortion(Location portion) {
+    if (!portions[portion]->tryvox()) {return;}
     GeomTerrain geom;
     GLfloat afCubeValue[8];
     GLfloat scCubeValue[8];
 //    std::vector<glm::vec3> triangles;
     PortionPointer sampler = portions[portion];
-    
-    for (int xi=0;xi<CHSIZE-1;xi++) {
-        for (int yi=0;yi<CHSIZE-1;yi++) {
-            for (int zi=0;zi<CHSIZE-1;zi++) {
+    std::pair<Location,Location> bounds = portions[portion]->voxbounds();
+    for (int xi=bounds.first.x;xi<bounds.second.x;xi++) {
+        for (int yi=bounds.first.y;yi<bounds.second.y;yi++) {
+            for (int zi=bounds.first.z;zi<bounds.second.z;zi++) {
                 int xt = portion.x*CHSIZE+xi;
                 int yt = portion.y*CHSIZE+yi;
                 int zt = portion.z*CHSIZE+zi;
