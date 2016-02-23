@@ -24,8 +24,11 @@ void Generator::firstdump() {
     spinrock.transform = mat1;
     pool->push_back(spinrock);
 }
-DetailedPortion* Generator::terrain_update(Structure* target,Location po) {
-    DetailedPortion* myportion = new DetailedPortion();
+int (*Generator::terrain_update(Structure* target,Location po))[CHSIZE][CHSIZE] {
+//    DetailedPortion* myportion = new DetailedPortion();
+//    int*** = new int[CHSIZE][CHSIZE][CHSIZE];
+    int (*data)[CHSIZE][CHSIZE] = new int[CHSIZE][CHSIZE][CHSIZE];
+    
     for (int xi=0;xi<CHSIZE;xi++) {
         for (int yi=0;yi<CHSIZE;yi++) {
             for (int zi=0;zi<CHSIZE;zi++) {
@@ -58,13 +61,13 @@ DetailedPortion* Generator::terrain_update(Structure* target,Location po) {
                     density -= 32*(TRUNC_DIV(yt,32));
                     double scale = 3;
                     if (density>scale) {
-                        myportion->data[xi][yi][zi] = 3;
+                        data[xi][yi][zi] = 3;
                     } else if (density>(scale/2.0)) {
-                        myportion->data[xi][yi][zi] = 2;
+                        data[xi][yi][zi] = 2;
                     } else if (density>0) {
-                        myportion->data[xi][yi][zi] = 1;
+                        data[xi][yi][zi] = 1;
                     } else {
-                        myportion->data[xi][yi][zi] = 0;
+                        data[xi][yi][zi] = 0;
                     }
                     
     //                if (xt*xt+zt*zt>yt*yt*2) {
@@ -91,13 +94,13 @@ DetailedPortion* Generator::terrain_update(Structure* target,Location po) {
                     //oesguh
                     double scale = 3;
                     if (density>scale) {
-                        myportion->data[xi][yi][zi] = 3;
+                        data[xi][yi][zi] = 3;
                     } else if (density>(scale/2.0)) {
-                        myportion->data[xi][yi][zi] = 2;
+                        data[xi][yi][zi] = 2;
                     } else if (density>0) {
-                        myportion->data[xi][yi][zi] = 1;
+                        data[xi][yi][zi] = 1;
                     } else {
-                        myportion->data[xi][yi][zi] = 0;
+                        data[xi][yi][zi] = 0;
                     }
                     
                 }
@@ -105,7 +108,7 @@ DetailedPortion* Generator::terrain_update(Structure* target,Location po) {
             }
         }
     }
-    return myportion;
+    return data;
 }
 
 

@@ -21,6 +21,8 @@ class Environment;
 
 #define RANDSIZE 64
 
+#define CHSIZE 128
+
 class NoiseVolume {
 private:
     float data[RANDSIZE][RANDSIZE][RANDSIZE];
@@ -39,7 +41,7 @@ private:
 public:
     std::vector<Structure>* pool;
     void firstdump();
-    DetailedPortion* terrain_update(Structure* target,Location po);
+    int (*terrain_update(Structure* target,Location po))[CHSIZE][CHSIZE];
     
 };
 
