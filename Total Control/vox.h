@@ -42,8 +42,9 @@ class Portion {
 public:
     unsigned int lod = 1;
     virtual unsigned int getAt(int,int,int);
-//    virtual unsigned int* solidface(int);
+    //    virtual unsigned int* solidface(int);
     virtual std::pair<Location,Location> voxbounds();
+    virtual std::pair<Location,Location> databounds();
     virtual bool tryvox();
 };
 class SolidPortion : public Portion {
@@ -52,6 +53,7 @@ public:
     unsigned int getAt(int,int,int) override;
     SolidPortion(unsigned int);
     std::pair<Location,Location> voxbounds() override;
+    std::pair<Location,Location> databounds() override;
     bool tryvox() override;
 //    unsigned int* solidface(int) override;
     
@@ -61,6 +63,7 @@ public:
     unsigned int data[CHSIZE][CHSIZE][CHSIZE];
     unsigned int getAt(int,int,int) override;
     std::pair<Location,Location> voxbounds() override;
+    std::pair<Location,Location> databounds() override;
     bool tryvox() override;
 };
 class ComplexPortion : public Portion {
@@ -72,6 +75,7 @@ public:
     unsigned int defaults[6];
     unsigned int getAt(int,int,int) override;
     std::pair<Location,Location> voxbounds() override;
+    std::pair<Location,Location> databounds() override;
     bool tryvox() override;
 };
 class PortionPointer {

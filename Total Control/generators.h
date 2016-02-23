@@ -18,6 +18,7 @@ class Structure;
 class Location;
 class DetailedPortion;
 class Environment;
+class PortionPointer;
 
 #define RANDSIZE 64
 
@@ -41,7 +42,8 @@ private:
 public:
     std::vector<Structure>* pool;
     void firstdump();
-    int (*terrain_update(Structure* target,Location po))[CHSIZE][CHSIZE];
+    PortionPointer terrain_update(Structure* target,Location po);
+    PortionPointer makeportion(std::string filename,int (*)[CHSIZE][CHSIZE]);
     
 };
 
