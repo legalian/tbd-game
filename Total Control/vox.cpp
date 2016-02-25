@@ -77,6 +77,21 @@ std::pair<Location,Location> DetailedPortion::voxbounds() {
 std::pair<Location,Location> ComplexPortion::voxbounds() {
     return std::pair<Location,Location>(Location(std::max(depths[0]-1,0),std::max(depths[1]-1,0),std::max(depths[2]-1,0)),(Location(std::min(depths[3]+1,CHSIZE-1),std::min(depths[4]+1,CHSIZE-1),std::min(depths[5]+1,CHSIZE-1))));
 }
+
+std::pair<Location,Location> Portion::databounds() {
+    throw;
+    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
+}
+std::pair<Location,Location> SolidPortion::databounds() {
+    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
+}
+std::pair<Location,Location> DetailedPortion::databounds() {
+    return std::pair<Location,Location>(Location(0,0,0),(Location(CHSIZE-1,CHSIZE-1,CHSIZE-1)));
+}
+std::pair<Location,Location> ComplexPortion::databounds() {
+    return std::pair<Location,Location>(Location(depths[0],depths[1],depths[2]),Location(depths[3],depths[4],depths[5]));
+}
+
 bool Portion::tryvox() {
     throw;
     return false;
@@ -244,6 +259,7 @@ void Structure::load(Location po,Generator* resource) {
         
     } else {
         PortionPointer newportion = resource->terrain_update(this,po);
+        portions.insert ( std::pair<Location,PortionPointer>(po,newportion) );
                 
     }
     //    delete myportion;

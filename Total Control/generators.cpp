@@ -24,7 +24,7 @@ void Generator::firstdump() {
     spinrock.transform = mat1;
     pool->push_back(spinrock);
 }
-int (*Generator::terrain_update(Structure* target,Location po))[CHSIZE][CHSIZE] {
+PortionPointer Generator::terrain_update(Structure* target,Location po) {
 //    DetailedPortion* myportion = new DetailedPortion();
 //    int*** = new int[CHSIZE][CHSIZE][CHSIZE];
     int (*data)[CHSIZE][CHSIZE] = new int[CHSIZE][CHSIZE][CHSIZE];
@@ -110,7 +110,7 @@ int (*Generator::terrain_update(Structure* target,Location po))[CHSIZE][CHSIZE] 
     }
     std::string filename = "structures/"+target->structureid+po.tostring()+".str";
 
-    return data;
+    return makeportion(filename,data);
 }
 
 
@@ -173,6 +173,8 @@ PortionPointer Generator::makeportion(std::string filename,int (*dat)[CHSIZE][CH
         myFile.write(info,1);
         myFile.write((char*)&solidId,sizeof(unsigned int));
         delete tenguess;
+        delete[] dat;
+        myFile.close();
         return PortionPointer(new SolidPortion(solidId));
     } else if (false) {
         //            portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(new DetailedPortion(dat))));
@@ -196,13 +198,12 @@ PortionPointer Generator::makeportion(std::string filename,int (*dat)[CHSIZE][CH
             }
         }
         myFile.write((char*)(tenguess->data),sizeof(unsigned int)*size);
+        delete[] dat;
+        myFile.close();
         return PortionPointer(tenguess);
     }
-    delete[] dat;
-    myFile.close();
 
 }
-
 
 
 //double NoiseVolume::interp(float &x, float &y, float &a) {
