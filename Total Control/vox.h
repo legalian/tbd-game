@@ -38,59 +38,32 @@ typedef struct Location {
     friend bool operator< (const Location& l, const Location& r);
     friend bool operator== (const Location& l, const Location& r);
 } Location;
-class Portion {
-public:
-    unsigned int lod = 1;
-    virtual unsigned int getAt(int,int,int);
-    //    virtual unsigned int* solidface(int);
-    virtual std::pair<Location,Location> voxbounds();
-    virtual std::pair<Location,Location> databounds();
-    virtual bool tryvox();
+
+struct OctreeSegment {
+    OctreeSegment(int (*)[CHSIZE][CHSIZE],int,int,int,int);
+    OctreeSegment();
+    unsigned int fillvalue;
+    bool isfilled;
+    OctreeSegment* subdivisions[2][2][2];
+    unsigned int getser(const int&,const int&,int const&);
+    bool uniqueat(const int&,const int&,int const&,int const&);
+    void savetofile(std::ostream&);
+    OctreeSegment(std::istream&);
 };
-class SolidPortion : public Portion {
+class OctreePortion {
 public:
-    unsigned int fillId;
-    unsigned int getAt(int,int,int) override;
-    SolidPortion(unsigned int);
-    std::pair<Location,Location> voxbounds() override;
-    std::pair<Location,Location> databounds() override;
-    bool tryvox() override;
-//    unsigned int* solidface(int) override;
-    
+    int lod = 0;
+    OctreeSegment data;
+    OctreePortion(int (*)[CHSIZE][CHSIZE]);
+    OctreePortion(std::string);
+    unsigned int getAt(int,int,int);
+    std::pair<Location,Location> voxbounds();
+    bool tryvox();
+    bool uniqueat(int,int,int);
+    int flipbits(int);
+    void save(std::string);
 };
-class DetailedPortion : public Portion {
-public:
-    unsigned int data[CHSIZE][CHSIZE][CHSIZE];
-    unsigned int getAt(int,int,int) override;
-    std::pair<Location,Location> voxbounds() override;
-    std::pair<Location,Location> databounds() override;
-    bool tryvox() override;
-};
-class ComplexPortion : public Portion {
-public:
-    ~ComplexPortion();
-    int depths[6] = {0,0,0,CHSIZE,CHSIZE,CHSIZE};
-//    unsigned int* solidface(int) override;
-    unsigned int* data;
-    unsigned int defaults[6];
-    unsigned int getAt(int,int,int) override;
-    std::pair<Location,Location> voxbounds() override;
-    std::pair<Location,Location> databounds() override;
-    bool tryvox() override;
-};
-class PortionPointer {
-private:
-    Portion* pointer;
-    int* reference;
-public:
-    PortionPointer(Portion*);
-    PortionPointer(const PortionPointer& sp);
-    PortionPointer();
-    ~PortionPointer();
-    Portion& operator* ();
-    Portion* operator-> ();
-    PortionPointer& operator= (const PortionPointer& sp);
-};
+
 class Structure {
 public:
     std::string structureid = "";
@@ -101,7 +74,7 @@ public:
     bool bounded;
     glm::mat4 transform;
     std::vector<Location> queue;
-    std::map<Location,PortionPointer> portions;
+    std::map<Location,OctreePortion*> portions;
     std::map<Location,GeomTerrain> geoms;
     GeomTerrain* createOrGet(Location);
     unsigned int getAt(int,int,int);

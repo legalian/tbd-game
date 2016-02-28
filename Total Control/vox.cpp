@@ -44,74 +44,130 @@ bool operator== (const Location& l, const Location& r) {
     return true;
 }
 
-unsigned int Portion::getAt(int x, int y, int z) {
-    throw;
-    return 1;
-}
-unsigned int DetailedPortion::getAt(int x, int y, int z) {
-    return data[x][y][z];
-}
-unsigned int SolidPortion::getAt(int x, int y, int z) {
-    return fillId;
-}
-unsigned int ComplexPortion::getAt(int x, int y, int z) {
-    if (x<depths[0]) {return defaults[0];}
-    if (y<depths[1]) {return defaults[1];}
-    if (z<depths[2]) {return defaults[2];}
-    if (x>depths[3]) {return defaults[3];}
-    if (y>depths[4]) {return defaults[4];}
-    if (z>depths[5]) {return defaults[5];}
-    return data[(x-depths[0]) + (1+depths[3]-depths[0])*( (y-depths[1]) + (1+depths[4]-depths[1])*(z-depths[2]) )];
-}
 
-std::pair<Location,Location> Portion::voxbounds() {
-    throw;
-    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
-}
-std::pair<Location,Location> SolidPortion::voxbounds() {
-    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
-}
-std::pair<Location,Location> DetailedPortion::voxbounds() {
+std::pair<Location,Location> OctreePortion::voxbounds() {
     return std::pair<Location,Location>(Location(0,0,0),(Location(CHSIZE-1,CHSIZE-1,CHSIZE-1)));
 }
-std::pair<Location,Location> ComplexPortion::voxbounds() {
-    return std::pair<Location,Location>(Location(std::max(depths[0]-1,0),std::max(depths[1]-1,0),std::max(depths[2]-1,0)),(Location(std::min(depths[3]+1,CHSIZE-1),std::min(depths[4]+1,CHSIZE-1),std::min(depths[5]+1,CHSIZE-1))));
-}
 
-std::pair<Location,Location> Portion::databounds() {
-    throw;
-    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
-}
-std::pair<Location,Location> SolidPortion::databounds() {
-    return std::pair<Location,Location>(Location(0,0,0),(Location(0,0,0)));
-}
-std::pair<Location,Location> DetailedPortion::databounds() {
-    return std::pair<Location,Location>(Location(0,0,0),(Location(CHSIZE-1,CHSIZE-1,CHSIZE-1)));
-}
-std::pair<Location,Location> ComplexPortion::databounds() {
-    return std::pair<Location,Location>(Location(depths[0],depths[1],depths[2]),Location(depths[3],depths[4],depths[5]));
-}
-
-bool Portion::tryvox() {
-    throw;
-    return false;
-}
-bool SolidPortion::tryvox() {
-    return false;
-}
-bool DetailedPortion::tryvox() {
-    return true;
-}
-bool ComplexPortion::tryvox() {
+bool OctreePortion::tryvox() {
     return true;
 }
 
-SolidPortion::SolidPortion(unsigned int fill) {
-    fillId = fill;
+unsigned int OctreeSegment::getser(const int& x,const int& y,const int& z) {
+    if (isfilled) {
+        return fillvalue;
+    } else {
+//        int andbit = CHSIZE/2;
+//        int shiftbit = CHPOWER-1;
+        return subdivisions[(x&1)][(y&1)][(z&1)]->getser(x>>1,y>>1,z>>1);
+//        return subdivisions[(x&andbit)>>shiftbit][(y&andbit)>>shiftbit][(z&andbit)>>shiftbit]->getser(x<<1,y<<1,z<<1);
+    }
 }
-ComplexPortion::~ComplexPortion() {
-    delete [] data;
+bool OctreeSegment::uniqueat(const int& x,const int& y,const int& z,const int& recur) {
+    if (isfilled) {
+        return (x==((1<<recur)-1) or y==((1<<recur)-1) or z==((1<<recur)-1));
+    } else {
+//        int andbit = CHSIZE/2;
+//        int shiftbit = CHPOWER-1;
+        return subdivisions[(x&1)][(y&1)][(z&1)]->uniqueat(x>>1,y>>1,z>>1,recur-1);
+    }
+//    return true;
 }
+void OctreeSegment::savetofile(std::ostream &file) {
+    file.write((char*)&isfilled,sizeof(bool));
+    if (isfilled) {
+        file.write((char*)&fillvalue,sizeof(unsigned int));
+    } else {
+        subdivisions[0][0][0]->savetofile(file);
+        subdivisions[1][0][0]->savetofile(file);
+        subdivisions[0][1][0]->savetofile(file);
+        subdivisions[1][1][0]->savetofile(file);
+        subdivisions[0][0][1]->savetofile(file);
+        subdivisions[1][0][1]->savetofile(file);
+        subdivisions[0][1][1]->savetofile(file);
+        subdivisions[1][1][1]->savetofile(file);
+    }
+}
+OctreeSegment::OctreeSegment(std::istream &file) {
+    file.read((char*)&isfilled,sizeof(bool));
+    if (isfilled) {
+        file.read((char*)&fillvalue,sizeof(unsigned int));
+    } else {
+        subdivisions[0][0][0] = new OctreeSegment(file);
+        subdivisions[1][0][0] = new OctreeSegment(file);
+        subdivisions[0][1][0] = new OctreeSegment(file);
+        subdivisions[1][1][0] = new OctreeSegment(file);
+        subdivisions[0][0][1] = new OctreeSegment(file);
+        subdivisions[1][0][1] = new OctreeSegment(file);
+        subdivisions[0][1][1] = new OctreeSegment(file);
+        subdivisions[1][1][1] = new OctreeSegment(file);
+    }
+}
+OctreeSegment::OctreeSegment() {
+    
+}
+void OctreePortion::save(std::string filename) {
+    std::ofstream myFile(filename, std::ios::out | std::ios::binary);
+    data.savetofile(myFile);
+    myFile.close();
+}
+OctreePortion::OctreePortion(std::string filename) {
+    std::ifstream myFile(filename, std::ios::in | std::ios::binary);
+    data = OctreeSegment(myFile);
+    myFile.close();
+}
+
+
+OctreePortion::OctreePortion(int (*dat)[CHSIZE][CHSIZE]) : data(OctreeSegment(dat,CHPOWER,0,0,0)) {
+    
+}
+OctreeSegment::OctreeSegment(int (*dat)[CHSIZE][CHSIZE],int recur,int xoff,int yoff, int zoff) {
+    fillvalue = dat[xoff][yoff][zoff];
+    if (recur==0) {
+        isfilled = true;
+        return;
+    }
+    for (int x=xoff;x<xoff+(1<<recur);x++) {
+        for (int y=yoff;y<yoff+(1<<recur);y++) {
+            for (int z=zoff;z<zoff+(1<<recur);z++) {
+                if (dat[x][y][z] != fillvalue) {
+                    isfilled = false;
+                    int nrc = recur-1;
+                    subdivisions[0][0][0] = new OctreeSegment(dat,nrc,xoff,yoff,zoff);
+                    subdivisions[1][0][0] = new OctreeSegment(dat,nrc,xoff+(1<<nrc),yoff,zoff);
+                    subdivisions[0][1][0] = new OctreeSegment(dat,nrc,xoff,yoff+(1<<nrc),zoff);
+                    subdivisions[1][1][0] = new OctreeSegment(dat,nrc,xoff+(1<<nrc),yoff+(1<<nrc),zoff);
+                    subdivisions[0][0][1] = new OctreeSegment(dat,nrc,xoff,yoff,zoff+(1<<nrc));
+                    subdivisions[1][0][1] = new OctreeSegment(dat,nrc,xoff+(1<<nrc),yoff,zoff+(1<<nrc));
+                    subdivisions[0][1][1] = new OctreeSegment(dat,nrc,xoff,yoff+(1<<nrc),zoff+(1<<nrc));
+                    subdivisions[1][1][1] = new OctreeSegment(dat,nrc,xoff+(1<<nrc),yoff+(1<<nrc),zoff+(1<<nrc));
+                    return;
+                }
+            }
+        }
+    }
+    isfilled = true;
+}
+unsigned int OctreePortion::getAt(int x, int y, int z) {
+    return data.getser(flipbits(x),flipbits(y),flipbits(z));
+//    return data.getser(x,y,z);
+}
+bool OctreePortion::uniqueat(int x, int y, int z) {
+    return data.uniqueat(flipbits(x),flipbits(y),flipbits(z),CHPOWER);
+}
+int OctreePortion::flipbits(int f) {
+    int k = 0;
+    k|=(f&1)<<6;
+    k|=(f&2)<<4;
+    k|=(f&4)<<2;
+    k|=(f&8);
+    k|=(f&16)>>2;
+    k|=(f&32)>>4;
+    k|=(f&64)>>6;
+    if (f&128) {throw;}
+    return k;
+}
+
 
 //unsigned int* Portion::solidface(int face) {
 //    return NULL;
@@ -136,44 +192,6 @@ ComplexPortion::~ComplexPortion() {
 //}
 
 
-PortionPointer::PortionPointer(Portion* init) {
-    pointer = init;
-    reference = new int(1);
-}
-PortionPointer::PortionPointer(){
-    reference = new int(1);
-}
-PortionPointer::~PortionPointer() {
-    if(--(*reference) == 0)
-    {
-        delete pointer;
-        delete reference;
-    }
-}
-Portion& PortionPointer::operator* () {
-    return *pointer;
-}
-Portion* PortionPointer::operator-> () {
-    return pointer;
-}
-PortionPointer& PortionPointer::operator= (const PortionPointer& sp) {
-    if (this != &sp) {
-        if(--(*reference) == 0) {
-            delete pointer;
-            delete reference;
-        }
-        pointer = sp.pointer;
-        reference = sp.reference;
-        (*reference)++;
-    }
-    return *this;
-}
-
-PortionPointer::PortionPointer(const PortionPointer& sp) {
-    pointer = sp.pointer;
-    reference = sp.reference;
-    (*reference)++;
-}
 void Structure::settransform(glm::mat4 trans) {
     transform = trans;
 //    for (igeom=0;igeom<geom)
@@ -196,11 +214,11 @@ GeomTerrain* Structure::createOrGet(Location po) {
     return &geoms[po];
 }
 unsigned int Structure::getAt(int x,int y,int z) {
-    PortionPointer sampler = portions[Location(TRUNC_DIV(x,CHSIZE),TRUNC_DIV(y,CHSIZE),TRUNC_DIV(z,CHSIZE))];
+    OctreePortion* sampler = portions[Location(TRUNC_DIV(x,CHSIZE),TRUNC_DIV(y,CHSIZE),TRUNC_DIV(z,CHSIZE))];
     return sampler->getAt((x&(CHSIZE-1)),(y&(CHSIZE-1)),z&(CHSIZE-1));
 }
 unsigned int Structure::getLodAt(int x, int y, int z) {
-    PortionPointer yupperoo =portions[Location(x,y,z)];
+    OctreePortion* yupperoo = portions[Location(x,y,z)];
     return yupperoo->lod;
 }
 
@@ -233,33 +251,12 @@ void Structure::load(Location po,Generator* resource) {
     struct stat buffer;
     std::string filename = "structures/"+structureid+po.tostring()+".str";
     if (stat (filename.c_str(), &buffer) == 0) {
-        std::ifstream myFile(filename, std::ios::in | std::ios::binary);
-        char info[1];
-        myFile.read(info,1);
-        if (info[0] == 's') {
-            unsigned int solidid;
-            myFile.read((char*)&solidid,sizeof(unsigned int));
-            portions.insert ( std::pair<Location,PortionPointer>(po,PortionPointer(new SolidPortion(solidid))));
-        } else if (info[0] == 'c') {
-            ComplexPortion* myportion = new ComplexPortion();
-            myFile.read((char*)&(myportion->defaults),sizeof(int)*6);
-            myFile.read((char*)&(myportion->depths),sizeof(int)*6);
-            int size = (1+myportion->depths[3]-myportion->depths[0])*(1+myportion->depths[4]-myportion->depths[1])*(1+myportion->depths[5]-myportion->depths[2]);
-            myportion->data = new unsigned int[size];
-            myFile.read((char*)myportion->data,sizeof(unsigned int)*size);
-            portions.insert ( std::pair<Location,PortionPointer>(po,PortionPointer(myportion)));
-        } else if (info[0] == 'd') {
-            DetailedPortion* myportion = new DetailedPortion();
-            myFile.read((char*)&(myportion->data),sizeof(unsigned int)*CHSIZE*CHSIZE*CHSIZE);
-            portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(myportion)));
-        } else {
-            throw;
-        }
-        myFile.close();
-        
+        OctreePortion* newportion = new OctreePortion(filename);
+        portions.insert ( std::pair<Location,OctreePortion*>(po,newportion) );
     } else {
-        PortionPointer newportion = resource->terrain_update(this,po);
-        portions.insert ( std::pair<Location,PortionPointer>(po,newportion) );
+        OctreePortion* newportion = resource->terrain_update(this,po);
+        newportion->save(filename);
+        portions.insert ( std::pair<Location,OctreePortion*>(po,newportion) );
                 
     }
     //    delete myportion;
@@ -358,8 +355,8 @@ void Structure::voxPortion(Location portion) {
     GeomTerrain geom;
     GLfloat afCubeValue[8];
     GLfloat scCubeValue[8];
-//    std::vector<glm::vec3> triangles;
-    PortionPointer sampler = portions[portion];
+    //    std::vector<glm::vec3> triangles;
+    OctreePortion* samddpler = portions[portion];
     std::pair<Location,Location> bounds = portions[portion]->voxbounds();
     for (int xi=bounds.first.x;xi<bounds.second.x;xi++) {
         for (int yi=bounds.first.y;yi<bounds.second.y;yi++) {
@@ -367,33 +364,35 @@ void Structure::voxPortion(Location portion) {
                 int xt = portion.x*CHSIZE+xi;
                 int yt = portion.y*CHSIZE+yi;
                 int zt = portion.z*CHSIZE+zi;
-                std::vector<glm::vec3> triangles = std::vector<glm::vec3>();
-                for(int iVertex = 0; iVertex < 8; iVertex++) {
-                    unsigned int code = sampler->getAt(xi+a2fVertexOffset[iVertex][0],yi+a2fVertexOffset[iVertex][1],zi+a2fVertexOffset[iVertex][2]);
-                    afCubeValue[iVertex] = 0;
-                    scCubeValue[iVertex] = 0;
-                    if (code == 4) {
-                        scCubeValue[iVertex] = .25;
-                    } else if (code == 5) {
-                        scCubeValue[iVertex] = .15;
-                    } else if (code == 3) {
-                        afCubeValue[iVertex] = 1.0;
-                    } else if (code == 2) {
-                        afCubeValue[iVertex] = 2.0/3.0;
-                    } else if (code == 1) {
-                        afCubeValue[iVertex] = 1.0/3.0;
+                if (samddpler->uniqueat(xi,yi,zi)) {
+                    std::vector<glm::vec3> triangles = std::vector<glm::vec3>();
+                    for(int iVertex = 0; iVertex < 8; iVertex++) {
+                        unsigned int code = samddpler->getAt(xi+a2fVertexOffset[iVertex][0],yi+a2fVertexOffset[iVertex][1],zi+a2fVertexOffset[iVertex][2]);
+                        afCubeValue[iVertex] = 0;
+                        scCubeValue[iVertex] = 0;
+                        if (code == 4) {
+                            scCubeValue[iVertex] = .25;
+                        } else if (code == 5) {
+                            scCubeValue[iVertex] = .15;
+                        } else if (code == 3) {
+                            afCubeValue[iVertex] = 1.0;
+                        } else if (code == 2) {
+                            afCubeValue[iVertex] = 2.0/3.0;
+                        } else if (code == 1) {
+                            afCubeValue[iVertex] = 1.0/3.0;
+                        }
                     }
+                    MarchCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, afCubeValue,triangles);
+                    SolidCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, scCubeValue,triangles);
+                    
+                    
+                    for (int ivert = 0;ivert<triangles.size();ivert++) {
+    //                    std::cout<<"output";
+                        geom.addVert(triangles[ivert]);
+                    }
+                    geom.assumeNormals();
+    //                addmarch(xt, yt, zt, &geom);
                 }
-                MarchCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, afCubeValue,triangles);
-                SolidCube((portion.x*CHSIZE)+xi, (portion.y*CHSIZE)+yi, (portion.z*CHSIZE)+zi, scCubeValue,triangles);
-                
-                
-                for (int ivert = 0;ivert<triangles.size();ivert++) {
-//                    std::cout<<"output";
-                    geom.addVert(triangles[ivert]);
-                }
-                geom.assumeNormals();
-//                addmarch(xt, yt, zt, &geom);
             }
         }
     }
