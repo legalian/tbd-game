@@ -49,8 +49,9 @@ OctreePortion* Generator::terrain_update(Structure* target,Location po) {
     //                    continue;
     //                }
     //                continue;
-                    double density = -yt;
-                    double mu = 64.0;
+                    double density = -yt/2.0;
+                    double mu = 128.0;
+//                    density += sample1.sample(xt/(mu*1.5),yt/(mu*1.5),zt/(mu*1.5))*1.5;
                     density += sample1.sample(xt/(mu*3),yt/(mu*3),zt/(mu*3))*3;
                     density += sample2.sample(xt/(mu*6),yt/(mu*6),zt/(mu*6))*6;
                     density += sample3.sample(xt/(mu*12),yt/(mu*12),zt/(mu*12))*12;
@@ -58,8 +59,8 @@ OctreePortion* Generator::terrain_update(Structure* target,Location po) {
                     density += sample2.sample(xt/(mu*48),yt/(mu*48),zt/(mu*48))*48;
                     density += sample3.sample(xt/(mu*72),yt/(mu*72),zt/(mu*72))*72;
                     density += sample3.sample(xt/(mu*148),yt/(mu*148),zt/(mu*148))*148;
-                    density -= 32*(TRUNC_DIV(yt,32));
-                    double scale = 3;
+                    density -= 32*(TRUNC_DIV(yt/2.0,32));
+                    double scale = 1.5;
                     if (density>scale) {
                         data[xi][yi][zi] = 3;
                     } else if (density>(scale/2.0)) {
@@ -81,8 +82,8 @@ OctreePortion* Generator::terrain_update(Structure* target,Location po) {
 //                                            myportion->data[xi][yi][zi] = 3;
 //                                        }
 //                                        continue;
-                    double density = 40-sqrt(xt*xt+yt*yt+zt*zt);
-                    double mu = 64.0;
+                    double density = 40-sqrt(xt*xt+yt*yt+zt*zt)*2;
+                    double mu = 128.0;
                     density += sample1.sample(xt/(mu*3),yt/(mu*3),zt/(mu*3))*3;
                     density += sample2.sample(xt/(mu*6),yt/(mu*6),zt/(mu*6))*6;
                     density += sample3.sample(xt/(mu*12),yt/(mu*12),zt/(mu*12))*12;

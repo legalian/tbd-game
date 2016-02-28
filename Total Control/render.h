@@ -62,10 +62,10 @@ public:
 };
 class GeomTerrain : public Geom {
 private:
-    std::vector<unsigned int> indexed_reference;
+    std::vector<uint8_t> indexed_reference;
 public:
     GLuint referencebuffer;
-    void addReference(unsigned int);
+    void addReference(uint8_t);
     void bake();
     void unbake();
     

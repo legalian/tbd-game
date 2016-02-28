@@ -21,8 +21,7 @@ class Environment;
 class OctreePortion;
 
 #define RANDSIZE 64
-
-#define CHSIZE 128
+#define CHSIZE 256
 
 class NoiseVolume {
 private:

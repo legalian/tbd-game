@@ -20,8 +20,9 @@
 
 //#include "boost/interprocess/sync/interprocess_mutex.hpp"
 
-#define CHSIZE 128
-#define CHPOWER  7
+#define CHSIZE 256
+#define CHPOWER  8
+#define SCALE .5
 
 inline int MOD(int,int);
 inline int TRUNC_DIV(int,int);
@@ -40,23 +41,34 @@ typedef struct Location {
 } Location;
 
 struct OctreeSegment {
-    OctreeSegment(int (*)[CHSIZE][CHSIZE],int,int,int,int);
-    OctreeSegment();
-    unsigned int fillvalue;
-    bool isfilled;
+    static OctreeSegment* makeOctree(int (*)[CHSIZE][CHSIZE],int,int,int,int);
+    static OctreeSegment* makeOctree(std::istream&);
+//    bool isfilled;
+    virtual uint8_t getser(const int&,const int&,int const&);
+    virtual bool uniqueat(const int&,const int&,int const&,int const&);
+    virtual void savetofile(std::ostream&);
+};
+struct OctreeLeaf : OctreeSegment {
+    uint8_t fillvalue;
+    
+    uint8_t getser(const int&,const int&,int const&) override;
+    bool uniqueat(const int&,const int&,int const&,int const&) override;
+    void savetofile(std::ostream&) override;
+};
+struct OctreeBranch : OctreeSegment {
     OctreeSegment* subdivisions[2][2][2];
-    unsigned int getser(const int&,const int&,int const&);
-    bool uniqueat(const int&,const int&,int const&,int const&);
-    void savetofile(std::ostream&);
-    OctreeSegment(std::istream&);
+    
+    uint8_t getser(const int&,const int&,int const&) override;
+    bool uniqueat(const int&,const int&,int const&,int const&) override;
+    void savetofile(std::ostream&) override;
 };
 class OctreePortion {
 public:
     int lod = 0;
-    OctreeSegment data;
+    OctreeSegment* data;
     OctreePortion(int (*)[CHSIZE][CHSIZE]);
     OctreePortion(std::string);
-    unsigned int getAt(int,int,int);
+    uint8_t getAt(int,int,int);
     std::pair<Location,Location> voxbounds();
     bool tryvox();
     bool uniqueat(int,int,int);
@@ -77,8 +89,8 @@ public:
     std::map<Location,OctreePortion*> portions;
     std::map<Location,GeomTerrain> geoms;
     GeomTerrain* createOrGet(Location);
-    unsigned int getAt(int,int,int);
-    unsigned int getLodAt(int,int,int);
+    uint8_t getAt(int,int,int);
+    int getLodAt(int,int,int);
     bool existsAt(int,int,int);
     void refreshqueue();
 //    void sortqueue(glm::vec4 position);
@@ -97,6 +109,6 @@ public:
 };
 
 void MarchCube(int,int,int,GLfloat*,std::vector<glm::vec3>&);
-void SolidCube(int,int,int,GLfloat*,std::vector<glm::vec3>&);
+void SolidCube(int,int,int,bool*,std::vector<glm::vec3>&);
 
 #endif /* defined(__Total_Control__vox__) */

@@ -93,7 +93,7 @@ void GeomVNC::unbake(){
     glDeleteBuffers(1, &colorbuffer);
     glDeleteBuffers(1, &normalbuffer);
 }
-void GeomTerrain::addReference(unsigned int a) {
+void GeomTerrain::addReference(uint8_t a) {
     indexed_reference.push_back(a);
 }
 void GeomTerrain::bake(){
@@ -109,7 +109,7 @@ void GeomTerrain::bake(){
     
     glGenBuffers(1, &referencebuffer);
     glBindBuffer(GL_ARRAY_BUFFER, referencebuffer);
-    glBufferData(GL_ARRAY_BUFFER, indexed_reference.size() * sizeof(unsigned int), &indexed_reference[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, indexed_reference.size() * sizeof(uint8_t), &indexed_reference[0], GL_STATIC_DRAW);
 }
 void GeomTerrain::unbake(){
     glDeleteBuffers(1, &vertexbuffer);
