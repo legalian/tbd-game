@@ -44,32 +44,56 @@ bool operator== (const Location& l, const Location& r) {
     return true;
 }
 
+//std::pair<Location,Location> OctreePortion::voxbounds() {
+//    return std::pair<Location,Location>(Location(0,0,0),(Location(CHSIZE-1,CHSIZE-1,CHSIZE-1)));
+//}
 
-std::pair<Location,Location> OctreePortion::voxbounds() {
-    return std::pair<Location,Location>(Location(0,0,0),(Location(CHSIZE-1,CHSIZE-1,CHSIZE-1)));
-}
+void OctreeSegment::setxcon(int x, int y, int z, const edgedat &edge) {throw;}
+void OctreeSegment::setycon(int x, int y, int z, const edgedat &edge) {throw;}
+void OctreeSegment::setzcon(int x, int y, int z, const edgedat &edge) {throw;}
+edgedat OctreeSegment::getxcon(int x, int y, int z) {throw;}
+edgedat OctreeSegment::getycon(int x, int y, int z) {throw;}
+edgedat OctreeSegment::getzcon(int x, int y, int z) {throw;}
+void OctreeSegment::savetofile(std::ostream &file) {throw;}
+uint8_t OctreeSegment::getser(const int& x,const int& y,const int& z) {throw;}
+bool OctreeSegment::uniqueat(const int& x,const int& y,const int& z,const int& recur) {throw;}
 
-bool OctreePortion::tryvox() {
-    return true;
-}
+void OctreeBranch::setxcon(int x, int y, int z, const edgedat &edge) { subdivisions[x&1][y&1][z&1]->setxcon(x>>1,y>>1,z>>1,edge); }
+void OctreeBranch::setycon(int x, int y, int z, const edgedat &edge) { subdivisions[x&1][y&1][z&1]->setycon(x>>1,y>>1,z>>1,edge); }
+void OctreeBranch::setzcon(int x, int y, int z, const edgedat &edge) { subdivisions[x&1][y&1][z&1]->setzcon(x>>1,y>>1,z>>1,edge); }
+edgedat OctreeBranch::getxcon(int x, int y, int z) { return subdivisions[x&1][y&1][z&1]->getxcon(x>>1,y>>1,z>>1); }
+edgedat OctreeBranch::getycon(int x, int y, int z) { return subdivisions[x&1][y&1][z&1]->getycon(x>>1,y>>1,z>>1); }
+edgedat OctreeBranch::getzcon(int x, int y, int z) { return subdivisions[x&1][y&1][z&1]->getzcon(x>>1,y>>1,z>>1); }
+uint8_t OctreeBranch::getser(const int& x,const int& y,const int& z) { return subdivisions[x&1][y&1][z&1]->getser(x>>1,y>>1,z>>1); }
+bool OctreeBranch::uniqueat(const int& x,const int& y,const int& z,const int& recur) { return subdivisions[x&1][y&1][z&1]->uniqueat(x>>1,y>>1,z>>1,recur-1); }
 
-uint8_t OctreeSegment::getser(const int& x,const int& y,const int& z) {throw; return 0;}
-uint8_t OctreeLeaf::getser(const int& x,const int& y,const int& z) {
-    return fillvalue;
-}
-uint8_t OctreeBranch::getser(const int& x,const int& y,const int& z) {
-    return subdivisions[(x&1)][(y&1)][(z&1)]->getser(x>>1,y>>1,z>>1);
-}
-bool OctreeSegment::uniqueat(const int& x,const int& y,const int& z,const int& recur) {throw; return false;}
+
+
+void OctreeLeaf::setxcon(int x, int y, int z, const edgedat &edge) { xplane[y][z] = edge; }
+void OctreeLeaf::setycon(int x, int y, int z, const edgedat &edge) { yplane[x][z] = edge; }
+void OctreeLeaf::setzcon(int x, int y, int z, const edgedat &edge) { zplane[y][z] = edge; }
+edgedat OctreeLeaf::getxcon(int x, int y, int z) { return xplane[y][z]; }
+edgedat OctreeLeaf::getycon(int x, int y, int z) { return yplane[x][z]; }
+edgedat OctreeLeaf::getzcon(int x, int y, int z) { return zplane[x][y]; }
+uint8_t OctreeLeaf::getser(const int& x,const int& y,const int& z) { return fillvalue; }
 bool OctreeLeaf::uniqueat(const int& x,const int& y,const int& z,const int& recur) {
     return (x==((1<<recur)-1) or y==((1<<recur)-1) or z==((1<<recur)-1));
 }
-bool OctreeBranch::uniqueat(const int& x,const int& y,const int& z,const int& recur) {
-    return subdivisions[(x&1)][(y&1)][(z&1)]->uniqueat(x>>1,y>>1,z>>1,recur-1);
+
+
+OctreeLeaf::OctreeLeaf(int recur) {
+    xplane = new edgedat*[recur];
+    yplane = new edgedat*[recur];
+    zplane = new edgedat*[recur];
+    for (int i = 0;i<recur;i++) {
+        xplane[i] = new edgedat[recur];
+        yplane[i] = new edgedat[recur];
+        zplane[i] = new edgedat[recur];
+    }
 }
 
 
-void OctreeSegment::savetofile(std::ostream &file) {throw;return;}
+
 void OctreeLeaf::savetofile(std::ostream &file) {
     bool aug = true;
     file.write((char*)&aug,sizeof(bool));
@@ -86,25 +110,25 @@ void OctreeBranch::savetofile(std::ostream &file) {
     subdivisions[1][0][1]->savetofile(file);
     subdivisions[0][1][1]->savetofile(file);
     subdivisions[1][1][1]->savetofile(file);
-    
 }
-OctreeSegment* OctreeSegment::makeOctree(std::istream &file) {
+
+OctreeSegment* OctreeSegment::makeOctree(std::istream &file,int recur) {
     bool isfilled;
     file.read((char*)&isfilled,sizeof(bool));
     if (isfilled) {
-        OctreeLeaf* node = new OctreeLeaf();
+        OctreeLeaf* node = new OctreeLeaf(recur);
         file.read((char*)&(node->fillvalue),sizeof(uint8_t));
         return node;
     } else {
         OctreeBranch* node = new OctreeBranch();
-        node->subdivisions[0][0][0] = OctreeSegment::makeOctree(file);
-        node->subdivisions[1][0][0] = OctreeSegment::makeOctree(file);
-        node->subdivisions[0][1][0] = OctreeSegment::makeOctree(file);
-        node->subdivisions[1][1][0] = OctreeSegment::makeOctree(file);
-        node->subdivisions[0][0][1] = OctreeSegment::makeOctree(file);
-        node->subdivisions[1][0][1] = OctreeSegment::makeOctree(file);
-        node->subdivisions[0][1][1] = OctreeSegment::makeOctree(file);
-        node->subdivisions[1][1][1] = OctreeSegment::makeOctree(file);
+        node->subdivisions[0][0][0] = OctreeSegment::makeOctree(file,recur-1);
+        node->subdivisions[1][0][0] = OctreeSegment::makeOctree(file,recur-1);
+        node->subdivisions[0][1][0] = OctreeSegment::makeOctree(file,recur-1);
+        node->subdivisions[1][1][0] = OctreeSegment::makeOctree(file,recur-1);
+        node->subdivisions[0][0][1] = OctreeSegment::makeOctree(file,recur-1);
+        node->subdivisions[1][0][1] = OctreeSegment::makeOctree(file,recur-1);
+        node->subdivisions[0][1][1] = OctreeSegment::makeOctree(file,recur-1);
+        node->subdivisions[1][1][1] = OctreeSegment::makeOctree(file,recur-1);
         return node;
     }
 }
@@ -115,18 +139,18 @@ void OctreePortion::save(std::string filename) {
 }
 OctreePortion::OctreePortion(std::string filename) {
     std::ifstream myFile(filename, std::ios::in | std::ios::binary);
-    data = OctreeSegment::makeOctree(myFile);
+    data = OctreeSegment::makeOctree(myFile,CHPOWER);
     myFile.close();
 }
 
 
-OctreePortion::OctreePortion(int (*dat)[CHSIZE][CHSIZE]) : data(OctreeSegment::makeOctree(dat,CHPOWER,0,0,0)) {
-    
-}
-OctreeSegment* OctreeSegment::makeOctree(int (*dat)[CHSIZE][CHSIZE],int recur,int xoff,int yoff, int zoff) {
+OctreePortion::OctreePortion(uint8_t (*dat)[CHSIZE][CHSIZE]) :
+    data(OctreeSegment::makeOctree(dat,CHPOWER,0,0,0)) {}
+
+OctreeSegment* OctreeSegment::makeOctree(uint8_t (*dat)[CHSIZE][CHSIZE],int recur,int xoff,int yoff, int zoff) {
     uint8_t fillvalue = dat[xoff][yoff][zoff];
     if (recur==0) {
-        OctreeLeaf* node = new OctreeLeaf();
+        OctreeLeaf* node = new OctreeLeaf(recur);
         node->fillvalue = fillvalue;
         return node;
     }
@@ -135,21 +159,21 @@ OctreeSegment* OctreeSegment::makeOctree(int (*dat)[CHSIZE][CHSIZE],int recur,in
             for (int z=zoff;z<zoff+(1<<recur);z++) {
                 if (dat[x][y][z] != fillvalue) {
                     OctreeBranch* node = new OctreeBranch();
-                    int nrc = recur-1;
-                    node->subdivisions[0][0][0] = OctreeSegment::makeOctree(dat,nrc,xoff,yoff,zoff);
-                    node->subdivisions[1][0][0] = OctreeSegment::makeOctree(dat,nrc,xoff+(1<<nrc),yoff,zoff);
-                    node->subdivisions[0][1][0] = OctreeSegment::makeOctree(dat,nrc,xoff,yoff+(1<<nrc),zoff);
-                    node->subdivisions[1][1][0] = OctreeSegment::makeOctree(dat,nrc,xoff+(1<<nrc),yoff+(1<<nrc),zoff);
-                    node->subdivisions[0][0][1] = OctreeSegment::makeOctree(dat,nrc,xoff,yoff,zoff+(1<<nrc));
-                    node->subdivisions[1][0][1] = OctreeSegment::makeOctree(dat,nrc,xoff+(1<<nrc),yoff,zoff+(1<<nrc));
-                    node->subdivisions[0][1][1] = OctreeSegment::makeOctree(dat,nrc,xoff,yoff+(1<<nrc),zoff+(1<<nrc));
-                    node->subdivisions[1][1][1] = OctreeSegment::makeOctree(dat,nrc,xoff+(1<<nrc),yoff+(1<<nrc),zoff+(1<<nrc));
+                    int nrc = 1<<(recur-1);
+                    node->subdivisions[0][0][0] = OctreeSegment::makeOctree(dat,recur-1,xoff,yoff,zoff);
+                    node->subdivisions[1][0][0] = OctreeSegment::makeOctree(dat,recur-1,xoff+nrc,yoff,zoff);
+                    node->subdivisions[0][1][0] = OctreeSegment::makeOctree(dat,recur-1,xoff,yoff+nrc,zoff);
+                    node->subdivisions[1][1][0] = OctreeSegment::makeOctree(dat,recur-1,xoff+nrc,yoff+nrc,zoff);
+                    node->subdivisions[0][0][1] = OctreeSegment::makeOctree(dat,recur-1,xoff,yoff,zoff+nrc);
+                    node->subdivisions[1][0][1] = OctreeSegment::makeOctree(dat,recur-1,xoff+nrc,yoff,zoff+nrc);
+                    node->subdivisions[0][1][1] = OctreeSegment::makeOctree(dat,recur-1,xoff,yoff+nrc,zoff+nrc);
+                    node->subdivisions[1][1][1] = OctreeSegment::makeOctree(dat,recur-1,xoff+nrc,yoff+nrc,zoff+nrc);
                     return node;
                 }
             }
         }
     }
-    OctreeLeaf* node = new OctreeLeaf();
+    OctreeLeaf* node = new OctreeLeaf(recur);
     node->fillvalue = fillvalue;
     return node;
 }
@@ -158,19 +182,28 @@ uint8_t OctreePortion::getAt(int x, int y, int z) {
 //    return data.getser(x,y,z);
 }
 bool OctreePortion::uniqueat(int x, int y, int z) {
+//    std::cout<<
     return data->uniqueat(flipbits(x),flipbits(y),flipbits(z),CHPOWER);
 }
 int OctreePortion::flipbits(int f) {
     int k = 0;
-    k|=(f&1)<<7;
-    k|=(f&2)<<5;
-    k|=(f&4)<<3;
-    k|=(f&8)<<1;
-    k|=(f&16)>>1;
-    k|=(f&32)>>3;
-    k|=(f&64)>>5;
-    k|=(f&128)>>7;
-    if (f&256) {throw;}
+    k|=(f&1)<<6;
+    k|=(f&2)<<4;
+    k|=(f&4)<<2;
+    k|=(f&8);
+    k|=(f&16)>>2;
+    k|=(f&32)>>4;
+    k|=(f&64)>>6;
+    if (f&128) {throw;}
+//    k|=(f&1)<<7;
+//    k|=(f&2)<<5;
+//    k|=(f&4)<<3;
+//    k|=(f&8)<<1;
+//    k|=(f&16)>>1;
+//    k|=(f&32)>>3;
+//    k|=(f&64)>>5;
+//    k|=(f&128)>>7;
+//    if (f&256) {throw;}
     return k;
 }
 
@@ -267,7 +300,7 @@ void Structure::load(Location po,Generator* resource) {
     }
     //    delete myportion;
     voxPortion(po);
-    voxSnippets(po);
+//    voxSnippets(po);
 }
 void Structure::voxSnippets(Location po) {
 //    std::cout<<portion.x<<","<<portion.y<<","<<portion.z<<"\n";
@@ -357,16 +390,16 @@ void Structure::voxSnippets(Location po) {
 }
 
 void Structure::voxPortion(Location portion) {
-    if (!portions[portion]->tryvox()) {return;}
+//    if (!portions[portion]->tryvox()) {return;}
     GeomTerrain geom;
     GLfloat afCubeValue[8];
     bool scCubeValue[8];
     //    std::vector<glm::vec3> triangles;
     OctreePortion* samddpler = portions[portion];
-    std::pair<Location,Location> bounds = portions[portion]->voxbounds();
-    for (int xi=bounds.first.x;xi<bounds.second.x;xi++) {
-        for (int yi=bounds.first.y;yi<bounds.second.y;yi++) {
-            for (int zi=bounds.first.z;zi<bounds.second.z;zi++) {
+//    std::pair<Location,Location> bounds = portions[portion]->voxbounds();
+    for (int xi=0;xi<CHSIZE-1;xi++) {
+        for (int yi=0;yi<CHSIZE-1;yi++) {
+            for (int zi=0;zi<CHSIZE-1;zi++) {
                 int xt = portion.x*CHSIZE+xi;
                 int yt = portion.y*CHSIZE+yi;
                 int zt = portion.z*CHSIZE+zi;

@@ -26,8 +26,9 @@ void Generator::firstdump() {
 }
 OctreePortion* Generator::terrain_update(Structure* target,Location po) {
 //    DetailedPortion* myportion = new DetailedPortion();
-//    int*** = new int[CHSIZE][CHSIZE][CHSIZE];
-    int (*data)[CHSIZE][CHSIZE] = new int[CHSIZE][CHSIZE][CHSIZE];
+    //    int*** = new int[CHSIZE][CHSIZE][CHSIZE];
+    float prepass[CHSIZE][CHSIZE][CHSIZE];
+    uint8_t data[CHSIZE][CHSIZE][CHSIZE];
     
     for (int xi=0;xi<CHSIZE;xi++) {
         for (int yi=0;yi<CHSIZE;yi++) {
@@ -36,178 +37,104 @@ OctreePortion* Generator::terrain_update(Structure* target,Location po) {
                 int yt = po.y*CHSIZE+yi;
                 int zt = po.z*CHSIZE+zi;
                 if (target->structureid == "mainland") {
-//                    if ((xi==0 or yi==0 or zi==0) and ((xt+yt+zt)%10==0)) {
-//                        myportion->data[xi][yi][zi] = 3;
-//                    }
-//                    continue;
-    //                if ((MOD(xt,11)<4)and(MOD(yt,11)<4)and(MOD(zt,11)<4)) {
-    //                    if (MOD(xt+yt+zt,2)==1) {
-    //                        myportion->data[xi][yi][zi] = 5;
-    //                    } else {
-    //                        myportion->data[xi][yi][zi] = 4;
-    //                    }
-    //                    continue;
-    //                }
-    //                continue;
-                    double density = -yt/2.0;
-                    double mu = 128.0;
-//                    density += sample1.sample(xt/(mu*1.5),yt/(mu*1.5),zt/(mu*1.5))*1.5;
-                    density += sample1.sample(xt/(mu*3),yt/(mu*3),zt/(mu*3))*3;
-                    density += sample2.sample(xt/(mu*6),yt/(mu*6),zt/(mu*6))*6;
-                    density += sample3.sample(xt/(mu*12),yt/(mu*12),zt/(mu*12))*12;
-                    density += sample1.sample(xt/(mu*24),yt/(mu*24),zt/(mu*24))*24;
-                    density += sample2.sample(xt/(mu*48),yt/(mu*48),zt/(mu*48))*48;
-                    density += sample3.sample(xt/(mu*72),yt/(mu*72),zt/(mu*72))*72;
-                    density += sample3.sample(xt/(mu*148),yt/(mu*148),zt/(mu*148))*148;
-                    density -= 32*(TRUNC_DIV(yt/2.0,32));
-                    double scale = 1.5;
-                    if (density>scale) {
-                        data[xi][yi][zi] = 3;
-                    } else if (density>(scale/2.0)) {
-                        data[xi][yi][zi] = 2;
-                    } else if (density>0) {
-                        data[xi][yi][zi] = 1;
-                    } else {
-                        data[xi][yi][zi] = 0;
-                    }
-                    
-    //                if (xt*xt+zt*zt>yt*yt*2) {
-    //                    myportion->data[xi][yi][zi] = 1;
-    //                } else {
-    //                    myportion->data[xi][yi][zi] = 0;
-    //                }
+                    prepass[xi][yi][zi] = worsample.sample(xt,yt,zt);
+                    data[xi][yi][zi] = worsample.index(prepass[xi][yi][zi]);
                 }
                 else if (target->structureid == "spinnyrock") {
-//                                        if ((xi==0 or yi==0 or zi==0) and ((xt+yt+zt)%10==0)) {
-//                                            myportion->data[xi][yi][zi] = 3;
-//                                        }
-//                                        continue;
-                    double density = 40-sqrt(xt*xt+yt*yt+zt*zt)*2;
-                    double mu = 128.0;
-                    density += sample1.sample(xt/(mu*3),yt/(mu*3),zt/(mu*3))*3;
-                    density += sample2.sample(xt/(mu*6),yt/(mu*6),zt/(mu*6))*6;
-                    density += sample3.sample(xt/(mu*12),yt/(mu*12),zt/(mu*12))*12;
-                    density += sample1.sample(xt/(mu*24),yt/(mu*24),zt/(mu*24))*24;
-//                    density += sample2.sample(xt/(mu*48),yt/(mu*48),zt/(mu*48))*48;
-//                    density += sample3.sample(xt/(mu*72),yt/(mu*72),zt/(mu*72))*72;
-//                    density += sample3.sample(xt/(mu*148),yt/(mu*148),zt/(mu*148))*148;
-//                    density -= 32*(TRUNC_DIV(yt,32));
-                    //oesguh
-                    double scale = 3;
-                    if (density>scale) {
-                        data[xi][yi][zi] = 3;
-                    } else if (density>(scale/2.0)) {
-                        data[xi][yi][zi] = 2;
-                    } else if (density>0) {
-                        data[xi][yi][zi] = 1;
-                    } else {
-                        data[xi][yi][zi] = 0;
-                    }
+                    prepass[xi][yi][zi] = metsample.sample(xt,yt,zt);
+                    data[xi][yi][zi] = metsample.index(prepass[xi][yi][zi]);
                     
                 }
                 
             }
         }
     }
+    
+    
     std::string filename = "structures/"+target->structureid+po.tostring()+".str";
-
-    return makeportion(filename,data);
-}
-
-
-OctreePortion* Generator::makeportion(std::string filename,int (*dat)[CHSIZE][CHSIZE]) {
-//    OctreePortion builder = OctreePortion(dat);
-    OctreePortion* toreturn = new OctreePortion(dat);
-    delete[] dat;
+    OctreePortion toreturn = OctreePortion(data);
+    for (int xi=0;xi<CHSIZE-1;xi++) {
+        for (int yi=0;yi<CHSIZE-1;yi++) {
+            for (int zi=0;zi<CHSIZE-1;zi++) {
+                if (data[xi][yi][zi]!=data[xi+1][yi][zi]) {
+                    
+                    toreturn.data->setxcon(xi,yi,zi,
+                                           edgedat(prepass[xi][yi][zi]/(prepass[xi][yi][zi]-prepass[xi+1][yi][zi]),
+                                                   
+                                                   ));
+                    
+                }
+                if (data[xi][yi][zi]!=data[xi][yi+1][zi]) {
+                    (prepass[xi][yi][zi]/(prepass[xi][yi][zi]-prepass[xi+1][yi][zi]));
+                    
+                }
+                if (data[xi][yi][zi]!=data[xi][yi][zi+1]) {
+                    (prepass[xi][yi][zi]/(prepass[xi][yi][zi]-prepass[xi+1][yi][zi]));
+                    
+                }
+            }
+        }
+    }
     return toreturn;
-//    ComplexPortion* tenguess = new ComplexPortion();
-//    tenguess->defaults[0] = dat[0][0][0];
-//    tenguess->defaults[1] = dat[0][0][0];
-//    tenguess->defaults[2] = dat[0][0][0];
-//    tenguess->defaults[3] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
-//    tenguess->defaults[4] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
-//    tenguess->defaults[5] = dat[CHSIZE-1][CHSIZE-1][CHSIZE-1];
-//    bool solidsofar[] = {true,true,true,true,true,true};
-//    for (int z=0;z<CHSIZE;z++) {
-//        for (int x=0;x<CHSIZE;x++) {
-//            for (int y=0;y<CHSIZE;y++) {
-//                if (dat[z][x][y]!=tenguess->defaults[0]) {
-//                    if (solidsofar[0]) {
-//                        tenguess->depths[0] = z;
-//                    }
-//                    solidsofar[0] = false;
-//                }
-//                if (dat[x][z][y]!=tenguess->defaults[1]) {
-//                    if (solidsofar[1]) {
-//                        tenguess->depths[1] = z;
-//                    }
-//                    solidsofar[1] = false;
-//                }
-//                if (dat[x][y][z]!=tenguess->defaults[2]) {
-//                    if (solidsofar[2]) {
-//                        tenguess->depths[2] = z;
-//                    }
-//                    solidsofar[2] = false;
-//                }
-//                if (dat[CHSIZE-1-z][x][y]!=tenguess->defaults[3]) {
-//                    if (solidsofar[3]) {
-//                        tenguess->depths[3] = CHSIZE-1-z;
-//                    }
-//                    solidsofar[3] = false;
-//                }
-//                if (dat[x][CHSIZE-1-z][y]!=tenguess->defaults[4]) {
-//                    if (solidsofar[4]) {
-//                        tenguess->depths[4] = CHSIZE-1-z;
-//                    }
-//                    solidsofar[4] = false;
-//                }
-//                if (dat[x][y][CHSIZE-1-z]!=tenguess->defaults[5]) {
-//                    if (solidsofar[5]) {
-//                        tenguess->depths[5] = CHSIZE-1-z;
-//                    }
-//                    solidsofar[5] = false;
-//                }
-//            }
-//        }
-//    }
-//    std::ofstream myFile(filename, std::ios::out | std::ios::binary);
-//    if (solidsofar[0]) {
-//        int solidId = dat[0][0][0];
-//        char info[1] = {'s'};
-//        myFile.write(info,1);
-//        myFile.write((char*)&solidId,sizeof(unsigned int));
-//        delete tenguess;
-//        delete[] dat;
-//        myFile.close();
-//        return PortionPointer(new SolidPortion(solidId));
-//    } else if (false) {
-//        //            portions.insert(std::pair<Location,PortionPointer>(po,PortionPointer(new DetailedPortion(dat))));
-//        //            char info[1] = {'d'};
-//        //            myFile.write(info,1);
-//        //            myFile.write((char*)dat,sizeof(unsigned int)*CHSIZE*CHSIZE*CHSIZE);
-//    } else {
-//        char info[1] = {'c'};
-//        myFile.write(info,1);
-//        myFile.write((char*)tenguess->defaults,sizeof(unsigned int)*6);
-//        myFile.write((char*)tenguess->depths,sizeof(int)*6);
-//        int size = (1+tenguess->depths[3]-tenguess->depths[0])*(1+tenguess->depths[4]-tenguess->depths[1])*(1+tenguess->depths[5]-tenguess->depths[2]);
-//        tenguess->data = new unsigned int[size];
-//        int index=0;
-//        for (int z = tenguess->depths[2];z<=tenguess->depths[5];z++) {
-//            for (int y = tenguess->depths[1];y<=tenguess->depths[4];y++) {
-//                for (int x = tenguess->depths[0];x<=tenguess->depths[3];x++) {
-//                    tenguess->data[index] = dat[x][y][z];
-//                    index++;
-//                }
-//            }
-//        }
-//        myFile.write((char*)(tenguess->data),sizeof(unsigned int)*size);
-//        delete[] dat;
-//        myFile.close();
-//        return PortionPointer(tenguess);
-//    }
 
+//    return makeportion(filename,data);
 }
+
+
+
+FeatureEngine::FeatureEngine(NoiseVolume* nya,NoiseVolume* nyu, NoiseVolume* nyo) {
+    sample1 = nya;
+    sample2 = nyu;
+    sample3 = nyo;
+}
+MeteorEngine::MeteorEngine(NoiseVolume* nya,NoiseVolume* nyu, NoiseVolume* nyo) : FeatureEngine(nya,nyu,nyo) {}
+WorldEngine::WorldEngine(NoiseVolume* nya,NoiseVolume* nyu, NoiseVolume* nyo) : FeatureEngine(nya,nyu,nyo) {}
+
+float FeatureEngine::sample(float x, float y, float z) {throw;}
+uint8_t FeatureEngine::index(float density) {throw;}
+
+float WorldEngine::sample(float x, float y, float z) {
+    float density = -y/2.0;
+    const float mu = 128.0;
+    density += sample1->sample(x/(mu*3),y/(mu*3),z/(mu*3))*3;
+    density += sample2->sample(x/(mu*6),y/(mu*6),z/(mu*6))*6;
+    density += sample3->sample(x/(mu*12),y/(mu*12),z/(mu*12))*12;
+    density += sample1->sample(x/(mu*24),y/(mu*24),z/(mu*24))*24;
+    density += sample2->sample(x/(mu*48),y/(mu*48),z/(mu*48))*48;
+    density += sample3->sample(x/(mu*72),y/(mu*72),z/(mu*72))*72;
+    density += sample3->sample(x/(mu*148),y/(mu*148),z/(mu*148))*148;
+    density -= 32*(TRUNC_DIV(y/2.0,32));
+    return density;
+    
+}
+uint8_t WorldEngine::index(float density) {
+    if (density>0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+float MeteorEngine::sample(float x, float y, float z) {
+    float density = 80-sqrt(x*x+y*y+z*z)*2;
+    const float mu = 128.0;
+    density += sample1->sample(x/(mu*3),y/(mu*3),z/(mu*3))*3;
+    density += sample2->sample(x/(mu*6),y/(mu*6),z/(mu*6))*6;
+    density += sample3->sample(x/(mu*12),y/(mu*12),z/(mu*12))*12;
+    density += sample1->sample(x/(mu*24),y/(mu*24),z/(mu*24))*24;
+    return density;
+    
+}
+uint8_t MeteorEngine::index(float density) {
+    if (density>0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+
 
 
 //double NoiseVolume::interp(float &x, float &y, float &a) {

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5BB0FACF1B89F93D005050AB /* meshingalgs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BB0FACD1B89F93D005050AB /* meshingalgs.cpp */; };
+		5BD28F4E1C84960200B84035 /* octree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD28F4C1C84960200B84035 /* octree.cpp */; };
 		5BD5E8761C35A464008DECC6 /* lookuptables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD5E8741C35A464008DECC6 /* lookuptables.cpp */; };
 		5BD5E87C1C41DE42008DECC6 /* environment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD5E87A1C41DE42008DECC6 /* environment.cpp */; };
 		5BD5E87F1C4AF52F008DECC6 /* generators.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD5E87D1C4AF52F008DECC6 /* generators.cpp */; };
@@ -37,6 +38,8 @@
 		5BB0FACA1B88C5B0005050AB /* shaders */ = {isa = PBXFileReference; lastKnownFileType = folder; path = shaders; sourceTree = "<group>"; };
 		5BB0FACD1B89F93D005050AB /* meshingalgs.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = meshingalgs.cpp; sourceTree = "<group>"; };
 		5BB0FACE1B89F93D005050AB /* meshingalgs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = meshingalgs.h; sourceTree = "<group>"; };
+		5BD28F4C1C84960200B84035 /* octree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octree.cpp; sourceTree = "<group>"; };
+		5BD28F4D1C84960200B84035 /* octree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = octree.h; sourceTree = "<group>"; };
 		5BD5E8741C35A464008DECC6 /* lookuptables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = lookuptables.cpp; sourceTree = "<group>"; };
 		5BD5E8751C35A464008DECC6 /* lookuptables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lookuptables.h; sourceTree = "<group>"; };
 		5BD5E87A1C41DE42008DECC6 /* environment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = environment.cpp; sourceTree = "<group>"; };
@@ -106,6 +109,8 @@
 				5BD5E87E1C4AF52F008DECC6 /* generators.h */,
 				5BDA34461C1E2F7B000CF569 /* render.cpp */,
 				5BDA34491C285EBE000CF569 /* vox.cpp */,
+				5BD28F4C1C84960200B84035 /* octree.cpp */,
+				5BD28F4D1C84960200B84035 /* octree.h */,
 				5BD5E8751C35A464008DECC6 /* lookuptables.h */,
 				5BD5E8741C35A464008DECC6 /* lookuptables.cpp */,
 				5BDA344A1C285EBE000CF569 /* vox.h */,
@@ -183,6 +188,7 @@
 				5BD5E8761C35A464008DECC6 /* lookuptables.cpp in Sources */,
 				5BDA344B1C285EBE000CF569 /* vox.cpp in Sources */,
 				5BD5E87F1C4AF52F008DECC6 /* generators.cpp in Sources */,
+				5BD28F4E1C84960200B84035 /* octree.cpp in Sources */,
 				5BB0FACF1B89F93D005050AB /* meshingalgs.cpp in Sources */,
 				5BDE05B71B718D5B00202240 /* main.cpp in Sources */,
 			);

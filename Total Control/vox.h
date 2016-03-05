@@ -20,9 +20,9 @@
 
 //#include "boost/interprocess/sync/interprocess_mutex.hpp"
 
-#define CHSIZE 256
-#define CHPOWER  8
-#define SCALE .5
+#define CHSIZE 128
+#define CHPOWER  7
+#define SCALE 1
 
 inline int MOD(int,int);
 inline int TRUNC_DIV(int,int);
@@ -40,20 +40,47 @@ typedef struct Location {
     friend bool operator== (const Location& l, const Location& r);
 } Location;
 
+struct edgedat {
+    uint8_t t;
+    
+    uint8_t x;
+    uint8_t y;
+    uint8_t z;
+};
+
 struct OctreeSegment {
-    static OctreeSegment* makeOctree(int (*)[CHSIZE][CHSIZE],int,int,int,int);
-    static OctreeSegment* makeOctree(std::istream&);
+    static OctreeSegment* makeOctree(uint8_t (*)[CHSIZE][CHSIZE],int,int,int,int);
+    static OctreeSegment* makeOctree(std::istream&,int);
 //    bool isfilled;
     virtual uint8_t getser(const int&,const int&,int const&);
     virtual bool uniqueat(const int&,const int&,int const&,int const&);
     virtual void savetofile(std::ostream&);
+    virtual void setxcon(int,int,int,const edgedat&);
+    virtual void setycon(int,int,int,const edgedat&);
+    virtual void setzcon(int,int,int,const edgedat&);
+    virtual edgedat getxcon(int,int,int);
+    virtual edgedat getycon(int,int,int);
+    virtual edgedat getzcon(int,int,int);
+    
 };
 struct OctreeLeaf : OctreeSegment {
     uint8_t fillvalue;
+    edgedat** xplane;
+    edgedat** yplane;
+    edgedat** zplane;
+    
+    OctreeLeaf(int);
     
     uint8_t getser(const int&,const int&,int const&) override;
     bool uniqueat(const int&,const int&,int const&,int const&) override;
     void savetofile(std::ostream&) override;
+    
+    void setxcon(int,int,int,const edgedat&) override;
+    void setycon(int,int,int,const edgedat&) override;
+    void setzcon(int,int,int,const edgedat&) override;
+    edgedat getxcon(int,int,int) override;
+    edgedat getycon(int,int,int) override;
+    edgedat getzcon(int,int,int) override;
 };
 struct OctreeBranch : OctreeSegment {
     OctreeSegment* subdivisions[2][2][2];
@@ -61,16 +88,22 @@ struct OctreeBranch : OctreeSegment {
     uint8_t getser(const int&,const int&,int const&) override;
     bool uniqueat(const int&,const int&,int const&,int const&) override;
     void savetofile(std::ostream&) override;
+    
+    void setxcon(int,int,int,const edgedat&) override;
+    void setycon(int,int,int,const edgedat&) override;
+    void setzcon(int,int,int,const edgedat&) override;
+    edgedat getxcon(int,int,int) override;
+    edgedat getycon(int,int,int) override;
+    edgedat getzcon(int,int,int) override;
 };
 class OctreePortion {
 public:
     int lod = 0;
     OctreeSegment* data;
-    OctreePortion(int (*)[CHSIZE][CHSIZE]);
+    OctreePortion(uint8_t (*)[CHSIZE][CHSIZE]);
     OctreePortion(std::string);
     uint8_t getAt(int,int,int);
-    std::pair<Location,Location> voxbounds();
-    bool tryvox();
+//    std::pair<Location,Location> voxbounds();
     bool uniqueat(int,int,int);
     int flipbits(int);
     void save(std::string);
