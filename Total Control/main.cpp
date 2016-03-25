@@ -1,27 +1,28 @@
 //
 //  main.cpp
-//  Total Control
+//  Wasteland Kings
 //
 //  Created by Parker Lawrence on 8/4/15.
 //  Copyright (c) 2015 Parker Lawrence. All rights reserved.
 //
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <iostream>
 
 #include </usr/include/GL/glew.h>
 
-#include <GLFW/glfw3.h>
+#include <glfw3.h>
 GLFWwindow* window;
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
 
-#include "shader.h"
-#include "render.h"
-#include "vox.h"
 #include "environment.h"
+#include "renderterrain.h"
+#include "octree.h"
+#include "geometryoctree.h"
+#include "materials.h"
 
 #include <pthread.h>
 
@@ -72,14 +73,22 @@ void initialize(){
     glDepthFunc(GL_LESS);
 //    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     
+    extern int numberofmaterials;
+    extern ShaderTerrain* materials[];
+    for (int k=0;k<numberofmaterials;k++) {
+        if (materials[k]!=NULL) {
+            materials[k]->mountshaders();
+        }
+    }
+    
 }
 
 int main()
 {
     initialize();
     
-    ShaderVNC shader;
-    shader.mountshaders();
+//    ShaderVNC shader;
+//    shader.mountshaders();
     
 
     glm::mat4 Projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 1000.0f);
@@ -105,7 +114,7 @@ int main()
 //    }
 //    std::cout<<structure.geoms.size();
     
-    Environment envi;
+//    Environment envi;
     
     double x = 8;
     double y = 6;
@@ -120,26 +129,50 @@ int main()
     double lastFrameTime = lastTime;
     int nbFrames = 0;
     
-    Structure* meteor = envi.getStruct("spinnyrock");
+    glm::mat4 matrix = glm::mat4(1.0f);
+    Octree testworld;
+    GeometryOctree phys = GeometryOctree(matrix,testworld);
+    uint8_t test[CHSIZE+1][CHSIZE+1][CHSIZE+1];
+//    long alt = (((LONG_MAX/3)<<1)|1);
+    for (int x=0;x<CHSIZE+1;x++) {
+        for (int y=0;y<CHSIZE+1;y++) {
+            for (int z=0;z<CHSIZE+1;z++) {
+                if (12<x and x<17 and 12<y and y<17 and 12<z and z<17) {
+                    test[x][y][z] = 2;
+                } else {
+                    test[x][y][z] = 1;
+                }
+            }
+        }
+    }
+    testworld.loadportion(0,0,0,test);
+    for (int x=0;x<CHSIZE;x++) {
+        for (int y=0;y<CHSIZE;y++) {
+            for (int z=0;z<CHSIZE;z++) {
+                if (test[x][y][z] != test[x+1][y][z]) {
+                    testworld.conx(x,y,z) = Edgedat(1,0,0,1);
+                }
+                if (test[x][y][z] != test[x][y+1][z]) {
+                    testworld.cony(x,y,z) = Edgedat(0,1,0,1);
+                }
+                if (test[x][y][z] != test[x][y+1][z]) {
+                    testworld.conz(x,y,z) = Edgedat(0,0,1,1);
+                }
+            }
+        }
+    }
+    testworld.hermitify(0,0,0);
+    phys.manifest(0,0,0);
+    
+    extern glm::mat4 camera;
     
     do{
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         double currentTime = glfwGetTime();
-        envi.checkup();
-        envi.cluein(x,y,z);
-        meteorangle += .01;
-        glm::mat4 mat1 = glm::translate(glm::mat4(),glm::vec3(0,100,0));
-        glm::mat4 mat2 = glm::rotate(glm::mat4(1.0f),meteorangle,glm::vec3(1,1,1));
-//        glm::mat4 mat2 = glm::rotate(glm:
-    
-        meteor->transform = (mat1*mat2);
-//        float deltaTime = (float)(currentTime - lastFrameTime);
         lastFrameTime = currentTime;
         nbFrames++;
-        if ( currentTime - lastTime >= 1.0 ){ // If last prinf() was more than 1sec ago
-            // printf and reset
-//            printf("%f ms/frame\n", 1000.0/double(nbFrames));
+        if ( currentTime - lastTime >= 1.0 ){
             std::cout<<nbFrames<<" frames per second\n";
             nbFrames = 0;
             lastTime += 1.0;
@@ -150,16 +183,12 @@ int main()
                                            glm::vec3(x+cos(theta)*3,y-1,z+sin(theta)*3), // and looks at the origin
                                            glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
                                            );
+        camera = Projection*View;
         
+        phys.render();
+        renderall();
+//        std::cout<<x<<","<<y<<","<<z<<"\n";
         
-        //structure.refreshqueue(TRUNC_DIV(x,CHSIZE),TRUNC_DIV(y,CHSIZE),TRUNC_DIV(z,CHSIZE));
-        //globalqueue = structure.queue;
-        
-        shader.open();
-        shader.setcam(Projection*View);
-//        std::cout<<count<<"\n";
-        envi.draw(&shader);
-        shader.close();
         
 
         glfwSwapBuffers(window);
@@ -198,8 +227,10 @@ int main()
     }
     while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
     
-    shader.cleanup();
-    envi.cleanup();
+//    shader.cleanup();
+    //envi.cleanup();
+    
+    cleanup();
     
     
     glfwTerminate();

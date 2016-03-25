@@ -16,7 +16,7 @@
 
 #include </usr/include/GL/glew.h>
 
-#include <GLFW/glfw3.h>
+#include <glfw3.h>
 
 //GLint Result = GL_FALSE;
 //int InfoLogLength;
