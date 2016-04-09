@@ -7,6 +7,49 @@
 //
 
 #include "vox.h"
+
+EmptySampler Structure::emptysampler = EmptySampler();
+
+void Structure::updatequeue(double x, double y, double z) {
+    glm::vec4 epicenter = glm::inverse(transform)*glm::vec4(x,y,z,1);
+    Location newloc = Location((int)(epicenter.x/CHSIZE),(int)(epicenter.y/CHSIZE),(int)(epicenter.z/CHSIZE));
+    if (not (cameraloc==newloc)) {
+        cameraloc = newloc;
+        loadstage = 0;
+        queue.clear();
+    }
+//    std::cout<<"loadstage is "<<loadstage<<".\n";
+    while (queue.size()==0) {
+        for (int xi=newloc.x-loadstage;xi<=newloc.x+loadstage;xi++) {
+//            std::cout<<"x executed at "<<xi<<"\n";
+            if ((bounds.lx<=xi and xi<=bounds.ux) or !bounds.bounded) {
+                for (int yi=newloc.y-loadstage;yi<=newloc.y+loadstage;yi++) {
+//                    std::cout<<"y executed at "<<yi<<"\n";
+                    if ((bounds.ly<=yi and yi<=bounds.uy) or !bounds.bounded) {
+                        for (int zi=newloc.z-loadstage;zi<=newloc.z+loadstage;zi++) {
+//                            std::cout<<"z executed at "<<zi<<"\n";
+                            if ((bounds.lz<=zi and zi<=bounds.uz) or !bounds.bounded) {
+                                if (!visibleworld.existsat(xi,yi,zi)) {
+//                                    std::cout<<"added";
+                                    queue.push_back(Location(xi,yi,zi));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        loadstage++;
+    }
+}
+void Structure::attain(Location pos) {
+    //load if you can
+    source->populate(pos.x,pos.y,pos.z,world);
+    visibleworld.manifest(pos.x,pos.y,pos.z);
+}
+void Structure::render() {
+    visibleworld.render();
+}
 //#include "lookuptables.cpp"
 //
 //inline int MOD(int n,int m) {
@@ -15,34 +58,37 @@
 //inline int TRUNC_DIV(int n, int m) {
 //    return (n-MOD(n,m))/m;
 //}
-//Location::Location(int qx, int qy, int qz) {
-//    x = qx;
-//    y = qy;
-//    z = qz;
-//}
-//Location::Location() {
-//    x = 0;
-//    y = 0;
-//    z = 0;
-//}
-//std::string Location::tostring() const {
-//    return "["+std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)+"]";
-//}
-//bool operator< (const Location& l, const Location& r) {
-//    if (l.x<r.x) {return true;}
-//    if (l.x>r.x) {return false;}
-//    if (l.y<r.y) {return true;}
-//    if (l.y>r.y) {return false;}
-//    if (l.z<r.z) {return true;}
-//    if (l.z>r.z) {return false;}
-//    return false;
-//}
-//bool operator== (const Location& l, const Location& r) {
-//    if (l.x!=r.x) {return false;}
-//    if (l.y!=r.y) {return false;}
-//    if (l.z!=r.z) {return false;}
-//    return true;
-//}
+Location::Location(int qx, int qy, int qz) {
+    x = qx;
+    y = qy;
+    z = qz;
+}
+Location::Location() {
+    x = 0;
+    y = 0;
+    z = 0;
+}
+std::string Location::tostring() const {
+    return "["+std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)+"]";
+}
+bool operator< (const Location& l, const Location& r) {
+    if (l.x<r.x) {return true;}
+    if (l.x>r.x) {return false;}
+    if (l.y<r.y) {return true;}
+    if (l.y>r.y) {return false;}
+    if (l.z<r.z) {return true;}
+    if (l.z>r.z) {return false;}
+    return false;
+}
+bool operator== (const Location& l, const Location& r) {
+    if (l.x!=r.x) {return false;}
+    if (l.y!=r.y) {return false;}
+    if (l.z!=r.z) {return false;}
+    return true;
+}
+
+Bounds::Bounds(int xl,int xu,int yl, int yu, int zl, int zu) : lx(xl),ux(xu),ly(yl),uy(yu),lz(zl),uz(zu),bounded(true) {}
+Bounds::Bounds() : bounded(false) {}
 //
 ////std::pair<Location,Location> OctreePortion::voxbounds() {
 ////    return std::pair<Location,Location>(Location(0,0,0),(Location(CHSIZE-1,CHSIZE-1,CHSIZE-1)));

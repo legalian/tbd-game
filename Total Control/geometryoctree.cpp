@@ -10,13 +10,13 @@
 
 
 void GeometryOctreeSegment::render(const glm::mat4& matr) {throw;}
-void GeometryOctreeSegment::insertinto(long x,long y,long z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self) {
+void GeometryOctreeSegment::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self) {
     throw;
 }
-bool GeometryOctreeSegment::existsat(long x,long y,long z) {throw;}
+bool GeometryOctreeSegment::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 
 
-GeometryOctreeSegment::GeometryOctreeSegment(long i,long j,long k,int rec) : xs(i),ys(j),zs(k),recurs(rec) {}
+GeometryOctreeSegment::GeometryOctreeSegment(BlockLoc i,BlockLoc j,BlockLoc k,int rec) : xs(i),ys(j),zs(k),recurs(rec) {}
 
 bool GeometryOctreeSegment::checkbounds(const glm::mat4& matr) {
     return true;
@@ -25,7 +25,7 @@ GeometryOctreeBranch::GeometryOctreeBranch(GeometryOctreeSegment* a,GeometryOctr
                                            GeometryOctreeSegment* c,GeometryOctreeSegment* d,
                                            GeometryOctreeSegment* e,GeometryOctreeSegment* f,
                                            GeometryOctreeSegment* g,GeometryOctreeSegment* h,
-                                           long i,long j,long k,int rec) : GeometryOctreeSegment(i,j,k,rec) {
+                                           BlockLoc i,BlockLoc j,BlockLoc k,int rec) : GeometryOctreeSegment(i,j,k,rec) {
     subdivisions[0][0][0] = a;
     subdivisions[1][0][0] = b;
     subdivisions[0][1][0] = c;
@@ -48,14 +48,14 @@ void GeometryOctreeBranch::render(const glm::mat4& matr) {
         subdivisions[1][1][1]->render(matr);
     }
 }
-void GeometryOctreeBranch::insertinto(long x,long y,long z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self) {
-    subdivisions[x&1][y&1][z&1]->insertinto(x,y,z,recur-1,toinsert,subdivisions[x&1][y&1][z&1]);
+void GeometryOctreeBranch::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self) {
+    subdivisions[x&1][y&1][z&1]->insertinto(x>>1,y>>1,z>>1,recur-1,toinsert,subdivisions[x&1][y&1][z&1]);
 }
-bool GeometryOctreeBranch::existsat(long x,long y,long z) {
-    return subdivisions[x&1][y&1][z&1]->existsat(x,y,z);
+bool GeometryOctreeBranch::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
+    return subdivisions[x&1][y&1][z&1]->existsat(x>>1,y>>1,z>>1);
 }
 
-GeometryOctreeLeaf::GeometryOctreeLeaf(long i,long j,long k,int rec) : GeometryOctreeSegment(i,j,k,rec) {}
+GeometryOctreeLeaf::GeometryOctreeLeaf(BlockLoc i,BlockLoc j,BlockLoc k,int rec) : GeometryOctreeSegment(i,j,k,rec) {}
 
 void GeometryOctreeLeaf::render(const glm::mat4& matr){
     if (checkbounds(matr)) {
@@ -68,23 +68,23 @@ void GeometryOctreeLeaf::render(const glm::mat4& matr){
         }
     }
 }
-void GeometryOctreeLeaf::insertinto(long x,long y,long z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self){
+void GeometryOctreeLeaf::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self){
     delete self;
     self = toinsert;
 }
-bool GeometryOctreeLeaf::existsat(long x,long y,long z) {
+bool GeometryOctreeLeaf::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
     return true;
 }
 
-GeometryOctreeBud::GeometryOctreeBud(long i,long j,long k,int rec) : GeometryOctreeSegment(i,j,k,rec) {}
+GeometryOctreeBud::GeometryOctreeBud(BlockLoc i,BlockLoc j,BlockLoc k,int rec) : GeometryOctreeSegment(i,j,k,rec) {}
 
 void GeometryOctreeBud::render(const glm::mat4& matr) {}
-void GeometryOctreeBud::insertinto(long x,long y,long z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self){
+void GeometryOctreeBud::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,GeometryOctreeSegment* toinsert,GeometryOctreeSegment*& self){
     delete self;
     if (recur==0) {
         self = toinsert;
     } else {
-        long add = 1<<(recurs-1);
+        BlockLoc add = 1<<(recurs-1);
         int pa = recurs-1;
         self = new GeometryOctreeBranch(new GeometryOctreeBud(xs,ys,zs,pa),new GeometryOctreeBud(xs+add,ys,zs,pa),
                                         new GeometryOctreeBud(xs,ys+add,zs,pa),new GeometryOctreeBud(xs+add,ys+add,zs,pa),
@@ -94,19 +94,20 @@ void GeometryOctreeBud::insertinto(long x,long y,long z,int recur,GeometryOctree
         self->insertinto(x,y,z,recur,toinsert,self);
     }
 }
-bool GeometryOctreeBud::existsat(long x, long y, long z) {
+bool GeometryOctreeBud::existsat(BlockLoc x, BlockLoc y, BlockLoc z) {
     return false;
 }
-bool GeometryOctreePlaceholder::existsat(long x, long y, long z) {
+bool GeometryOctreePlaceholder::existsat(BlockLoc x, BlockLoc y, BlockLoc z) {
     return true;
 }
 
-void GeometryOctree::expand(long x,long y,long z) {
+void GeometryOctree::expand(BlockLoc x,BlockLoc y,BlockLoc z) {
     int desireddepth = underpressure(x,y,z);
     while (desireddepth>depth) {
         depth++;
-        long pos = -1 * (1<<((depth-1)>>1));
-        long max = pos + (1<<(depth-1));
+        BlockLoc pos = -1 * (1<<((depth-1)>>1));
+        BlockLoc max = pos + (1<<(depth-1));
+        
         if (depth&1) {
             data = new GeometryOctreeBranch(new GeometryOctreeBud(pos,pos,pos,depth-1),new GeometryOctreeBud(max,pos,pos,depth-1),
                                             new GeometryOctreeBud(pos,max,pos,depth-1),new GeometryOctreeBud(max,max,pos,depth-1),
@@ -122,34 +123,37 @@ void GeometryOctree::expand(long x,long y,long z) {
     }
 }
 
-int GeometryOctree::underpressure(long x,long y,long z) {
-    x = (x+(LONG_MAX/3))^(LONG_MAX/3);
-    y = (y+(LONG_MAX/3))^(LONG_MAX/3);
-    z = (z+(LONG_MAX/3))^(LONG_MAX/3);
-    long mo = std::max(std::max(x,y),z);
+int GeometryOctree::underpressure(BlockLoc x,BlockLoc y,BlockLoc z) {
+    x = (x+ALTERNATOR)^ALTERNATOR;
+    y = (y+ALTERNATOR)^ALTERNATOR;
+    z = (z+ALTERNATOR)^ALTERNATOR;
+    BlockLoc mo = std::max(std::max(x,y),z);
     int r;
     for (r=0;(1<<r)<=mo;r++) {}
     return r;
 }
-long GeometryOctree::flipbits(long f) {
-    long k = 0;
-    long dist = f+(LONG_MAX/3);
+BlockLoc GeometryOctree::flipbits(BlockLoc f) {
+    BlockLoc k = 0;
+    BlockLoc dist = f+ALTERNATOR;
     for (int w=0;w<depth;w++) {
         //        k|= (dist&(1<<w))>>(desireddepth-1-(w<<1));
-        if(dist & (1 << w)) {
-            k |= 1 << ((depth - 1) - w);
-        }
+//        if(dist & (1 << w)) {
+//            k |= 1 << ((depth - 1) - w);
+//        }
+        k<<=1;
+        k|=dist&1;
+        dist>>=1;
     }
     return k;
 }
 
 
 void GeometryOctree::render() {data->render(matrix);}
-bool GeometryOctree::existsat(long x,long y,long z) {
+bool GeometryOctree::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
     if (underpressure(x,y,z)>depth) {return false;}
     return data->existsat(flipbits(x),flipbits(y),flipbits(z));
 }
-void GeometryOctree::manifest(long x,long y,long z) {
+void GeometryOctree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
     GeometryOctreeLeaf* newguy = new GeometryOctreeLeaf(x,y,z,0);
     expand(x,y,z);
     data->insertinto(flipbits(x),flipbits(y),flipbits(z),depth,newguy,data);
@@ -163,14 +167,13 @@ void GeometryOctree::manifest(long x,long y,long z) {
     for (int xi=0;xi<GEOSIZE-1;xi++) {
         for (int yi=0;yi<GEOSIZE-1;yi++) {
             for (int zi=0;zi<GEOSIZE-1;zi++) {
-                long xt = xi+ (x<<GEOPOWER);
-                long yt = yi+ (y<<GEOPOWER);
-                long zt = zi+ (z<<GEOPOWER);
+                BlockLoc xt = xi+ (x<<GEOPOWER);
+                BlockLoc yt = yi+ (y<<GEOPOWER);
+                BlockLoc zt = zi+ (z<<GEOPOWER);
                 uint8_t an = voxes.getAt(xt,yt,zt);
                 uint8_t anx = voxes.getAt(xt+1,yt,zt);
                 uint8_t any = voxes.getAt(xt,yt+1,zt);
                 uint8_t anz = voxes.getAt(xt,yt,zt+1);
-                
                 if (materialprops[an]>materialprops[anx]) {
                     for (int ik=0;ik<6;ik++) {
                         newguy->geometry[an].addVert(glm::vec3(xt,yt-gtable[1][ik][0],zt-gtable[1][ik][1])+
@@ -215,7 +218,7 @@ void GeometryOctree::manifest(long x,long y,long z) {
         // Repeat if you also want to iterate through the second map.
 //        iterator->second.material = iterator->first;
         iterator->second.matrix = &matrix;
-        std::cout<<"created geometry with material "<<iterator->first<<"\n";
+        std::cout<<"created geometry with material "<<(int)iterator->first<<"\n";
     }
     std::cout<<"finished generation.\n";
 }

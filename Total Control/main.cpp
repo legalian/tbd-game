@@ -129,40 +129,19 @@ int main()
     double lastFrameTime = lastTime;
     int nbFrames = 0;
     
-    glm::mat4 matrix = glm::mat4(1.0f);
-    Octree testworld;
-    GeometryOctree phys = GeometryOctree(matrix,testworld);
-    uint8_t test[CHSIZE+1][CHSIZE+1][CHSIZE+1];
-//    long alt = (((LONG_MAX/3)<<1)|1);
-    for (int x=0;x<CHSIZE+1;x++) {
-        for (int y=0;y<CHSIZE+1;y++) {
-            for (int z=0;z<CHSIZE+1;z++) {
-                if (12<x and x<17 and 12<y and y<17 and 12<z and z<17) {
-                    test[x][y][z] = 2;
-                } else {
-                    test[x][y][z] = 1;
-                }
-            }
+    Structure test;
+    test.source = new BoxSample();
+//    test.attain(Location(0,-1,0));
+//    test.attain(Location(0,0,0));
+    for (int f=0;f<2;f++) {
+        test.updatequeue(3,3,3);
+        std::cout<<test.queue.size()<<" is len\n";
+        for (int index=0;index<test.queue.size();index++) {
+            test.attain(test.queue[index]);
         }
+        test.queue.clear();
+        
     }
-    testworld.loadportion(0,0,0,test);
-    for (int x=0;x<CHSIZE;x++) {
-        for (int y=0;y<CHSIZE;y++) {
-            for (int z=0;z<CHSIZE;z++) {
-                if (test[x][y][z] != test[x+1][y][z]) {
-                    testworld.conx(x,y,z) = Edgedat(1,0,0,1);
-                }
-                if (test[x][y][z] != test[x][y+1][z]) {
-                    testworld.cony(x,y,z) = Edgedat(0,1,0,1);
-                }
-                if (test[x][y][z] != test[x][y+1][z]) {
-                    testworld.conz(x,y,z) = Edgedat(0,0,1,1);
-                }
-            }
-        }
-    }
-    testworld.hermitify(0,0,0);
-    phys.manifest(0,0,0);
     
     extern glm::mat4 camera;
     
@@ -185,12 +164,12 @@ int main()
                                            );
         camera = Projection*View;
         
-        phys.render();
+        test.render();
         renderall();
 //        std::cout<<x<<","<<y<<","<<z<<"\n";
         
         
-
+        
         glfwSwapBuffers(window);
         glfwPollEvents();
         

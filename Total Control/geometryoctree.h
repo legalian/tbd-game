@@ -20,13 +20,13 @@
 
 struct GeometryOctreeSegment {
     virtual void render(const glm::mat4&);
-    virtual void insertinto(long,long,long,int,GeometryOctreeSegment*,GeometryOctreeSegment*&);
-    virtual bool existsat(long,long,long);
-    long xs;
-    long ys;
-    long zs;
+    virtual void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&);
+    virtual bool existsat(BlockLoc,BlockLoc,BlockLoc);
+    BlockLoc xs;
+    BlockLoc ys;
+    BlockLoc zs;
     int recurs;
-    GeometryOctreeSegment(long,long,long,int);
+    GeometryOctreeSegment(BlockLoc,BlockLoc,BlockLoc,int);
     bool checkbounds(const glm::mat4&);
 };
 struct GeometryOctreeBranch : GeometryOctreeSegment {
@@ -34,32 +34,32 @@ struct GeometryOctreeBranch : GeometryOctreeSegment {
     GeometryOctreeBranch(GeometryOctreeSegment*,GeometryOctreeSegment*,
                          GeometryOctreeSegment*,GeometryOctreeSegment*,
                          GeometryOctreeSegment*,GeometryOctreeSegment*,
-                         GeometryOctreeSegment*,GeometryOctreeSegment*,long,long,long,int);
+                         GeometryOctreeSegment*,GeometryOctreeSegment*,BlockLoc,BlockLoc,BlockLoc,int);
     void render(const glm::mat4&) override;
-    void insertinto(long,long,long,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
-    bool existsat(long,long,long) override;
+    void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
+    bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
 };
 struct GeometryOctreeLeaf : GeometryOctreeSegment {
-    GeometryOctreeLeaf(long,long,long,int);
+    GeometryOctreeLeaf(BlockLoc,BlockLoc,BlockLoc,int);
     std::map<uint8_t,GeomTerrain> geometry;
     void render(const glm::mat4&) override;
-    void insertinto(long,long,long,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
-    bool existsat(long,long,long) override;
+    void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
+    bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
 };
 struct GeometryOctreeBud : GeometryOctreeSegment {
-    GeometryOctreeBud(long,long,long,int);
+    GeometryOctreeBud(BlockLoc,BlockLoc,BlockLoc,int);
     void render(const glm::mat4&) override;
-    void insertinto(long,long,long,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
-    bool existsat(long,long,long) override;
+    void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
+    bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
 };
 struct GeometryOctreePlaceholder : GeometryOctreeBud {
-    bool existsat(long,long,long) override;
+    bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
 };
 class GeometryOctree {
 private:
-    long flipbits(long);
-    void expand(long,long,long);
-    int underpressure(long,long,long);
+    BlockLoc flipbits(BlockLoc);
+    void expand(BlockLoc,BlockLoc,BlockLoc);
+    int underpressure(BlockLoc,BlockLoc,BlockLoc);
     int depth = 0;
     GeometryOctreeSegment* data = new GeometryOctreeBud(0,0,0,0);
     glm::mat4& matrix;
@@ -67,8 +67,8 @@ private:
 public:
     GeometryOctree(glm::mat4&,Octree&);
     void render();
-    bool existsat(long,long,long);
-    void manifest(long,long,long);
+    bool existsat(BlockLoc,BlockLoc,BlockLoc);
+    void manifest(BlockLoc,BlockLoc,BlockLoc);
 //    void draw(long,long,long,long,long,long,Octree*);
 };
 
