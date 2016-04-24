@@ -149,79 +149,81 @@ BlockLoc GeometryOctree::flipbits(BlockLoc f) {
 
 
 void GeometryOctree::render() {data->render(matrix);}
+GeometryOctreeLeaf* GeometryOctree::getorcreategeomat(BlockLoc x,BlockLoc y,BlockLoc z) {
+    return data->getgeomat();
+}
 bool GeometryOctree::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
     if (underpressure(x,y,z)>depth) {return false;}
     return data->existsat(flipbits(x),flipbits(y),flipbits(z));
 }
-void GeometryOctree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
-    GeometryOctreeLeaf* newguy = new GeometryOctreeLeaf(x,y,z,0);
-    expand(x,y,z);
-    data->insertinto(flipbits(x),flipbits(y),flipbits(z),depth,newguy,data);
-//    newguy->geometry.material = 2;
-//    newguy->geometry.matrix = &matrix;
-    uint8_t gtable[2][6][2] = {
-        {{0,0},{1,1},{1,0},{1,1},{0,0},{0,1}},
-        {{1,1},{0,0},{1,0},{0,0},{1,1},{0,1}}
-    };
-    extern uint8_t materialprops[];
-    for (int xi=0;xi<GEOSIZE-1;xi++) {
-        for (int yi=0;yi<GEOSIZE-1;yi++) {
-            for (int zi=0;zi<GEOSIZE-1;zi++) {
-                BlockLoc xt = xi+ (x<<GEOPOWER);
-                BlockLoc yt = yi+ (y<<GEOPOWER);
-                BlockLoc zt = zi+ (z<<GEOPOWER);
-                uint8_t an = voxes.getAt(xt,yt,zt);
-                uint8_t anx = voxes.getAt(xt+1,yt,zt);
-                uint8_t any = voxes.getAt(xt,yt+1,zt);
-                uint8_t anz = voxes.getAt(xt,yt,zt+1);
-                if (materialprops[an]>materialprops[anx]) {
-                    for (int ik=0;ik<6;ik++) {
-                        newguy->geometry[an].addVert(glm::vec3(xt,yt-gtable[1][ik][0],zt-gtable[1][ik][1])+
-                                                    voxes.feat(xt,yt-gtable[1][ik][0],zt-gtable[1][ik][1]).get());
-                    }
-                } else if (materialprops[an]<materialprops[anx]) {
-                    for (int ik=0;ik<6;ik++) {
-                        newguy->geometry[anx].addVert(glm::vec3(xt,yt-gtable[0][ik][0],zt-gtable[0][ik][1])+
-                                                     voxes.feat(xt,yt-gtable[0][ik][0],zt-gtable[0][ik][1]).get());
-                    }
-                }
-                if (materialprops[an]>materialprops[any]) {
-                    for (int ik=0;ik<6;ik++) {
-                        newguy->geometry[an].addVert(glm::vec3(xt-gtable[0][ik][0],yt,zt-gtable[0][ik][1])+
-                                                    voxes.feat(xt-gtable[0][ik][0],yt,zt-gtable[0][ik][1]).get());
-                    }
-                } else if (materialprops[an]<materialprops[any]) {
-                    for (int ik=0;ik<6;ik++) {
-                        newguy->geometry[any].addVert(glm::vec3(xt-gtable[1][ik][0],yt,zt-gtable[1][ik][1])+
-                                                     voxes.feat(xt-gtable[1][ik][0],yt,zt-gtable[1][ik][1]).get());
-                    }
-                }
-                if (materialprops[an]>materialprops[anz]) {
-//                    std::cout<<"made a face. z";
-                    for (int ik=0;ik<6;ik++) {
-                        newguy->geometry[an].addVert(glm::vec3(xt-gtable[1][ik][0],yt-gtable[1][ik][1],zt)+
-                                                    voxes.feat(xt-gtable[1][ik][0],yt-gtable[1][ik][1],zt).get());
-                    }
-                } else if (materialprops[an]<materialprops[anz]) {
-                    for (int ik=0;ik<6;ik++) {
-                        newguy->geometry[anz].addVert(glm::vec3(xt-gtable[0][ik][0],yt-gtable[0][ik][1],zt)+
-                                                     voxes.feat(xt-gtable[0][ik][0],yt-gtable[0][ik][1],zt).get());
-                    }
-                }
-            }
-        }
-    }
-    
-    for(auto iterator = newguy->geometry.begin(); iterator != newguy->geometry.end(); iterator++) {
-        // iterator->first = key
-        // iterator->second = value
-        // Repeat if you also want to iterate through the second map.
-//        iterator->second.material = iterator->first;
-        iterator->second.matrix = &matrix;
-        std::cout<<"created geometry with material "<<(int)iterator->first<<"\n";
-    }
-    std::cout<<"finished generation.\n";
-}
+//void GeometryOctree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    GeometryOctreeLeaf* newguy = new GeometryOctreeLeaf(x,y,z,0);
+//    expand(x,y,z);
+//    data->insertinto(flipbits(x),flipbits(y),flipbits(z),depth,newguy,data);
+////    newguy->geometry.material = 2;
+////    newguy->geometry.matrix = &matrix;
+//    extern uint8_t materialprops[];
+//    for (int xi=0;xi<GEOSIZE-1;xi++) {
+//        for (int yi=0;yi<GEOSIZE-1;yi++) {
+//            for (int zi=0;zi<GEOSIZE-1;zi++) {
+//                BlockLoc xo = xi+ (x<<GEOPOWER);
+//                BlockLoc yo = yi+ (y<<GEOPOWER);
+//                BlockLoc zo = zi+ (z<<GEOPOWER);
+//                BlockLoc xt = xo ASBLOCKLOC;
+//                BlockLoc yt = yo ASBLOCKLOC;
+//                BlockLoc zt = zo ASBLOCKLOC;
+//                uint8_t an = voxes.data->getser(xt,yt,zt);
+//                uint8_t anx = voxes.data->getser(xt+1,yt,zt);
+//                uint8_t any = voxes.data->getser(xt,yt+1,zt);
+//                uint8_t anz = voxes.data->getser(xt,yt,zt+1);
+//                if (materialprops[an]>materialprops[anx]) {
+//                    for (int ik=0;ik<6;ik++) {
+//                        newguy->geometry[an].addVert(glm::vec3(xo,yo-gtable[1][ik][0],zo-gtable[1][ik][1])+
+//                                              voxes.data->feat(xt,yt-gtable[1][ik][0],zt-gtable[1][ik][1]).get());
+//                    }
+//                } else if (materialprops[an]<materialprops[anx]) {
+//                    for (int ik=0;ik<6;ik++) {
+//                        newguy->geometry[anx].addVert(glm::vec3(xo,yo-gtable[0][ik][0],zo-gtable[0][ik][1])+
+//                                               voxes.data->feat(xt,yt-gtable[0][ik][0],zt-gtable[0][ik][1]).get());
+//                    }
+//                }
+//                if (materialprops[an]>materialprops[any]) {
+//                    for (int ik=0;ik<6;ik++) {
+//                        newguy->geometry[an].addVert(glm::vec3(xo-gtable[0][ik][0],yo,zo-gtable[0][ik][1])+
+//                                              voxes.data->feat(xt-gtable[0][ik][0],yt,zt-gtable[0][ik][1]).get());
+//                    }
+//                } else if (materialprops[an]<materialprops[any]) {
+//                    for (int ik=0;ik<6;ik++) {
+//                        newguy->geometry[any].addVert(glm::vec3(xo-gtable[1][ik][0],yo,zo-gtable[1][ik][1])+
+//                                               voxes.data->feat(xt-gtable[1][ik][0],yt,zt-gtable[1][ik][1]).get());
+//                    }
+//                }
+//                if (materialprops[an]>materialprops[anz]) {
+////                    std::cout<<"made a face. z";
+//                    for (int ik=0;ik<6;ik++) {
+//                        newguy->geometry[an].addVert(glm::vec3(xo-gtable[1][ik][0],yo-gtable[1][ik][1],zo)+
+//                                              voxes.data->feat(xt-gtable[1][ik][0],yt-gtable[1][ik][1],zt).get());
+//                    }
+//                } else if (materialprops[an]<materialprops[anz]) {
+//                    for (int ik=0;ik<6;ik++) {
+//                        newguy->geometry[anz].addVert(glm::vec3(xo-gtable[0][ik][0],yo-gtable[0][ik][1],zo)+
+//                                               voxes.data->feat(xt-gtable[0][ik][0],yt-gtable[0][ik][1],zt).get());
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    
+//    for(auto iterator = newguy->geometry.begin(); iterator != newguy->geometry.end(); iterator++) {
+//        // iterator->first = key
+//        // iterator->second = value
+//        // Repeat if you also want to iterate through the second map.
+////        iterator->second.material = iterator->first;
+//        iterator->second.matrix = &matrix;
+//        std::cout<<"created geometry with material "<<(int)iterator->first<<"\n";
+//    }
+//    std::cout<<"finished generation.\n";
+//}
 
-GeometryOctree::GeometryOctree(glm::mat4& matr,Octree& vox) : matrix(matr),voxes(vox) {}
+GeometryOctree::GeometryOctree(glm::mat4& matr) : matrix(matr) {}
 

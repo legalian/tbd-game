@@ -10,9 +10,14 @@
 
 EmptySampler Structure::emptysampler = EmptySampler();
 
+Structure::Structure(std::string name) : structureid(name) {
+    
+}
 void Structure::updatequeue(double x, double y, double z) {
     glm::vec4 epicenter = glm::inverse(transform)*glm::vec4(x,y,z,1);
-    Location newloc = Location((int)(epicenter.x/CHSIZE),(int)(epicenter.y/CHSIZE),(int)(epicenter.z/CHSIZE));
+    Location newloc = Location(TRUNC_DIV((int)(epicenter.x),CHSIZE),
+                               TRUNC_DIV((int)(epicenter.y),CHSIZE),
+                               TRUNC_DIV((int)(epicenter.z),CHSIZE));
     if (not (cameraloc==newloc)) {
         cameraloc = newloc;
         loadstage = 0;
@@ -29,7 +34,7 @@ void Structure::updatequeue(double x, double y, double z) {
                         for (int zi=newloc.z-loadstage;zi<=newloc.z+loadstage;zi++) {
 //                            std::cout<<"z executed at "<<zi<<"\n";
                             if ((bounds.lz<=zi and zi<=bounds.uz) or !bounds.bounded) {
-                                if (!visibleworld.existsat(xi,yi,zi)) {
+                                if (!world.existsat(xi,yi,zi)) {
 //                                    std::cout<<"added";
                                     queue.push_back(Location(xi,yi,zi));
                                 }
@@ -42,13 +47,21 @@ void Structure::updatequeue(double x, double y, double z) {
         loadstage++;
     }
 }
-void Structure::attain(Location pos) {
+void Structure::attain(std::string basename,Location pos) {
     //load if you can
-    source->populate(pos.x,pos.y,pos.z,world);
-    visibleworld.manifest(pos.x,pos.y,pos.z);
+    std::string filename = basename+"/"+structureid;
+    if (world.dataexists(filename,pos.x,pos.y,pos.z)) {
+        std::cout<<"loaded from a nifty file.\n";
+        world.filepullportion(filename,pos.x,pos.y,pos.z);
+    } else {
+        std::cout<<"made a new nifty file.\n";
+        source->populate(pos.x,pos.y,pos.z,world);
+        world.filepushportion(filename,pos.x,pos.y,pos.z);
+    }
+    world.manifest(pos.x,pos.y,pos.z);
 }
 void Structure::render() {
-    visibleworld.render();
+    world.render();
 }
 //#include "lookuptables.cpp"
 //

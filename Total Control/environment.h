@@ -14,32 +14,37 @@
 //#include "render.h"
 #include "generators.h"
 #include "glm/gtx/string_cast.hpp"
+#include <boost/filesystem.hpp>
 
-//class Environment {
-//private:
+class Environment {
+private:
 //    std::vector<std::pair<Location*,Structure*>> loadqueue;
 //    std::vector<GeomTerrain*> bakequeue;
-//    std::vector<Structure> structures;
+    std::vector<Structure> structures;
+//    boost::filesystem::path savedir = boost::filesystem::path("testworld");
+    std::string savedir = "testworld";
 //    glm::vec4 view = glm::vec4(0,0,0,1);
-//    
-//    pthread_t loadingthread;
-////    Generator gen;
-//    
-//    
-//    
-//    bool testerbool = true;
-//public:
-//    bool keepexecution = true;
-//    
+    
+    pthread_t loadingthread;
+//    Generator gen;
+    double epix = 0;
+    double epiy = 0;
+    double epiz = 0;
+    
+    
+public:
+    bool keepexecution = true;
 //    Environment();
-//    void loadnextchunk();
-//    void draw(ShaderVNC*);
-//    void cluein(double,double,double);
-//    Structure* getStruct(std::string targetid);
-//    void checkup();
-//    void cleanup();
-//};
+    void opensavedirectory();
+    void loadnextchunk();
+    void beginthread();
+    void addstructure(Structure newst);
+    void draw();
+    void checkup(double x,double y,double z);
+    Structure* getstructure(std::string targetid);
+    void cleanup();
+};
 //
-//void* loaderthread(void*);
+void* loaderthread(void*);
 
 #endif /* defined(__Total_Control__environment__) */

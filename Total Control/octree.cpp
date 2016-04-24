@@ -11,19 +11,17 @@
 #define XYZINDEX [(x&(1<<depth))>>depth][(y&(1<<depth))>>depth][(z&(1<<depth))>>depth]
 //#define XYZINDEX [x&(1<<depth)?1:0][y&(1<<depth)?1:0][z&(1<<depth)?1:0]
 
-#define ASBLOCKLOC +(ALTERNATOR-(ALTERNATOR&(CHSIZE-1)))
-
-#if CHPOWER%2 == 0
-    #define ASCHUNKLOC +ALTERNATOR<<CHPOWER
-#else
-    #define ASCHUNKLOC +ALTALTERNATOR<<CHPOWER
-#endif
 
 
+uint8_t gtable[2][6][2] = {
+    {{0,0},{1,1},{1,0},{1,1},{0,0},{0,1}},
+    {{1,1},{0,0},{1,0},{0,0},{1,1},{0,1}}
+};
 
 Edgedat::Edgedat() {
     
 }
+Edgedat::Edgedat(uint8_t tc,uint8_t xc,uint8_t yc,uint8_t zc) : x(xc),y(yc),z(zc),t(tc) {}
 Edgedat::Edgedat(float xi,float yi,float zi,float ti) {
     x = (uint8_t)255*xi;
     y = (uint8_t)255*yi;
@@ -44,7 +42,13 @@ void Feature::operator=(const glm::vec3& other) {
     y = other.y*255;
     z = other.z*255;
 }
-
+void OctreeSegment::geomifyselection(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {}
+void OctreeSegment::hermitifyselection(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
+void OctreeSegment::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {}
+//void OctreeSegment::geomifyportion(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {}
+void OctreeSegment::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
+OctreeSegment* OctreeSegment::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {return this;}
+//void OctreeSegment::hermitifyportion(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
 BlockId OctreeSegment::getser(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 void OctreeSegment::setser(BlockLoc x,BlockLoc y,BlockLoc z,BlockId newid,int recur,OctreeSegment*& self) {throw;}
 void OctreeSegment::collapse(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*& self) {}
@@ -54,28 +58,153 @@ Edgedat& OctreeSegment::ycon(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 Edgedat& OctreeSegment::zcon(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 Feature& OctreeSegment::feat(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 void OctreeSegment::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* toinsert,OctreeSegment*& self) {throw;}
-void OctreeSegment::savetofile(std::ostream& file) {throw;}
-uint8_t OctreeSegment::getsimpid() {throw;}
+void OctreeSegment::filesave(std::ostream& file) {throw;}
+BlockId OctreeSegment::getsimpid() {throw;}
 bool OctreeSegment::featuresque(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 
-OctreeFeature::OctreeFeature(uint8_t fill) : fillvalue(fill) {}
-uint8_t OctreeFeature::getser(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
-void OctreeFeature::setser(BlockLoc x,BlockLoc y,BlockLoc z,uint8_t newid,int recur,OctreeSegment*& self) {fillvalue = newid;}
+OctreeFeature::OctreeFeature(BlockId fill) : fillvalue(fill) {}
+BlockId OctreeFeature::getser(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
+void OctreeFeature::setser(BlockLoc x,BlockLoc y,BlockLoc z,BlockId newid,int recur,OctreeSegment*& self) {fillvalue = newid;}
 Feature& OctreeFeature::feat(BlockLoc x,BlockLoc y,BlockLoc z)  {return point;}
-uint8_t OctreeFeature::getsimpid() {return 0;}
-void OctreeFeature::savetofile(std::ostream& file) {throw;}
+BlockId OctreeFeature::getsimpid() {return 0;}
+void OctreeFeature::filesave(std::ostream& file) {
+    char towrite = 'f';
+    file.write(&towrite,1);
+    file.write((char*)&fillvalue, sizeof(BlockId));
+}
 bool OctreeFeature::featuresque(BlockLoc x,BlockLoc y,BlockLoc z) {return true;}
 
-OctreeLeaf::OctreeLeaf(uint8_t fill) : OctreeFeature(fill) {}
+void OctreeFeature::hermitifyselection(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
+    int size = 0;
+    glm::vec3 points[12];
+    glm::vec3 normals[12];
+    BlockId buf[2][2][2];
+    for (int xl=0;xl<2;xl++) {
+        for (int yl=0;yl<2;yl++) {
+            for (int zl=0;zl<2;zl++) {
+                buf[xl][yl][zl] = world->getser(x+xl,y+yl,z+zl);
+            }
+        }
+    }
+    for (int xl=0;xl<2;xl++) {
+        for (int yl=0;yl<2;yl++) {
+            if (buf[xl][yl][0]!=buf[xl][yl][1]) {
+                Edgedat& koka = world->zcon(x+xl,y+yl,z);
+                points[size] = glm::vec3(xl,yl,koka.getoffset());
+                normals[size] = koka.getnorm();
+                size++;
+            }
+        }
+    }
+    for (int xl=0;xl<2;xl++) {
+        for (int zl=0;zl<2;zl++) {
+            if (buf[xl][0][zl]!=buf[xl][1][zl]) {
+                Edgedat& koka = world->ycon(x+xl,y,z+zl);
+                points[size] = glm::vec3(xl,koka.getoffset(),zl);
+                normals[size] = koka.getnorm();
+                size++;
+            }
+        }
+    }
+    for (int yl=0;yl<2;yl++) {
+        for (int zl=0;zl<2;zl++) {
+            if (buf[0][yl][zl]!=buf[1][yl][zl]) {
+                Edgedat& koka = world->xcon(x,y+yl,z+zl);
+                points[size] = glm::vec3(koka.getoffset(),yl,zl);
+                normals[size] = koka.getnorm();
+                size++;
+            }
+        }
+    }
+    point = omgqef(normals, points, size);
+}
+void OctreeFeature::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
+    if ( ((x&(CHSIZE-1)) != CHSIZE-1) and ((y&(CHSIZE-1)) != CHSIZE-1) and ((z&(CHSIZE-1)) != CHSIZE-1) ) {
+        hermitifyselection(x, y, z, world);
+    }
+}
+
+OctreeLeaf::OctreeLeaf(BlockId fill) : OctreeFeature(fill) {}
+OctreeLeaf::OctreeLeaf(BlockId fill,uint8_t n[12]) : OctreeFeature(fill),
+    xcondat(n[0],n[1],n[2],n[3]),
+    ycondat(n[4],n[5],n[6],n[7]),
+    zcondat(n[8],n[9],n[10],n[11])  {}
 //bool OctreeLeaf::uniqueat(long x,long y,long z,int recur) {return true;}
+void OctreeLeaf::geomifyselection(BlockLoc x, BlockLoc y, BlockLoc z,GeometryOctreeLeaf* geometry, OctreeSegment *world) {
+    extern uint8_t gtable[2][6][2];
+    extern uint8_t materialprops[];
+    uint8_t anx = world->getser(x+1,y,z);
+    uint8_t any = world->getser(x,y+1,z);
+    uint8_t anz = world->getser(x,y,z+1);
+    BlockLoc xo = x - (ASBLOCKLOC(0));
+    BlockLoc yo = y - (ASBLOCKLOC(0));
+    BlockLoc zo = z - (ASBLOCKLOC(0));
+    if (materialprops[fillvalue]>materialprops[anx]) {
+        for (int ik=0;ik<6;ik++) {
+            geometry->geometry[fillvalue].addVert(glm::vec3(xo,yo-gtable[1][ik][0],zo-gtable[1][ik][1])+
+                                                world->feat(x,y-gtable[1][ik][0],z-gtable[1][ik][1]).get());
+        }
+    } else if (materialprops[fillvalue]<materialprops[anx]) {
+        for (int ik=0;ik<6;ik++) {
+            geometry->geometry[anx].addVert(glm::vec3(xo,yo-gtable[0][ik][0],zo-gtable[0][ik][1])+
+                                          world->feat(x,y-gtable[0][ik][0],z-gtable[0][ik][1]).get());
+        }
+    }
+    if (materialprops[fillvalue]>materialprops[any]) {
+        for (int ik=0;ik<6;ik++) {
+            geometry->geometry[fillvalue].addVert(glm::vec3(xo-gtable[0][ik][0],yo,zo-gtable[0][ik][1])+
+                                                world->feat(x-gtable[0][ik][0],y,z-gtable[0][ik][1]).get());
+        }
+    } else if (materialprops[fillvalue]<materialprops[any]) {
+        for (int ik=0;ik<6;ik++) {
+            geometry->geometry[any].addVert(glm::vec3(xo-gtable[1][ik][0],yo,zo-gtable[1][ik][1])+
+                                          world->feat(x-gtable[1][ik][0],y,z-gtable[1][ik][1]).get());
+        }
+    }
+    if (materialprops[fillvalue]>materialprops[anz]) {
+        //                    std::cout<<"made a face. z";
+        for (int ik=0;ik<6;ik++) {
+            geometry->geometry[fillvalue].addVert(glm::vec3(xo-gtable[1][ik][0],yo-gtable[1][ik][1],zo)+
+                                                world->feat(x-gtable[1][ik][0],y-gtable[1][ik][1],z).get());
+        }
+    } else if (materialprops[fillvalue]<materialprops[anz]) {
+        for (int ik=0;ik<6;ik++) {
+            geometry->geometry[anz].addVert(glm::vec3(xo-gtable[0][ik][0],yo-gtable[0][ik][1],zo)+
+                                          world->feat(x-gtable[0][ik][0],y-gtable[0][ik][1],z).get());
+        }
+    }
+    
+}
+void OctreeLeaf::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {
+    if ( ((x&(CHSIZE-1)) != CHSIZE-1) and ((y&(CHSIZE-1)) != CHSIZE-1) and ((z&(CHSIZE-1)) != CHSIZE-1) and
+         ((x&(CHSIZE-1)) != 0       ) and ((y&(CHSIZE-1)) != 0       ) and ((z&(CHSIZE-1)) != 0       ) ) {
+        geomifyselection(x,y,z,geometry,world);
+    }
+}
 Edgedat& OctreeLeaf::xcon(BlockLoc x,BlockLoc y,BlockLoc z) {return xcondat;}
 Edgedat& OctreeLeaf::ycon(BlockLoc x,BlockLoc y,BlockLoc z) {return ycondat;}
 Edgedat& OctreeLeaf::zcon(BlockLoc x,BlockLoc y,BlockLoc z) {return zcondat;}
-void OctreeLeaf::savetofile(std::ostream& file) {throw;}
+void OctreeLeaf::filesave(std::ostream& file) {
+    char towrite = 'l';
+    file.write(&towrite,1);
+    file.write((char*)&fillvalue,sizeof(uint8_t));
+    file.write((char*)&xcondat.x,sizeof(uint8_t));
+    file.write((char*)&xcondat.y,sizeof(uint8_t));
+    file.write((char*)&xcondat.z,sizeof(uint8_t));
+    file.write((char*)&xcondat.t,sizeof(uint8_t));
+    file.write((char*)&ycondat.x,sizeof(uint8_t));
+    file.write((char*)&ycondat.y,sizeof(uint8_t));
+    file.write((char*)&ycondat.z,sizeof(uint8_t));
+    file.write((char*)&ycondat.t,sizeof(uint8_t));
+    file.write((char*)&zcondat.x,sizeof(uint8_t));
+    file.write((char*)&zcondat.y,sizeof(uint8_t));
+    file.write((char*)&zcondat.z,sizeof(uint8_t));
+    file.write((char*)&zcondat.t,sizeof(uint8_t));
+}
 
-OctreeBud::OctreeBud(uint8_t fill) : fillvalue(fill) {}
-uint8_t OctreeBud::getser(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
-void OctreeBud::setser(BlockLoc x,BlockLoc y,BlockLoc z,uint8_t newid,int recur,OctreeSegment*& self) {
+OctreeBud::OctreeBud(BlockId fill) : fillvalue(fill) {}
+BlockId OctreeBud::getser(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
+void OctreeBud::setser(BlockLoc x,BlockLoc y,BlockLoc z,BlockId newid,int recur,OctreeSegment*& self) {
     if (newid == fillvalue) {
     } else if (recur==0) {
         fillvalue = newid;
@@ -103,8 +232,12 @@ void OctreeBud::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegm
         self->insertinto(x,y,z,recur,toinsert,self);
     }
 }
-uint8_t OctreeBud::getsimpid() {return fillvalue;}
-void OctreeBud::savetofile(std::ostream& file) {throw;}
+BlockId OctreeBud::getsimpid() {return fillvalue;}
+void OctreeBud::filesave(std::ostream& file) {
+    char towrite = 's';
+    file.write(&towrite,1);
+    file.write((char*)&fillvalue, sizeof(BlockId));
+}
 bool OctreeBud::featuresque(BlockLoc x,BlockLoc y,BlockLoc z) {return false;}
 
 OctreeBranch::OctreeBranch(OctreeSegment* a,OctreeSegment* b,
@@ -121,11 +254,63 @@ OctreeBranch::OctreeBranch(OctreeSegment* a,OctreeSegment* b,
     subdivisions[1][1][1] = h;
 }
 
+void OctreeBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {
+    BlockLoc mask = 1<<depth;
+    subdivisions[0][0][0]->geomify(x     ,y     ,z     ,geometry,world);
+    subdivisions[1][0][0]->geomify(x|mask,y     ,z     ,geometry,world);
+    subdivisions[0][1][0]->geomify(x     ,y|mask,z     ,geometry,world);
+    subdivisions[1][1][0]->geomify(x|mask,y|mask,z     ,geometry,world);
+    subdivisions[0][0][1]->geomify(x     ,y     ,z|mask,geometry,world);
+    subdivisions[1][0][1]->geomify(x|mask,y     ,z|mask,geometry,world);
+    subdivisions[0][1][1]->geomify(x     ,y|mask,z|mask,geometry,world);
+    subdivisions[1][1][1]->geomify(x|mask,y|mask,z|mask,geometry,world);
+}
+//void OctreeBranch::geomifyportion(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {
+//    if (CHPOWER<=depth) {
+//        subdivisions XYZINDEX->geomifyportion(x,y,z,geometry,world);
+//    } else {
+//        geomify(x,y,z,geometry,world);
 
-uint8_t OctreeBranch::getser(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    }
+//    
+//}
+void OctreeBranch::geomifyselection(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {
+    subdivisions XYZINDEX->geomifyselection(x,y,z,geometry,world);
+}
+void OctreeBranch::hermitifyselection(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
+    subdivisions XYZINDEX->hermitifyselection(x,y,z,world);
+}
+void OctreeBranch::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
+    BlockLoc mask = 1<<depth;
+    subdivisions[0][0][0]->hermitify(x     ,y     ,z     ,world);
+    subdivisions[1][0][0]->hermitify(x|mask,y     ,z     ,world);
+    subdivisions[0][1][0]->hermitify(x     ,y|mask,z     ,world);
+    subdivisions[1][1][0]->hermitify(x|mask,y|mask,z     ,world);
+    subdivisions[0][0][1]->hermitify(x     ,y     ,z|mask,world);
+    subdivisions[1][0][1]->hermitify(x|mask,y     ,z|mask,world);
+    subdivisions[0][1][1]->hermitify(x     ,y|mask,z|mask,world);
+    subdivisions[1][1][1]->hermitify(x|mask,y|mask,z|mask,world);
+}
+OctreeSegment* OctreeBranch::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {
+    if (depth<CHPOWER) {
+        return this;
+    } else {
+        return subdivisions XYZINDEX->getvoxunit(x,y,z);
+    }
+}
+//void OctreeBranch::hermitifyportion(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
+//    if (depth<CHPOWER) {
+//        hermitify(x,y,z,world);
+//    } else {
+//        subdivisions XYZINDEX->hermitifyportion(x,y,z,world);
+//    }
+//    
+//}
+
+BlockId OctreeBranch::getser(BlockLoc x,BlockLoc y,BlockLoc z) {
     return subdivisions XYZINDEX->getser(x,y,z);
 }
-void OctreeBranch::setser(BlockLoc x,BlockLoc y,BlockLoc z,uint8_t newid,int recur,OctreeSegment*& self) {
+void OctreeBranch::setser(BlockLoc x,BlockLoc y,BlockLoc z,BlockId newid,int recur,OctreeSegment*& self) {
     subdivisions XYZINDEX->setser(x,y,z,newid,recur-1,subdivisions XYZINDEX);
 }
 //void OctreeBranch::collapse(long x,long y,long z,OctreeSegment*& self) {
@@ -152,8 +337,19 @@ void OctreeBranch::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeS
         subdivisions XYZINDEX->insertinto(x,y,z,recur-1,toinsert,subdivisions XYZINDEX);
     }
 }
-void OctreeBranch::savetofile(std::ostream& file) {throw;}
-uint8_t OctreeBranch::getsimpid() {return 0;}
+void OctreeBranch::filesave(std::ostream& file) {
+    char towrite = 'c';
+    file.write(&towrite,1);
+    subdivisions[0][0][0]->filesave(file);
+    subdivisions[1][0][0]->filesave(file);
+    subdivisions[0][1][0]->filesave(file);
+    subdivisions[1][1][0]->filesave(file);
+    subdivisions[0][0][1]->filesave(file);
+    subdivisions[1][0][1]->filesave(file);
+    subdivisions[0][1][1]->filesave(file);
+    subdivisions[1][1][1]->filesave(file);
+}
+BlockId OctreeBranch::getsimpid() {return 0;}
 bool OctreeBranch::featuresque(BlockLoc x,BlockLoc y,BlockLoc z) {
     return subdivisions XYZINDEX->featuresque(x,y,z);
 }
@@ -195,8 +391,40 @@ int Octree::underpressure(BlockLoc x,BlockLoc y,BlockLoc z) {
     return r;
 }
 
+OctreeSegment* makeOctree(std::ifstream& file,int recur) {
+    char tester;
+    file.read(&tester,1);
+    if (tester == 'l') {
+        uint8_t id;
+        uint8_t ids[12];
+        file.read((char*) &id,sizeof(uint8_t));
+        file.read((char*) &ids,sizeof(uint8_t)*12);
+        return new OctreeLeaf(id,ids);
+    } else if (tester == 's') {
+        uint8_t id;
+        file.read((char*) &id,sizeof(uint8_t));
+        return new OctreeBud(id);
+    } else if (tester == 'f') {
+        uint8_t id;
+        file.read((char*) &id,sizeof(uint8_t));
+        return new OctreeFeature(id);
+    } else if (tester == 'c') {
+        recur--;
+        return new OctreeBranch(makeOctree(file,recur),
+                                makeOctree(file,recur),
+                                makeOctree(file,recur),
+                                makeOctree(file,recur),
+                                makeOctree(file,recur),
+                                makeOctree(file,recur),
+                                makeOctree(file,recur),
+                                makeOctree(file,recur),recur);
+    } else {
+        throw;
+    }
+}
 
-OctreeSegment* makeOctree(uint8_t (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,int recur) {
+
+OctreeSegment* makeOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,int recur) {
     if (recur == 0) {
         uint8_t equi = data[x][y][z];
         
@@ -210,104 +438,137 @@ OctreeSegment* makeOctree(uint8_t (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,
             return new OctreeLeaf(data[x][y][z]);
         }
     }
-    int k = (1<<(recur-1));
-    OctreeSegment* a = makeOctree(data,x,y,z,recur-1);
-    OctreeSegment* b = makeOctree(data,x+k,y,z,recur-1);
-    OctreeSegment* c = makeOctree(data,x,y+k,z,recur-1);
-    OctreeSegment* d = makeOctree(data,x+k,y+k,z,recur-1);
-    OctreeSegment* e = makeOctree(data,x,y,z+k,recur-1);
-    OctreeSegment* f = makeOctree(data,x+k,y,z+k,recur-1);
-    OctreeSegment* g = makeOctree(data,x,y+k,z+k,recur-1);
-    OctreeSegment* h = makeOctree(data,x+k,y+k,z+k,recur-1);
-    uint8_t equi = a->getsimpid();
-    if (equi!=0 and equi==b->getsimpid() and equi==c->getsimpid() and equi==d->getsimpid() and
-                    equi==e->getsimpid() and equi==f->getsimpid() and equi==g->getsimpid() and equi==h->getsimpid()) {
-        delete a;
-        delete b;
-        delete c;
-        delete d;
-        delete e;
-        delete f;
-        delete g;
-        delete h;
-        return new OctreeBud(equi);
-    }
-    return new OctreeBranch(a,b,c,d,e,f,g,h,recur-1);
-}
-void Octree::loadportion(BlockLoc x,BlockLoc y,BlockLoc z,uint8_t (*dat)[CHSIZE+1][CHSIZE+1]) {
-    expandchunk(x,y,z);
-    data->insertinto(x ASCHUNKLOC,y ASCHUNKLOC,z ASCHUNKLOC,depth-CHPOWER,makeOctree(dat,0,0,0,CHPOWER),data);
-}
-void Octree::loadfromfile(BlockLoc x,BlockLoc y,BlockLoc z,int recur,std::string file) {
-    
-}
-void Octree::setAt(BlockLoc x,BlockLoc y,BlockLoc z,uint8_t newid) {
-    expand(x,y,z);
-    data->setser(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC,newid,depth,data);
-}
-uint8_t Octree::getAt(BlockLoc x,BlockLoc y,BlockLoc z) {
-    return data->getser(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-}
-Edgedat& Octree::conx(BlockLoc x,BlockLoc y,BlockLoc z) {
-    return data->xcon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-}
-Edgedat& Octree::cony(BlockLoc x,BlockLoc y,BlockLoc z) {
-    return data->ycon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-}
-Edgedat& Octree::conz(BlockLoc x,BlockLoc y,BlockLoc z) {
-    return data->zcon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-}
-Feature& Octree::feat(BlockLoc x,BlockLoc y,BlockLoc z) {
-    return data->feat(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-}
-void Octree::hermitify(BlockLoc x, BlockLoc y, BlockLoc z) {
-    for (BlockLoc xt=x<<CHPOWER;xt<(x+1)<<CHPOWER;xt++) {
-        for (BlockLoc yt=y<<CHPOWER;yt<(y+1)<<CHPOWER;yt++) {
-            for (BlockLoc zt=z<<CHPOWER;zt<(z+1)<<CHPOWER;zt++) {
-                if (data->featuresque(xt ASBLOCKLOC,yt ASBLOCKLOC,zt ASBLOCKLOC)) {
-                    int size = 0;
-                    glm::vec3 points[12];
-                    glm::vec3 normals[12];
-                    for (int xl=0;xl<2;xl++) {
-                        for (int yl=0;yl<2;yl++) {
-                            if (getAt(xl+xt,yl+yt,zt)!=getAt(xl+xt,yl+yt,zt+1)) {
-                                points[size] = glm::vec3(xl,yl,conz(xl+xt,yl+yt,zt).getoffset());
-                                normals[size] = conz(xl+xt,yl+yt,zt).getnorm();
-                                size++;
-                            }
-                        }
-                    }
-                    for (int xl=0;xl<2;xl++) {
-                        for (int zl=0;zl<2;zl++) {
-                            if (getAt(xl+xt,yt,zl+zt)!=getAt(xl+xt,yt+1,zl+zt)) {
-                                points[size] = glm::vec3(xl,cony(xl+xt,yt,zl+zt).getoffset(),zl);
-                                normals[size] = cony(xl+xt,yt,zl+zt).getnorm();
-                                size++;
-                            }
-                        }
-                    }
-                    for (int yl=0;yl<2;yl++) {
-                        for (int zl=0;zl<2;zl++) {
-                            if (getAt(xt,yl+yt,zl+zt)!=getAt(xt+1,yl+yt,zl+zt)) {
-                                points[size] = glm::vec3(conx(xt,yl+yt,zl+zt).getoffset(),yl,zl);
-                                normals[size] = conx(xt,yl+yt,zl+zt).getnorm();
-                                size++;
-                            }
-                        }
-                    }
-                    
-                    
-                    feat(xt,yt,zt) = omgqef(normals, points, size);
-                    
+    BlockLoc add = (1<<recur)+1;
+    BlockId equi = data[x][y][z];
+    for (BlockLoc xi=x;xi<x+add;xi++) {
+        for (BlockLoc yi=y;yi<y+add;yi++) {
+            for (BlockLoc zi=z;zi<z+add;zi++) {
+                if (data[xi][yi][zi] != equi) {
+                    int k = (1<<(recur-1));
+                    OctreeSegment* a = makeOctree(data,x,y,z,recur-1);
+                    OctreeSegment* b = makeOctree(data,x+k,y,z,recur-1);
+                    OctreeSegment* c = makeOctree(data,x,y+k,z,recur-1);
+                    OctreeSegment* d = makeOctree(data,x+k,y+k,z,recur-1);
+                    OctreeSegment* e = makeOctree(data,x,y,z+k,recur-1);
+                    OctreeSegment* f = makeOctree(data,x+k,y,z+k,recur-1);
+                    OctreeSegment* g = makeOctree(data,x,y+k,z+k,recur-1);
+                    OctreeSegment* h = makeOctree(data,x+k,y+k,z+k,recur-1);
+                //    uint8_t equi = a->getsimpid();
+                //    if (equi!=0 and equi==b->getsimpid() and equi==c->getsimpid() and equi==d->getsimpid() and
+                //        equi==e->getsimpid() and equi==f->getsimpid() and equi==g->getsimpid() and equi==h->getsimpid()) {
+                //        delete a;
+                //        delete b;
+                //        delete c;
+                //        delete d;
+                //        delete e;
+                //        delete f;
+                //        delete g;
+                //        delete h;
+                //        return new OctreeBud(equi);
+                //    }
+                    return new OctreeBranch(a,b,c,d,e,f,g,h,recur-1);
                 }
             }
         }
     }
+    return new OctreeBud(equi);
 }
-void Octree::save(std::string file) {
-    throw;
+
+void Octree::loadportion(BlockLoc x,BlockLoc y,BlockLoc z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
+    expandchunk(x,y,z);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),depth-CHPOWER,makeOctree(dat,0,0,0,CHPOWER),data);
 }
-glm::vec3 Octree::omgqef(glm::vec3 normals[], glm::vec3 positions[], int length )
+//void Octree::loadfromfile(BlockLoc x,BlockLoc y,BlockLoc z,int recur,std::string file) {
+//    
+//}
+//void Octree::setAt(BlockLoc x,BlockLoc y,BlockLoc z,uint8_t newid) {
+//    expand(x,y,z);
+//    data->setser(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC,newid,depth,data);
+//}
+//uint8_t Octree::getAt(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    return data->getser(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
+//}
+//Edgedat& Octree::conx(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    return data->xcon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
+//}
+//Edgedat& Octree::cony(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    return data->ycon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
+//}
+//Edgedat& Octree::conz(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    return data->zcon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
+//}
+//Feature& Octree::feat(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    return data->feat(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
+//}
+
+Octree::Octree(glm::mat4& trans) : realworld(trans) {}
+
+void Octree::hermitify(BlockLoc x, BlockLoc y, BlockLoc z) {
+    data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))->hermitify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),data);
+//    for (BlockLoc xt=(x<<CHPOWER)ASBLOCKLOC;xt<((x+1)<<CHPOWER)ASBLOCKLOC;xt++) {
+//        for (BlockLoc yt=(y<<CHPOWER)ASBLOCKLOC;yt<((y+1)<<CHPOWER)ASBLOCKLOC;yt++) {
+//            for (BlockLoc zt=(z<<CHPOWER)ASBLOCKLOC;zt<((z+1)<<CHPOWER)ASBLOCKLOC;zt++) {
+//                if (data->featuresque(xt,yt,zt)) {
+//                    int size = 0;
+//                    glm::vec3 points[12];
+//                    glm::vec3 normals[12];
+//                    for (int xl=0;xl<2;xl++) {
+//                        for (int yl=0;yl<2;yl++) {
+//                            if (data->getser(xl+xt,yl+yt,zt)!=data->getser(xl+xt,yl+yt,zt+1)) {
+//                                points[size] = glm::vec3(xl,yl,data->zcon(xl+xt,yl+yt,zt).getoffset());
+//                                normals[size] = data->zcon(xl+xt,yl+yt,zt).getnorm();
+//                                size++;
+//                            }
+//                        }
+//                    }
+//                    for (int xl=0;xl<2;xl++) {
+//                        for (int zl=0;zl<2;zl++) {
+//                            if (data->getser(xl+xt,yt,zl+zt)!=data->getser(xl+xt,yt+1,zl+zt)) {
+//                                points[size] = glm::vec3(xl,data->ycon(xl+xt,yt,zl+zt).getoffset(),zl);
+//                                normals[size] = data->ycon(xl+xt,yt,zl+zt).getnorm();
+//                                size++;
+//                            }
+//                        }
+//                    }
+//                    for (int yl=0;yl<2;yl++) {
+//                        for (int zl=0;zl<2;zl++) {
+//                            if (data->getser(xt,yl+yt,zl+zt)!=data->getser(xt+1,yl+yt,zl+zt)) {
+//                                points[size] = glm::vec3(data->xcon(xt,yl+yt,zl+zt).getoffset(),yl,zl);
+//                                normals[size] = data->xcon(xt,yl+yt,zl+zt).getnorm();
+//                                size++;
+//                            }
+//                        }
+//                    }
+//                    
+//                    
+//                    data->feat(xt,yt,zt) = omgqef(normals, points, size);
+//                    
+//                }
+//            }
+//        }
+//    }
+}
+void Octree::filepushportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+    //    file =
+    std::ofstream file = std::ofstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::out|std::ios::binary|std::ios::trunc);
+    data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))->filesave(file);
+    file.close();
+}
+void Octree::filepullportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+    //    file =
+    std::ifstream file = std::ifstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::in|std::ios::binary);
+    expandchunk(x,y,z);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),depth-CHPOWER,makeOctree(file,CHPOWER),data);
+    hermitify(x,y,z);
+    file.close();
+}
+bool Octree::dataexists(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+    return boost::filesystem::exists(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)));
+}
+//void Octree::save(std::string file) {
+//    throw;
+//}
+glm::vec3 omgqef(glm::vec3 normals[], glm::vec3 positions[], int length )
 {
 //    var A = DenseMatrix.OfRowArrays(normals.Select(e => new[] { e.X, e.Y, e.Z }).ToArray());
 //    var b = DenseVector.OfArray(normals.Zip(positions.Select(p => p - meanPoint), Vector3.Dot).ToArray());
@@ -321,6 +582,129 @@ glm::vec3 Octree::omgqef(glm::vec3 normals[], glm::vec3 positions[], int length 
         ret += positions[k];
     }
     return ret/(float)length;
+}
+
+void Octree::render() {
+    realworld.render();
+}
+bool Octree::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
+    return realworld.existsat(x,y,z);
+}
+void Octree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
+    GeometryOctreeLeaf* newguy = new GeometryOctreeLeaf(x,y,z,0);
+    
+    data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))->geomify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),newguy,data);
+    
+    realworld.expand(x,y,z);
+    
+    realworld.data->insertinto(realworld.flipbits(x),realworld.flipbits(y),realworld.flipbits(z),realworld.depth,newguy,realworld.data);
+    for(auto iterator = newguy->geometry.begin(); iterator != newguy->geometry.end(); iterator++) {
+        iterator->second.matrix = &realworld.matrix;
+        std::cout<<"created geometry with material "<<(int)iterator->first<<"\n";
+    }
+    std::cout<<"finished generation.\n";
+
+}
+
+//void Octree::voxSnippets(BlockLoc x,BlockLoc y,BlockLoc z) {
+////    std::cout<<portion.x<<","<<portion.y<<","<<portion.z<<"\n";
+////    return;
+//    if (existsat(x-1, y, z)) {
+//        voxXskirt(x-1, y, z);
+//    }
+//    if (existsat(x+1, y, z)) {
+//        voxXskirt(x, y, z);
+//    }
+//    if (existsat(x, y-1, z)) {
+//        voxYskirt(x, y-1, z);
+//    }
+//    if (existsat(x, y+1, z)) {
+//        voxYskirt(x, y, z);
+//    }
+//    if (existsat(x, y, z-1)) {
+//        voxZskirt(x, y, z-1);
+//    }
+//    if (existsat(x, y, z+1)) {
+//        voxZskirt(x, y, z);
+//    }
+//    for (int yo1=-1;yo1<=0;yo1++) {
+//        for (int zo1=-1;zo1<=0;zo1++) {
+//            bool count = true;
+//            for (int yo2=0;yo2<=1;yo2++) {
+//                for (int zo2=0;zo2<=1;zo2++) {
+//                    if (!existsat(x,y+yo1+yo2,z+zo1+zo2)) {
+//                        count = false;
+//                    }
+//                }
+//            }
+//            if (count) {
+//                voxXrow(x,y+yo1,z+zo1);
+//            }
+//        }
+//    }
+//    for (int xo1=-1;xo1<=0;xo1++) {
+//        for (int zo1=-1;zo1<=0;zo1++) {
+//            bool count = true;
+//            for (int xo2=0;xo2<=1;xo2++) {
+//                for (int zo2=0;zo2<=1;zo2++) {
+//                    if (!existsat(x+xo1+xo2,y,z+zo1+zo2)) {
+//                        count = false;
+//                    }
+//                }
+//            }
+//            if (count) {
+//                voxYrow(x+xo1,y,z+zo1);
+//            }
+//        }
+//    }
+//    for (int xo1=-1;xo1<=0;xo1++) {
+//        for (int yo1=-1;yo1<=0;yo1++) {
+//            bool count = true;
+//            for (int xo2=0;xo2<=1;xo2++) {
+//                for (int yo2=0;yo2<=1;yo2++) {
+//                    if (!existsat(x+xo1+xo2,y+yo1+yo2,z)) {
+//                        count = false;
+//                    }
+//                }
+//            }
+//            if (count) {
+//                voxZrow(x+xo1,y+yo1,z);
+//            }
+//        }
+//    }
+//    for (int xo1=-1;xo1<=0;xo1++) {
+//        for (int yo1=-1;yo1<=0;yo1++) {
+//            for (int zo1=-1;zo1<=0;zo1++) {
+//                bool count = true;
+//                for (int xo2=0;xo2<=1;xo2++) {
+//                    for (int yo2=0;yo2<=1;yo2++) {
+//                        for (int zo2=0;zo2<=1;zo2++) {
+//                            if (!existsat(x+xo1+xo2,y+yo1+yo2,z+zo1+zo2)) {
+//                                count = false;
+//                            }
+//                        }
+//                    }
+//                }
+//                if (count) {
+//                    voxXYZcorner(x+xo1,y+yo1,z+zo1);
+//                }
+//            }
+//        }
+//    }
+//}
+void Octree::voxXskirt(BlockLoc x,BlockLoc y,BlockLoc z) {
+    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
+        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+            data->hermitifyselection(ASCHUNKLOC(x+1)-1,yi,zi,data);
+        }
+    }
+    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
+        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+            realworld.
+            data->geomifyselection(ASCHUNKLOC(x+1)-1,yi,zi,,data);
+            data->geomifyselection(ASCHUNKLOC(x+1),yi,zi,,data);
+        }
+    }
 }
 
 

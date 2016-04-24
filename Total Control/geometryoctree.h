@@ -14,7 +14,8 @@
 #include "renderterrain.h"
 #include <climits>
 #include "constants.h"
-#include "octree.h"
+#include "materials.h"
+//#include "octree.h"
 #include <map>
 //#include "glm"
 
@@ -57,18 +58,19 @@ struct GeometryOctreePlaceholder : GeometryOctreeBud {
 };
 class GeometryOctree {
 private:
-    BlockLoc flipbits(BlockLoc);
-    void expand(BlockLoc,BlockLoc,BlockLoc);
     int underpressure(BlockLoc,BlockLoc,BlockLoc);
+//    Octree& voxes;
+public:
     int depth = 0;
     GeometryOctreeSegment* data = new GeometryOctreeBud(0,0,0,0);
     glm::mat4& matrix;
-    Octree& voxes;
-public:
-    GeometryOctree(glm::mat4&,Octree&);
+    BlockLoc flipbits(BlockLoc);
+    void expand(BlockLoc,BlockLoc,BlockLoc);
+    GeometryOctree(glm::mat4&);
     void render();
+    GeometryOctreeLeaf* getorcreategeomat(BlockLoc,BlockLoc,BlockLoc);
     bool existsat(BlockLoc,BlockLoc,BlockLoc);
-    void manifest(BlockLoc,BlockLoc,BlockLoc);
+//    void manifest(BlockLoc,BlockLoc,BlockLoc);
 //    void draw(long,long,long,long,long,long,Octree*);
 };
 

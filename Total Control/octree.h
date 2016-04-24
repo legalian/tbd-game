@@ -20,15 +20,11 @@
 //#include <sys/stat.h>
 #include "constants.h"
 #include "materials.h"
-#include <stdint.h>
+#include "geometryoctree.h"
 #include <fstream>
-#include <climits>
+#include <boost/filesystem.hpp>
 
-typedef uint8_t BlockId;
-typedef int BlockLoc;
 
-#define ALTERNATOR (((INT_MAX/3)<<1)|1)
-#define ALTALTERNATOR (ALTERNATOR<<1)
 
 struct Edgedat {
     uint8_t t;
@@ -38,6 +34,8 @@ struct Edgedat {
     uint8_t z;
     Edgedat();
     Edgedat(float,float,float,float);
+    Edgedat(uint8_t ct,uint8_t cx,uint8_t cy,uint8_t cz);
+    
     glm::vec3 getnorm();
     float getoffset();
 //    glm::vec3 getpointx();
@@ -53,15 +51,23 @@ struct Feature {
 };
 
 
+//uint8_t gtable[2][6][2];
+
+
 
 struct OctreeSegment {
 //    static OctreeSegment* makeOctree(std::istream&,int);
     //    bool isfilled;
+    virtual void geomify(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*);
+    virtual void geomifyselection(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*);
+    virtual void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
+    virtual void hermitifyselection(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
+    virtual OctreeSegment* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z);
     virtual BlockId getser(BlockLoc,BlockLoc,BlockLoc);
     virtual void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&);
     virtual void collapse(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*&);
 //    virtual bool uniqueat(long,long,long,int);
-    virtual void savetofile(std::ostream&);
+    virtual void filesave(std::ostream&);
     virtual Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc);
     virtual Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc);
     virtual Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc);
@@ -79,8 +85,10 @@ struct OctreeFeature : OctreeSegment {
     
     Feature& feat(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
-    void setser(BlockLoc,BlockLoc,BlockLoc,uint8_t,int,OctreeSegment*&) override;
-    void savetofile(std::ostream&) override;
+    void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
+    void hermitifyselection(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
+    void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
+    void filesave(std::ostream&) override;
     bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
 };
 struct OctreeLeaf : OctreeFeature {
@@ -88,21 +96,24 @@ struct OctreeLeaf : OctreeFeature {
     Edgedat ycondat;
     Edgedat zcondat;
     OctreeLeaf(BlockId);
+    OctreeLeaf(BlockId,uint8_t[12]);
     
-//    bool uniqueat(long,long,long,int) override;
-    void savetofile(std::ostream&) override;
+    //    bool uniqueat(long,long,long,int) override;
+    void geomify(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*) override;
+    void geomifyselection(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*) override;
+    void filesave(std::ostream&) override;
     Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc) override;
 };
 struct OctreeBud : OctreeSegment {
-    uint8_t fillvalue;
-    OctreeBud(uint8_t);
+    BlockId fillvalue;
+    OctreeBud(BlockId);
     
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
     void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
 //    bool uniqueat(long,long,long,int) override;
-    void savetofile(std::ostream&) override;
+    void filesave(std::ostream&) override;
     BlockId getsimpid() override;
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,OctreeSegment*&) override;
     bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
@@ -115,12 +126,20 @@ struct OctreeBranch : OctreeSegment {
                  OctreeSegment*,OctreeSegment*,
                  OctreeSegment*,OctreeSegment*,int);
     
+    
+    //    void geomifyportion(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*) override;
+    void geomify(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*) override;
+    void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
+    void geomifyselection(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*) override;
+    void hermitifyselection(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
+//    void hermitifyportion(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
+    OctreeSegment* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
     void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
     
 //    void collapse(long,long,long,OctreeSegment*&) override;
 //    bool uniqueat(long,long,long,int) override;
-    void savetofile(std::ostream&) override;
+    void filesave(std::ostream&) override;
     Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc) override;
@@ -136,22 +155,30 @@ private:
     void expand(int);
     int underpressure(BlockLoc,BlockLoc,BlockLoc);
     int depth = 0;
-    glm::vec3 omgqef(glm::vec3[],glm::vec3[],int);
-    OctreeSegment* data = new OctreeBud(0);
+    GeometryOctree realworld;
 public:
+    Octree(glm::mat4&);
+    OctreeSegment* data = new OctreeBud(0);
     void loadportion(BlockLoc,BlockLoc,BlockLoc,BlockId (*)[CHSIZE+1][CHSIZE+1]);
-    void loadfromfile(BlockLoc,BlockLoc,BlockLoc,int,std::string);
-    void setAt(BlockLoc,BlockLoc,BlockLoc,BlockId);
-    BlockId getAt(BlockLoc,BlockLoc,BlockLoc);
-    Edgedat& conx(BlockLoc,BlockLoc,BlockLoc);
-    Edgedat& cony(BlockLoc,BlockLoc,BlockLoc);
-    Edgedat& conz(BlockLoc,BlockLoc,BlockLoc);
-    Feature& feat(BlockLoc,BlockLoc,BlockLoc);
+//    void loadfromfile(BlockLoc,BlockLoc,BlockLoc,int,std::string);
+    void render();
+    void manifest(BlockLoc,BlockLoc,BlockLoc);
+    bool existsat(BlockLoc,BlockLoc,BlockLoc);
+    void filepullportion(std::string,BlockLoc,BlockLoc,BlockLoc);
+    void filepushportion(std::string,BlockLoc,BlockLoc,BlockLoc);
+    bool dataexists(std::string,BlockLoc,BlockLoc,BlockLoc);
+//    void push
+//    void setAt(BlockLoc,BlockLoc,BlockLoc,BlockId);
+//    BlockId getAt(BlockLoc,BlockLoc,BlockLoc);
+//    Edgedat& conx(BlockLoc,BlockLoc,BlockLoc);
+//    Edgedat& cony(BlockLoc,BlockLoc,BlockLoc);
+//    Edgedat& conz(BlockLoc,BlockLoc,BlockLoc);
+//    Feature& feat(BlockLoc,BlockLoc,BlockLoc);
     void hermitify(BlockLoc,BlockLoc,BlockLoc);
-    void save(std::string);
 };
 
 
+glm::vec3 omgqef(glm::vec3[],glm::vec3[],int);
 OctreeSegment* makeOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
 
 #endif /* defined(__Total_Control__octree__) */

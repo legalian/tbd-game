@@ -121,7 +121,7 @@ int main()
     double z = -6;
     double theta = 0;
     
-    float meteorangle = 0;
+//    float meteorangle = 0;
     
     
     
@@ -129,19 +129,26 @@ int main()
     double lastFrameTime = lastTime;
     int nbFrames = 0;
     
-    Structure test;
-    test.source = new BoxSample();
+    
+    Environment world;
+    world.addstructure(Structure("test"));
+    world.getstructure("test")->source = new SimpleTerrainSample();
+    world.opensavedirectory();
+    world.beginthread();
+//    Structure test = Structure("test");
+//    test.source = new SimpleTerrainSample();
+//    test.source = new SimpleTerrainSample();
 //    test.attain(Location(0,-1,0));
 //    test.attain(Location(0,0,0));
-    for (int f=0;f<2;f++) {
-        test.updatequeue(3,3,3);
-        std::cout<<test.queue.size()<<" is len\n";
-        for (int index=0;index<test.queue.size();index++) {
-            test.attain(test.queue[index]);
-        }
-        test.queue.clear();
-        
-    }
+//    for (int f=0;f<2;f++) {
+//        test.updatequeue(3,3,3);
+//        std::cout<<test.queue.size()<<" is len\n";
+//        for (int index=0;index<test.queue.size();index++) {
+//            test.attain(test.queue[index]);
+//        }
+//        test.queue.clear();
+//        
+//    }
     
     extern glm::mat4 camera;
     
@@ -164,8 +171,10 @@ int main()
                                            );
         camera = Projection*View;
         
-        test.render();
-        renderall();
+//        test.render();
+//        renderall();
+        world.checkup(x,y,z);
+        world.draw();
 //        std::cout<<x<<","<<y<<","<<z<<"\n";
         
         

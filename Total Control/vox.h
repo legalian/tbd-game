@@ -55,17 +55,18 @@ class Structure {
 public:
     static EmptySampler emptysampler;
     Sampler* source = &emptysampler;
-    std::string structureid = "";
+    std::string structureid;
     glm::mat4 transform;
-    Octree world;
-    GeometryOctree visibleworld = GeometryOctree(transform,world);
+    Octree world = Octree(transform);
+//    GeometryOctree visibleworld = GeometryOctree(transform);
     std::vector<Location> queue;
     Bounds bounds;
     Location cameraloc;
     int loadstage = 0;
     
+    Structure(std::string);
     void updatequeue(double,double,double);
-    void attain(Location);
+    void attain(std::string,Location);
     void render();
     
 //    int loadstage = 0;

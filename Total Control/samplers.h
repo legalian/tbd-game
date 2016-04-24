@@ -12,6 +12,18 @@
 #include <stdio.h>
 #include <octree.h>
 
+
+
+class NoiseVolume {
+private:
+    float data[RANDSIZE][RANDSIZE][RANDSIZE];
+//    inline double interp(float&, float&, float&);
+
+public:
+    NoiseVolume();
+    float sample(double, double, double);
+};
+
 class Sampler {
 public:
     virtual void populate(BlockLoc,BlockLoc,BlockLoc,Octree&);
@@ -23,6 +35,12 @@ public:
 class BoxSample : public Sampler {
 public:
     void populate(BlockLoc,BlockLoc,BlockLoc,Octree&) override;
+};
+class SimpleTerrainSample : public Sampler {
+public:
+    void populate(BlockLoc,BlockLoc,BlockLoc,Octree&) override;
+    inline float fGetOffset(float,float);
+    inline float sample(float,float,float);
 };
 //class SimpleSample : public Sampler {
 //public:
