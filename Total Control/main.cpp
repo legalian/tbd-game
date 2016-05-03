@@ -132,7 +132,8 @@ int main()
     
     Environment world;
     world.addstructure(Structure("test"));
-    world.getstructure("test")->source = new SimpleTerrainSample();
+    Structure* temppoint = world.getstructure("test");
+    temppoint->source = new SimpleTerrainSample();
     world.opensavedirectory();
     world.beginthread();
 //    Structure test = Structure("test");
@@ -181,6 +182,9 @@ int main()
         
         glfwSwapBuffers(window);
         glfwPollEvents();
+        if (glfwGetKey(window,GLFW_KEY_P) == GLFW_PRESS) {
+            temppoint->world.realworld.data->debugprinttrace(0);
+        }
         
         if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS) {
 //            glm::mat4 move = glm::rotate(glm::mat4(1.0f), .075f, glm::vec3(0.0f, 1.0f, 0.0f));

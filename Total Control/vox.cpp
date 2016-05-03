@@ -58,7 +58,17 @@ void Structure::attain(std::string basename,Location pos) {
         source->populate(pos.x,pos.y,pos.z,world);
         world.filepushportion(filename,pos.x,pos.y,pos.z);
     }
+    world.hermitify(pos.x,pos.y,pos.z);
     world.manifest(pos.x,pos.y,pos.z);
+    
+    world.voxsnippets(pos.x  ,pos.y  ,pos.z  );
+//    world.voxsnippets(pos.x-1,pos.y  ,pos.z  );
+//    world.voxsnippets(pos.x  ,pos.y-1,pos.z  );
+//    world.voxsnippets(pos.x-1,pos.y-1,pos.z  );
+//    world.voxsnippets(pos.x  ,pos.y  ,pos.z-1);
+//    world.voxsnippets(pos.x-1,pos.y  ,pos.z-1);
+//    world.voxsnippets(pos.x  ,pos.y-1,pos.z-1);
+//    world.voxsnippets(pos.x-1,pos.y-1,pos.z-1);
 }
 void Structure::render() {
     world.render();

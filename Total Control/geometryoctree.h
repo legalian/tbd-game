@@ -18,11 +18,14 @@
 //#include "octree.h"
 #include <map>
 //#include "glm"
+class GeometryOctreeLeaf;
 
 struct GeometryOctreeSegment {
+    virtual void debugprinttrace(int offset);
     virtual void render(const glm::mat4&);
     virtual void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&);
     virtual bool existsat(BlockLoc,BlockLoc,BlockLoc);
+    virtual GeometryOctreeLeaf* getgeomat(BlockLoc,BlockLoc,BlockLoc);
     BlockLoc xs;
     BlockLoc ys;
     BlockLoc zs;
@@ -32,6 +35,7 @@ struct GeometryOctreeSegment {
 };
 struct GeometryOctreeBranch : GeometryOctreeSegment {
     GeometryOctreeSegment* subdivisions[2][2][2];
+    void debugprinttrace(int offset) override;
     GeometryOctreeBranch(GeometryOctreeSegment*,GeometryOctreeSegment*,
                          GeometryOctreeSegment*,GeometryOctreeSegment*,
                          GeometryOctreeSegment*,GeometryOctreeSegment*,
@@ -39,13 +43,20 @@ struct GeometryOctreeBranch : GeometryOctreeSegment {
     void render(const glm::mat4&) override;
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
     bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
+    GeometryOctreeLeaf* getgeomat(BlockLoc,BlockLoc,BlockLoc) override;
 };
 struct GeometryOctreeLeaf : GeometryOctreeSegment {
+    bool open=true;
     GeometryOctreeLeaf(BlockLoc,BlockLoc,BlockLoc,int);
     std::map<uint8_t,GeomTerrain> geometry;
     void render(const glm::mat4&) override;
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
     bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
+    GeometryOctreeLeaf* getgeomat(BlockLoc,BlockLoc,BlockLoc) override;
+    
+    void matrixmap(glm::mat4*);
+    void securecore();
+    void preparesnippets();
 };
 struct GeometryOctreeBud : GeometryOctreeSegment {
     GeometryOctreeBud(BlockLoc,BlockLoc,BlockLoc,int);
@@ -53,13 +64,14 @@ struct GeometryOctreeBud : GeometryOctreeSegment {
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,GeometryOctreeSegment*,GeometryOctreeSegment*&) override;
     bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
 };
-struct GeometryOctreePlaceholder : GeometryOctreeBud {
-    bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
-};
+//struct GeometryOctreePlaceholder : GeometryOctreeBud {
+//    bool existsat(BlockLoc,BlockLoc,BlockLoc) override;
+//};
 class GeometryOctree {
 private:
     int underpressure(BlockLoc,BlockLoc,BlockLoc);
 //    Octree& voxes;
+    BlockLoc reduce = 0;
 public:
     int depth = 0;
     GeometryOctreeSegment* data = new GeometryOctreeBud(0,0,0,0);
@@ -68,8 +80,9 @@ public:
     void expand(BlockLoc,BlockLoc,BlockLoc);
     GeometryOctree(glm::mat4&);
     void render();
-    GeometryOctreeLeaf* getorcreategeomat(BlockLoc,BlockLoc,BlockLoc);
+    GeometryOctreeLeaf* getgeomat(BlockLoc,BlockLoc,BlockLoc);
     bool existsat(BlockLoc,BlockLoc,BlockLoc);
+    void insertinto(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*);
 //    void manifest(BlockLoc,BlockLoc,BlockLoc);
 //    void draw(long,long,long,long,long,long,Octree*);
 };

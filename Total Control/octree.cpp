@@ -42,6 +42,32 @@ void Feature::operator=(const glm::vec3& other) {
     y = other.y*255;
     z = other.z*255;
 }
+
+MatrixCarriage operator+(const MatrixCarriage &m1, const MatrixCarriage &m2)
+{
+    // use the Cents constructor and operator+(int, int)
+    // we can access m_cents directly because this is a friend function
+    return MatrixCarriage(
+                          m1.bb+m2.bb,
+                          m1.bb+m2.Ab1,
+                          m1.bb+m2.Ab2,
+                          m1.bb+m2.Ab3,
+                          m1.bb+m2.AA1,
+                          m1.bb+m2.AA2,
+                          m1.bb+m2.AA3,
+                          m1.bb+m2.AA4,
+                          m1.bb+m2.AA5,
+                          m1.bb+m2.AA6
+    );
+}
+
+MatrixCarriage::MatrixCarriage() :
+    bb(0), Ab1(0), Ab2(0), Ab3(0), AA1(0), AA2(0), AA3(0), AA4(0), AA5(0), AA6(0) {};
+MatrixCarriage::MatrixCarriage(double a,double b,double c,double d,double e,double f,double g,double h,double i,double j) :
+    bb(a), Ab1(b), Ab2(c), Ab3(d), AA1(e), AA2(f), AA3(g), AA4(h), AA5(i), AA6(j) {};
+
+
+
 void OctreeSegment::geomifyselection(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {}
 void OctreeSegment::hermitifyselection(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
 void OctreeSegment::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {}
@@ -188,18 +214,18 @@ void OctreeLeaf::filesave(std::ostream& file) {
     char towrite = 'l';
     file.write(&towrite,1);
     file.write((char*)&fillvalue,sizeof(uint8_t));
+    file.write((char*)&xcondat.t,sizeof(uint8_t));
     file.write((char*)&xcondat.x,sizeof(uint8_t));
     file.write((char*)&xcondat.y,sizeof(uint8_t));
     file.write((char*)&xcondat.z,sizeof(uint8_t));
-    file.write((char*)&xcondat.t,sizeof(uint8_t));
+    file.write((char*)&ycondat.t,sizeof(uint8_t));
     file.write((char*)&ycondat.x,sizeof(uint8_t));
     file.write((char*)&ycondat.y,sizeof(uint8_t));
     file.write((char*)&ycondat.z,sizeof(uint8_t));
-    file.write((char*)&ycondat.t,sizeof(uint8_t));
+    file.write((char*)&zcondat.t,sizeof(uint8_t));
     file.write((char*)&zcondat.x,sizeof(uint8_t));
     file.write((char*)&zcondat.y,sizeof(uint8_t));
     file.write((char*)&zcondat.z,sizeof(uint8_t));
-    file.write((char*)&zcondat.t,sizeof(uint8_t));
 }
 
 OctreeBud::OctreeBud(BlockId fill) : fillvalue(fill) {}
@@ -265,15 +291,6 @@ void OctreeBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* 
     subdivisions[0][1][1]->geomify(x     ,y|mask,z|mask,geometry,world);
     subdivisions[1][1][1]->geomify(x|mask,y|mask,z|mask,geometry,world);
 }
-//void OctreeBranch::geomifyportion(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {
-//    if (CHPOWER<=depth) {
-//        subdivisions XYZINDEX->geomifyportion(x,y,z,geometry,world);
-//    } else {
-//        geomify(x,y,z,geometry,world);
-
-//    }
-//    
-//}
 void OctreeBranch::geomifyselection(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world) {
     subdivisions XYZINDEX->geomifyselection(x,y,z,geometry,world);
 }
@@ -298,14 +315,6 @@ OctreeSegment* OctreeBranch::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {
         return subdivisions XYZINDEX->getvoxunit(x,y,z);
     }
 }
-//void OctreeBranch::hermitifyportion(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
-//    if (depth<CHPOWER) {
-//        hermitify(x,y,z,world);
-//    } else {
-//        subdivisions XYZINDEX->hermitifyportion(x,y,z,world);
-//    }
-//    
-//}
 
 BlockId OctreeBranch::getser(BlockLoc x,BlockLoc y,BlockLoc z) {
     return subdivisions XYZINDEX->getser(x,y,z);
@@ -453,19 +462,6 @@ OctreeSegment* makeOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,
                     OctreeSegment* f = makeOctree(data,x+k,y,z+k,recur-1);
                     OctreeSegment* g = makeOctree(data,x,y+k,z+k,recur-1);
                     OctreeSegment* h = makeOctree(data,x+k,y+k,z+k,recur-1);
-                //    uint8_t equi = a->getsimpid();
-                //    if (equi!=0 and equi==b->getsimpid() and equi==c->getsimpid() and equi==d->getsimpid() and
-                //        equi==e->getsimpid() and equi==f->getsimpid() and equi==g->getsimpid() and equi==h->getsimpid()) {
-                //        delete a;
-                //        delete b;
-                //        delete c;
-                //        delete d;
-                //        delete e;
-                //        delete f;
-                //        delete g;
-                //        delete h;
-                //        return new OctreeBud(equi);
-                //    }
                     return new OctreeBranch(a,b,c,d,e,f,g,h,recur-1);
                 }
             }
@@ -478,75 +474,13 @@ void Octree::loadportion(BlockLoc x,BlockLoc y,BlockLoc z,BlockId (*dat)[CHSIZE+
     expandchunk(x,y,z);
     data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),depth-CHPOWER,makeOctree(dat,0,0,0,CHPOWER),data);
 }
-//void Octree::loadfromfile(BlockLoc x,BlockLoc y,BlockLoc z,int recur,std::string file) {
-//    
-//}
-//void Octree::setAt(BlockLoc x,BlockLoc y,BlockLoc z,uint8_t newid) {
-//    expand(x,y,z);
-//    data->setser(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC,newid,depth,data);
-//}
-//uint8_t Octree::getAt(BlockLoc x,BlockLoc y,BlockLoc z) {
-//    return data->getser(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-//}
-//Edgedat& Octree::conx(BlockLoc x,BlockLoc y,BlockLoc z) {
-//    return data->xcon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-//}
-//Edgedat& Octree::cony(BlockLoc x,BlockLoc y,BlockLoc z) {
-//    return data->ycon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-//}
-//Edgedat& Octree::conz(BlockLoc x,BlockLoc y,BlockLoc z) {
-//    return data->zcon(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-//}
-//Feature& Octree::feat(BlockLoc x,BlockLoc y,BlockLoc z) {
-//    return data->feat(x ASBLOCKLOC,y ASBLOCKLOC,z ASBLOCKLOC);
-//}
+
 
 Octree::Octree(glm::mat4& trans) : realworld(trans) {}
 
 void Octree::hermitify(BlockLoc x, BlockLoc y, BlockLoc z) {
     data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))->hermitify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),data);
-//    for (BlockLoc xt=(x<<CHPOWER)ASBLOCKLOC;xt<((x+1)<<CHPOWER)ASBLOCKLOC;xt++) {
-//        for (BlockLoc yt=(y<<CHPOWER)ASBLOCKLOC;yt<((y+1)<<CHPOWER)ASBLOCKLOC;yt++) {
-//            for (BlockLoc zt=(z<<CHPOWER)ASBLOCKLOC;zt<((z+1)<<CHPOWER)ASBLOCKLOC;zt++) {
-//                if (data->featuresque(xt,yt,zt)) {
-//                    int size = 0;
-//                    glm::vec3 points[12];
-//                    glm::vec3 normals[12];
-//                    for (int xl=0;xl<2;xl++) {
-//                        for (int yl=0;yl<2;yl++) {
-//                            if (data->getser(xl+xt,yl+yt,zt)!=data->getser(xl+xt,yl+yt,zt+1)) {
-//                                points[size] = glm::vec3(xl,yl,data->zcon(xl+xt,yl+yt,zt).getoffset());
-//                                normals[size] = data->zcon(xl+xt,yl+yt,zt).getnorm();
-//                                size++;
-//                            }
-//                        }
-//                    }
-//                    for (int xl=0;xl<2;xl++) {
-//                        for (int zl=0;zl<2;zl++) {
-//                            if (data->getser(xl+xt,yt,zl+zt)!=data->getser(xl+xt,yt+1,zl+zt)) {
-//                                points[size] = glm::vec3(xl,data->ycon(xl+xt,yt,zl+zt).getoffset(),zl);
-//                                normals[size] = data->ycon(xl+xt,yt,zl+zt).getnorm();
-//                                size++;
-//                            }
-//                        }
-//                    }
-//                    for (int yl=0;yl<2;yl++) {
-//                        for (int zl=0;zl<2;zl++) {
-//                            if (data->getser(xt,yl+yt,zl+zt)!=data->getser(xt+1,yl+yt,zl+zt)) {
-//                                points[size] = glm::vec3(data->xcon(xt,yl+yt,zl+zt).getoffset(),yl,zl);
-//                                normals[size] = data->xcon(xt,yl+yt,zl+zt).getnorm();
-//                                size++;
-//                            }
-//                        }
-//                    }
-//                    
-//                    
-//                    data->feat(xt,yt,zt) = omgqef(normals, points, size);
-//                    
-//                }
-//            }
-//        }
-//    }
+    
 }
 void Octree::filepushportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
     //    file =
@@ -559,24 +493,13 @@ void Octree::filepullportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc
     std::ifstream file = std::ifstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::in|std::ios::binary);
     expandchunk(x,y,z);
     data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),depth-CHPOWER,makeOctree(file,CHPOWER),data);
-    hermitify(x,y,z);
     file.close();
 }
 bool Octree::dataexists(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
     return boost::filesystem::exists(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)));
 }
-//void Octree::save(std::string file) {
-//    throw;
-//}
 glm::vec3 omgqef(glm::vec3 normals[], glm::vec3 positions[], int length )
 {
-//    var A = DenseMatrix.OfRowArrays(normals.Select(e => new[] { e.X, e.Y, e.Z }).ToArray());
-//    var b = DenseVector.OfArray(normals.Zip(positions.Select(p => p - meanPoint), Vector3.Dot).ToArray());
-//    
-//    var pseudo = PseudoInverse(A);
-//    var leastsquares = pseudo.Multiply(b);
-//    
-//    return leastsquares + DenseVector.OfArray(new[] { meanPoint.X, meanPoint.Y, meanPoint.Z });
     glm::vec3 ret;
     for (int k=0;k<length;k++) {
         ret += positions[k];
@@ -596,31 +519,69 @@ void Octree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
     data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))->geomify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),newguy,data);
     
     realworld.expand(x,y,z);
-    
-    realworld.data->insertinto(realworld.flipbits(x),realworld.flipbits(y),realworld.flipbits(z),realworld.depth,newguy,realworld.data);
-    for(auto iterator = newguy->geometry.begin(); iterator != newguy->geometry.end(); iterator++) {
-        iterator->second.matrix = &realworld.matrix;
-        std::cout<<"created geometry with material "<<(int)iterator->first<<"\n";
-    }
-    std::cout<<"finished generation.\n";
+    realworld.insertinto(x,y,z,newguy);
+//    realworld.data->insertinto(realworld.flipbits(x),realworld.flipbits(y),realworld.flipbits(z),realworld.depth,newguy,realworld.data);
+    newguy->matrixmap(&realworld.matrix);
+    newguy->securecore();
+    newguy->open = false;
+//    for(auto iterator = newguy->geometry.begin(); iterator != newguy->geometry.end(); iterator++) {
+//        iterator->second.matrix = &realworld.matrix;
+//        std::cout<<"created geometry with material "<<(int)iterator->first<<"\n";
+//    }
+//    std::cout<<"finished generation.\n";
 
 }
+//
+void Octree::voxXskirt(BlockLoc x,BlockLoc y,BlockLoc z) {
+    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
+        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+            data->hermitifyselection(ASCHUNKLOC(x+1)-1,yi,zi,data);
+        }
+    }
+    GeometryOctreeLeaf* geo = realworld.getgeomat(x,y,z);
+    geo->open = true;
+    geo->preparesnippets();
+    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
+        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+            data->geomifyselection(ASCHUNKLOC(x+1)-1,yi,zi,geo,data);
+            data->geomifyselection(ASCHUNKLOC(x+1),yi,zi,geo,data);
+        }
+    }
+    geo->matrixmap(&realworld.matrix);
+    geo->open = false;
+}
+void Octree::voxYskirt(BlockLoc x,BlockLoc y,BlockLoc z) {
+    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
+        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+            data->hermitifyselection(xi,ASCHUNKLOC(y+1)-1,zi,data);
+        }
+    }
+    GeometryOctreeLeaf* geo = realworld.getgeomat(x,y,z);
+    geo->open = true;
+    geo->preparesnippets();
+    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
+        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+            data->geomifyselection(xi,ASCHUNKLOC(y+1)-1,zi,geo,data);
+            data->geomifyselection(xi,ASCHUNKLOC(y+1),zi,geo,data);
+        }
+    }
+    geo->matrixmap(&realworld.matrix);
+    geo->open = false;
+}
 
-//void Octree::voxSnippets(BlockLoc x,BlockLoc y,BlockLoc z) {
-////    std::cout<<portion.x<<","<<portion.y<<","<<portion.z<<"\n";
-////    return;
-//    if (existsat(x-1, y, z)) {
-//        voxXskirt(x-1, y, z);
-//    }
-//    if (existsat(x+1, y, z)) {
-//        voxXskirt(x, y, z);
-//    }
-//    if (existsat(x, y-1, z)) {
-//        voxYskirt(x, y-1, z);
-//    }
-//    if (existsat(x, y+1, z)) {
-//        voxYskirt(x, y, z);
-//    }
+void Octree::voxsnippets(BlockLoc x,BlockLoc y,BlockLoc z) {
+    if (existsat(x-1, y, z)) {
+        voxXskirt(x-1, y, z);
+    }
+    if (existsat(x+1, y, z)) {
+        voxXskirt(x, y, z);
+    }
+    if (existsat(x, y-1, z)) {
+        voxYskirt(x, y-1, z);
+    }
+    if (existsat(x, y+1, z)) {
+        voxYskirt(x, y, z);
+    }
 //    if (existsat(x, y, z-1)) {
 //        voxZskirt(x, y, z-1);
 //    }
@@ -679,7 +640,7 @@ void Octree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
 //                for (int xo2=0;xo2<=1;xo2++) {
 //                    for (int yo2=0;yo2<=1;yo2++) {
 //                        for (int zo2=0;zo2<=1;zo2++) {
-//                            if (!existsat(x+xo1+xo2,y+yo1+yo2,z+zo1+zo2)) {
+//                            if (!existsAt(x+xo1+xo2,y+yo1+yo2,z+zo1+zo2)) {
 //                                count = false;
 //                            }
 //                        }
@@ -691,40 +652,94 @@ void Octree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
 //            }
 //        }
 //    }
-//}
-void Octree::voxXskirt(BlockLoc x,BlockLoc y,BlockLoc z) {
-    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
-        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
-            data->hermitifyselection(ASCHUNKLOC(x+1)-1,yi,zi,data);
-        }
-    }
-    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
-        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
-            realworld.
-            data->geomifyselection(ASCHUNKLOC(x+1)-1,yi,zi,,data);
-            data->geomifyselection(ASCHUNKLOC(x+1),yi,zi,,data);
-        }
-    }
-}
 
-
-//choose 3:
-//
-//- me + choose 2 from below:
-//- = me + choose 1 from below:
-//-
-//-
-//-
-//-
-//choose(3,0,len,ar,[])
-//choose(n,o,max,ar,pre) {
-//    if (n=0) return [];
-//    if (max-o<n) return [];
-//    ret = [];
-//    for (i=o;o<max,ar) {
-//        ret += choose(n-1,o+1,max,ar,pre+[ar[o]])
+//    for (int ix=0;ix<2;ix++) {
+//        for (int iy=0;iy<2;iy++) {
+//            for (int iz=0;iz<2;iz++) {
+//                if (!existsat(x+ix,y+iy,z+iz)) {
+//                    return;
+//                }
+//            }
+//        }
 //    }
-//    return ret;
-//}
-
+////    for (int xi=ASCHUNKLOC(x);xi<ASCHUNKLOC(x+1)-1;xi++) {
+////        for (int yi=ASCHUNKLOC(x);yi<ASCHUNKLOC(y+1)-1;yi++) {
+////            data->hermitifyselection(xi, yi,ASCHUNKLOC(z+1)-1,data);
+////        }
+////    }
+////    for (int yi=ASCHUNKLOC(y)-1;yi<)
+//    for (int yi=ASCHUNKLOC(y);yi<ASCHUNKLOC(y+1)-1;yi++) {
+//        for (int zi=ASCHUNKLOC(z);zi<ASCHUNKLOC(z+1)-1;zi++) {
+//            data->hermitifyselection(ASCHUNKLOC(x+1)-1,yi,zi,data);
+//        }
+//    }
+//    for (int xi=ASCHUNKLOC(x);xi<ASCHUNKLOC(x+1)-1;xi++) {
+//        for (int zi=ASCHUNKLOC(z);zi<ASCHUNKLOC(z+1)-1;zi++) {
+//            data->hermitifyselection(xi,ASCHUNKLOC(y+1)-1,zi,data);
+//        }
+//    }
+//    for (int xi=ASCHUNKLOC(x);xi<ASCHUNKLOC(x+1)-1;xi++) {
+//        for (int yi=ASCHUNKLOC(y);yi<ASCHUNKLOC(y+1)-1;yi++) {
+//            data->hermitifyselection(xi,yi,ASCHUNKLOC(z+1)-1,data);
+//        }
+//    }
+//    
+////    for (int xi=ASCHUNKLOC(x);xi<ASCHUNKLOC(x+1)-1;xi++) {
+////        data->hermitifyselection(xi,ASCHUNKLOC(y+1)-1,ASCHUNKLOC(z+1)-1,data);
+////    }
+////    for (int yi=ASCHUNKLOC(y);yi<ASCHUNKLOC(y+1)-1;yi++) {
+////        data->hermitifyselection(ASCHUNKLOC(x+1)-1,yi,ASCHUNKLOC(z+1)-1,data);
+////    }
+////    for (int zi=ASCHUNKLOC(z);zi<ASCHUNKLOC(z+1)-1;zi++) {
+////        data->hermitifyselection(ASCHUNKLOC(x+1)-1,ASCHUNKLOC(y+1)-1,zi,data);
+////    }
+//    GeometryOctreeLeaf* geo = realworld.getgeomat(x,y,z);
+//    //    geo->
+//    geo->open = true;
+//    geo->preparesnippets();
+////    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
+////        for (int yi=ASCHUNKLOC(x)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
+////            data->geomifyselection(xi, yi,ASCHUNKLOC(z+1)-1,geo,data);
+////            data->geomifyselection(xi, yi,ASCHUNKLOC(z+1),geo,data);
+////        }
+////    }
+//    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)+1;yi++) {
+//        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)+1;zi++) {
+//            data->geomifyselection(ASCHUNKLOC(x+1)-1,yi,zi,geo,data);
+//            data->geomifyselection(ASCHUNKLOC(x+1),yi,zi,geo,data);
+//        }
+//    }
+//    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
+//        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+//            data->geomifyselection(xi,ASCHUNKLOC(y+1)-1,zi,geo,data);
+//            data->geomifyselection(xi,ASCHUNKLOC(y+1),zi,geo,data);
+//        }
+//    }
+//    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
+//        for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
+//            data->geomifyselection(xi,yi,ASCHUNKLOC(z+1)-1,geo,data);
+//            data->geomifyselection(xi,yi,ASCHUNKLOC(z+1),geo,data);
+//        }
+//    }
+////    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
+////        data->geomifyselection(xi,ASCHUNKLOC(y+1)-1,ASCHUNKLOC(z+1)-1,geo,data);
+////        data->geomifyselection(xi,ASCHUNKLOC(y+1),ASCHUNKLOC(z+1)-1,geo,data);
+////        data->geomifyselection(xi,ASCHUNKLOC(y+1)-1,ASCHUNKLOC(z+1),geo,data);
+////        data->geomifyselection(xi,ASCHUNKLOC(y+1),ASCHUNKLOC(z+1),geo,data);
+////    }
+////    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
+////        data->geomifyselection(ASCHUNKLOC(x+1)-1,yi,ASCHUNKLOC(z+1)-1,geo,data);
+////        data->geomifyselection(ASCHUNKLOC(x+1),yi,ASCHUNKLOC(z+1)-1,geo,data);
+////        data->geomifyselection(ASCHUNKLOC(x+1)-1,yi,ASCHUNKLOC(z+1),geo,data);
+////        data->geomifyselection(ASCHUNKLOC(x+1),yi,ASCHUNKLOC(z+1),geo,data);
+////    }
+////    for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
+////        data->geomifyselection(ASCHUNKLOC(x+1)-1,ASCHUNKLOC(y+1)-1,zi,geo,data);
+////        data->geomifyselection(ASCHUNKLOC(x+1),ASCHUNKLOC(y+1)-1,zi,geo,data);
+////        data->geomifyselection(ASCHUNKLOC(x+1)-1,ASCHUNKLOC(y+1),zi,geo,data);
+////        data->geomifyselection(ASCHUNKLOC(x+1),ASCHUNKLOC(y+1),zi,geo,data);
+////    }
+//    geo->matrixmap(&realworld.matrix);
+//    geo->open = false;
+}
 

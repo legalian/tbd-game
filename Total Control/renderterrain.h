@@ -32,11 +32,16 @@
 class GeomTerrain {
 public:
     int size = 0;
+    int coregeomsize = 0;
     bool baked = false;
     std::vector<glm::vec3> indexed_vertices;
     std::vector<glm::vec3> indexed_normals;
     GLuint vertexbuffer;
     GLuint normalbuffer;
+    
+    void dumpeverything();
+    void dumpextrabits();
+    void markcoregeom();
     
     void addVert(double,double,double);
     void addNormal(double,double,double);

@@ -125,7 +125,6 @@ void SimpleTerrainSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& wor
             }
         }
     }
-    world.hermitify(x,y,z);
     delete [] samplebuffer;
     delete [] ids;
 }

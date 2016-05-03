@@ -49,7 +49,21 @@ struct Feature {
     glm::vec3 get();
     void operator=(const glm::vec3&);
 };
-
+struct MatrixCarriage {
+    double bb;
+    double Ab1;
+    double Ab2;
+    double Ab3;
+    double AA1;
+    double AA2;
+    double AA3;
+    double AA4;
+    double AA5;
+    double AA6;
+    friend MatrixCarriage operator+(const MatrixCarriage&, const MatrixCarriage&);
+    MatrixCarriage();
+    MatrixCarriage(double,double,double,double,double,double,double,double,double,double);
+};
 
 //uint8_t gtable[2][6][2];
 
@@ -155,8 +169,9 @@ private:
     void expand(int);
     int underpressure(BlockLoc,BlockLoc,BlockLoc);
     int depth = 0;
-    GeometryOctree realworld;
+    int bakeddetails = 0;
 public:
+    GeometryOctree realworld;
     Octree(glm::mat4&);
     OctreeSegment* data = new OctreeBud(0);
     void loadportion(BlockLoc,BlockLoc,BlockLoc,BlockId (*)[CHSIZE+1][CHSIZE+1]);
@@ -175,6 +190,17 @@ public:
 //    Edgedat& conz(BlockLoc,BlockLoc,BlockLoc);
 //    Feature& feat(BlockLoc,BlockLoc,BlockLoc);
     void hermitify(BlockLoc,BlockLoc,BlockLoc);
+    
+    void voxXskirt(BlockLoc,BlockLoc,BlockLoc);
+    void voxYskirt(BlockLoc,BlockLoc,BlockLoc);
+//    void voxZskirt(BlockLoc,BlockLoc,BlockLoc);
+//    
+//    void voxXrow(BlockLoc,BlockLoc,BlockLoc);
+//    void voxYrow(BlockLoc,BlockLoc,BlockLoc);
+//    void voxZrow(BlockLoc,BlockLoc,BlockLoc);
+//    
+//    void voxXYZcorner(BlockLoc,BlockLoc,BlockLoc);
+    void voxsnippets(BlockLoc,BlockLoc,BlockLoc);
 };
 
 

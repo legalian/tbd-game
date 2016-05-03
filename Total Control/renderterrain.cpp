@@ -49,6 +49,28 @@ void GeomTerrain::bake(){
         baked = true;
     }
 }
+void GeomTerrain::markcoregeom() {
+    coregeomsize = (int)indexed_vertices.size();
+}
+void GeomTerrain::dumpeverything() {
+    baked = false;
+    glDeleteBuffers(1, &vertexbuffer);
+    glDeleteBuffers(1, &normalbuffer);
+    indexed_vertices.erase(indexed_vertices.begin(),indexed_vertices.end());
+    indexed_normals.erase(indexed_normals.begin(),indexed_normals.end());
+}
+void GeomTerrain::dumpextrabits() {
+    if (baked) {
+//        glDeleteBuffers(1, &vertexbuffer);
+//        glDeleteBuffers(1, &normalbuffer);
+        baked = false;
+//        throw;
+    }
+    
+//    std::cout<<coregeomsize;
+//    indexed_vertices.erase(indexed_vertices.begin()+coregeomsize,indexed_vertices.end());
+//    indexed_normals.erase(indexed_normals.begin()+coregeomsize,indexed_normals.end());
+}
 //void GeomTerrain::unbake(){
 //    glDeleteBuffers(1, &vertexbuffer);
 //    glDeleteBuffers(1, &normalbuffer);
