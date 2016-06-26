@@ -8,6 +8,8 @@
 
 #include "geometryoctree.h"
 
+
+
 int rv[8][3] = {{0,0,0},{1,0,0},{0,1,0},{1,1,0},
                 {0,0,1},{1,0,1},{0,1,1},{1,1,1}};
 
@@ -111,12 +113,13 @@ bool GeometryOctreeBranch::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
 GeometryOctreeLeaf::GeometryOctreeLeaf(BlockLoc i,BlockLoc j,BlockLoc k,int rec) : GeometryOctreeSegment(i,j,k,rec) {}
 void GeometryOctreeLeaf::render(const glm::mat4& matr){
     
-    if (checkbounds(matr) and !open) {
+    if (checkbounds(matr)) {
         
         for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
             // iterator->first = key
             // iterator->second = value
             // Repeat if you also want to iterate through the second map.
+            iterator->second.open = open;
             registergeom(iterator->first,&iterator->second);
         }
     }
@@ -222,16 +225,29 @@ void GeometryOctreeLeaf::matrixmap(glm::mat4 *matr) {
         iterator->second.matrix = matr;
     }
 }
-void GeometryOctreeLeaf::preparesnippets() {
-    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
-        iterator->second.dumpextrabits();
-    }
+//void GeometryOctreeLeaf::preparesnippets() {
+//    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
+//        iterator->second.dumpextrabits();
+//    }
+//}
+void GeometryOctreeLeaf::erase() {
+//    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
+//        iterator->second.dumpextrabits();
+//    }
+    geometry.erase(geometry.begin(),geometry.end());
 }
-void GeometryOctreeLeaf::securecore() {
-    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
-        iterator->second.markcoregeom();
-    }
-}
+//void GeometryOctreeLeaf::removeseal() {
+//    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
+//        iterator->second.baked = false;
+//    }
+//}
+//void GeometryOctreeLeaf::securecore() {
+//    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
+//        iterator->second.markcoregeom();
+//    }
+//}
+
+
 //void GeometryOctree::manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
 //    GeometryOctreeLeaf* newguy = new GeometryOctreeLeaf(x,y,z,0);
 //    expand(x,y,z);

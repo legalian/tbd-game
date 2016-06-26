@@ -20,14 +20,19 @@
 
 #define SCALE 1 //distance between voxels
 
+#define SVD_NUM_SWEEPS 5
+
 #include <stdint.h>
 #include <climits>
 
 typedef uint8_t BlockId;
 typedef int BlockLoc;
+typedef float QefPerc;
 
-#define ALTERNATOR (((INT_MAX/3)<<1)|1)
+#define BLOCKLOCFULLMASK INT_MAX
+#define ALTERNATOR (((BLOCKLOCFULLMASK/3)<<1)|1)
 #define ALTALTERNATOR (ALTERNATOR<<1)
+
 
 //leave this alone
 #define ASBLOCKLOC(f) f+(ALTERNATOR-(ALTERNATOR&(CHSIZE-1)))
@@ -45,7 +50,7 @@ inline int MOD(int n,int m) {
 inline int TRUNC_DIV(int n, int m) {
     return (n-MOD(n,m))/m;
 }
-
+#define WIREFRAMEDEBUG
 
 
 #endif /* constants_h */

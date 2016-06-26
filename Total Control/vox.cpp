@@ -34,8 +34,11 @@ void Structure::updatequeue(double x, double y, double z) {
                         for (int zi=newloc.z-loadstage;zi<=newloc.z+loadstage;zi++) {
 //                            std::cout<<"z executed at "<<zi<<"\n";
                             if ((bounds.lz<=zi and zi<=bounds.uz) or !bounds.bounded) {
-                                if (!world.existsat(xi,yi,zi)) {
+//                                if (!world.existsat(xi,yi,zi)) {
 //                                    std::cout<<"added";
+                                if (int(xi==newloc.x-loadstage)+int(xi==newloc.x+loadstage)
+                                    +int(yi==newloc.y-loadstage)+int(yi==newloc.y+loadstage)
+                                    +int(zi==newloc.z-loadstage)+int(zi==newloc.z+loadstage)>0) {
                                     queue.push_back(Location(xi,yi,zi));
                                 }
                             }
@@ -49,19 +52,42 @@ void Structure::updatequeue(double x, double y, double z) {
 }
 void Structure::attain(std::string basename,Location pos) {
     //load if you can
-    std::string filename = basename+"/"+structureid;
-    if (world.dataexists(filename,pos.x,pos.y,pos.z)) {
-        std::cout<<"loaded from a nifty file.\n";
-        world.filepullportion(filename,pos.x,pos.y,pos.z);
-    } else {
-        std::cout<<"made a new nifty file.\n";
-        source->populate(pos.x,pos.y,pos.z,world);
-        world.filepushportion(filename,pos.x,pos.y,pos.z);
+    if (!world.existsat(pos.x,pos.y,pos.z)) {
+        std::string filename = basename+"/"+structureid;
+        if (world.dataexists(filename,pos.x,pos.y,pos.z)) {
+            std::cout<<"loaded from a nifty file.\n";
+            world.filepullportion(filename,pos.x,pos.y,pos.z);
+        } else {
+            std::cout<<"made a new nifty file.\n";
+            source->populate(pos.x,pos.y,pos.z,world);
+            world.filepushportion(filename,pos.x,pos.y,pos.z);
+        }
+        OctreeSegment* unit = world.data->getvoxunit(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));
+        unit->runseperation(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),world.data);
+        unit->testconnected(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),world.data);
+        
+        world.h_manifest(pos.x-1,pos.y-1,pos.z-1); world.h_manifest(pos.x  ,pos.y-1,pos.z-1);
+        world.h_manifest(pos.x-1,pos.y  ,pos.z-1); world.h_manifest(pos.x  ,pos.y  ,pos.z-1);
+        world.h_manifest(pos.x-1,pos.y-1,pos.z  ); world.h_manifest(pos.x  ,pos.y-1,pos.z  );
+        world.h_manifest(pos.x-1,pos.y  ,pos.z  ); world.h_manifest(pos.x  ,pos.y  ,pos.z  );
+//        world.voxsnippets(pos.x  ,pos.y  ,pos.z  );
+    int distance = std::max(std::max(abs(cameraloc.x-pos.x),abs(cameraloc.z-pos.z)),abs(cameraloc.y-pos.y));
+    int lod = (int)((distance)/2);
+    world.data->setlodat(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),lod);
+    world.v_manifest(pos.x-1,pos.y-1,pos.z-1); world.v_manifest(pos.x  ,pos.y-1,pos.z-1);
+    world.v_manifest(pos.x-1,pos.y  ,pos.z-1); world.v_manifest(pos.x  ,pos.y  ,pos.z-1);
+    world.v_manifest(pos.x-1,pos.y-1,pos.z  ); world.v_manifest(pos.x  ,pos.y-1,pos.z  );
+    world.v_manifest(pos.x-1,pos.y  ,pos.z  ); world.v_manifest(pos.x  ,pos.y  ,pos.z  );
+    world.g_manifest(pos.x-1,pos.y-1,pos.z-1); world.g_manifest(pos.x  ,pos.y-1,pos.z-1); world.g_manifest(pos.x+1,pos.y-1,pos.z-1);
+    world.g_manifest(pos.x-1,pos.y  ,pos.z-1); world.g_manifest(pos.x  ,pos.y  ,pos.z-1); world.g_manifest(pos.x+1,pos.y  ,pos.z-1);
+    world.g_manifest(pos.x-1,pos.y+1,pos.z-1); world.g_manifest(pos.x  ,pos.y+1,pos.z-1); world.g_manifest(pos.x+1,pos.y+1,pos.z-1);
+    world.g_manifest(pos.x-1,pos.y-1,pos.z  ); world.g_manifest(pos.x  ,pos.y-1,pos.z  ); world.g_manifest(pos.x+1,pos.y-1,pos.z  );
+    world.g_manifest(pos.x-1,pos.y  ,pos.z  ); world.g_manifest(pos.x  ,pos.y  ,pos.z  ); world.g_manifest(pos.x+1,pos.y  ,pos.z  );
+    world.g_manifest(pos.x-1,pos.y+1,pos.z  ); world.g_manifest(pos.x  ,pos.y+1,pos.z  ); world.g_manifest(pos.x+1,pos.y+1,pos.z  );
+    world.g_manifest(pos.x-1,pos.y-1,pos.z+1); world.g_manifest(pos.x  ,pos.y-1,pos.z+1); world.g_manifest(pos.x+1,pos.y-1,pos.z+1);
+    world.g_manifest(pos.x-1,pos.y  ,pos.z+1); world.g_manifest(pos.x  ,pos.y  ,pos.z+1); world.g_manifest(pos.x+1,pos.y  ,pos.z+1);
+    world.g_manifest(pos.x-1,pos.y+1,pos.z+1); world.g_manifest(pos.x  ,pos.y+1,pos.z+1); world.g_manifest(pos.x+1,pos.y+1,pos.z+1);
     }
-    world.hermitify(pos.x,pos.y,pos.z);
-    world.manifest(pos.x,pos.y,pos.z);
-    
-    world.voxsnippets(pos.x  ,pos.y  ,pos.z  );
 //    world.voxsnippets(pos.x-1,pos.y  ,pos.z  );
 //    world.voxsnippets(pos.x  ,pos.y-1,pos.z  );
 //    world.voxsnippets(pos.x-1,pos.y-1,pos.z  );
@@ -94,6 +120,9 @@ Location::Location() {
 std::string Location::tostring() const {
     return "["+std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)+"]";
 }
+int Location::roughdistanceto(Location& other) {
+    return abs(other.x-x)+abs(other.y-y)+abs(other.z-z);
+}
 bool operator< (const Location& l, const Location& r) {
     if (l.x<r.x) {return true;}
     if (l.x>r.x) {return false;}
@@ -109,6 +138,8 @@ bool operator== (const Location& l, const Location& r) {
     if (l.z!=r.z) {return false;}
     return true;
 }
+
+
 
 Bounds::Bounds(int xl,int xu,int yl, int yu, int zl, int zu) : lx(xl),ux(xu),ly(yl),uy(yu),lz(zl),uz(zu),bounded(true) {}
 Bounds::Bounds() : bounded(false) {}

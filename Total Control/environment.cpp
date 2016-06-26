@@ -77,6 +77,7 @@ void Environment::loadnextchunk() {
         
         
 //        Location toload = min->queue.back();
+        
         min->attain(savedir,min->queue[loadind]);
 //        std::cout<<"loaded "<<min->structureid<<": "<<min->queue[loadind].tostring()<<"\n";
         min->queue.erase(min->queue.begin() + loadind);

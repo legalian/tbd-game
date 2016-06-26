@@ -28,16 +28,7 @@
 //
 //class Generator;
 //
-typedef struct Location {
-    int x;
-    int y;
-    int z;
-    Location(int,int,int);
-    Location();
-    std::string tostring() const;
-    friend bool operator< (const Location& l, const Location& r);
-    friend bool operator== (const Location& l, const Location& r);
-} Location;
+
 //
 typedef struct Bounds {
     int lx;

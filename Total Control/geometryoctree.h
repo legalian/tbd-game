@@ -19,6 +19,7 @@
 #include <map>
 //#include "glm"
 class GeometryOctreeLeaf;
+class Pool;
 
 struct GeometryOctreeSegment {
     virtual void debugprinttrace(int offset);
@@ -47,6 +48,9 @@ struct GeometryOctreeBranch : GeometryOctreeSegment {
 };
 struct GeometryOctreeLeaf : GeometryOctreeSegment {
     bool open=true;
+    int lodserial[7] = {-1,-1,-1,-1,-1,-1,-1};
+    int bakeddetails = 0;
+    std::vector<Pool*> localseprefs;
     GeometryOctreeLeaf(BlockLoc,BlockLoc,BlockLoc,int);
     std::map<uint8_t,GeomTerrain> geometry;
     void render(const glm::mat4&) override;
@@ -55,8 +59,10 @@ struct GeometryOctreeLeaf : GeometryOctreeSegment {
     GeometryOctreeLeaf* getgeomat(BlockLoc,BlockLoc,BlockLoc) override;
     
     void matrixmap(glm::mat4*);
-    void securecore();
-    void preparesnippets();
+//    void securecore();
+//    void preparesnippets();
+//    void removeseal();
+    void erase();
 };
 struct GeometryOctreeBud : GeometryOctreeSegment {
     GeometryOctreeBud(BlockLoc,BlockLoc,BlockLoc,int);

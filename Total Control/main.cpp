@@ -25,11 +25,12 @@ GLFWwindow* window;
 #include "materials.h"
 
 #include <pthread.h>
+//#include "qef.h"
 
 
-using namespace glm;
 
 //change
+
 
 void initialize(){
     // Initialise GLFW
@@ -71,6 +72,7 @@ void initialize(){
     glEnable(GL_CULL_FACE);
     // Accept fragment if it closer to the camera than the former one
     glDepthFunc(GL_LESS);
+    glLineWidth(3.0);
 //    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     
     extern int numberofmaterials;
@@ -80,12 +82,15 @@ void initialize(){
             materials[k]->mountshaders();
         }
     }
+//    extern ShaderTerrain* debugshader;
+//    debugshader->mountshaders();
     
 }
 
 int main()
 {
     initialize();
+//    test_qef();
     
 //    ShaderVNC shader;
 //    shader.mountshaders();
@@ -136,6 +141,8 @@ int main()
     temppoint->source = new SimpleTerrainSample();
     world.opensavedirectory();
     world.beginthread();
+    
+    
 //    Structure test = Structure("test");
 //    test.source = new SimpleTerrainSample();
 //    test.source = new SimpleTerrainSample();
@@ -150,16 +157,18 @@ int main()
 //        test.queue.clear();
 //        
 //    }
+//    test_qef();
     
     extern glm::mat4 camera;
     
+    int multip = 1;
     do{
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         double currentTime = glfwGetTime();
         lastFrameTime = currentTime;
         nbFrames++;
-        if ( currentTime - lastTime >= 1.0 ){
+        if ( currentTime - lastTime >= 1.0 ) {
             std::cout<<nbFrames<<" frames per second\n";
             nbFrames = 0;
             lastTime += 1.0;
@@ -172,18 +181,30 @@ int main()
                                            );
         camera = Projection*View;
         
-//        test.render();
-//        renderall();
         world.checkup(x,y,z);
         world.draw();
-//        std::cout<<x<<","<<y<<","<<z<<"\n";
+        
+        
+        
+        
         
         
         
         glfwSwapBuffers(window);
         glfwPollEvents();
         if (glfwGetKey(window,GLFW_KEY_P) == GLFW_PRESS) {
-            temppoint->world.realworld.data->debugprinttrace(0);
+            //            temppoint->world.realworld.data->debugprinttrace(0);
+            
+            glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+        } else {
+            
+            glPolygonMode( GL_FRONT, GL_FILL );
+        }
+        if (glfwGetKey(window,GLFW_KEY_SPACE) == GLFW_PRESS) {
+            //            temppoint->world.realworld.data->debugprinttrace(0);
+            multip = 3;
+        } else {
+            multip = 1;
         }
         
         if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS) {
@@ -198,22 +219,22 @@ int main()
         if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS) {
 //            glm::mat4 move = glm::translate(glm::mat4(), glm::vec3(0,0,0.1f));
 //            View = move * View;
-            x += cos(theta)*0.3f;
-            z += sin(theta)*0.3f;
+            x += cos(theta)*0.3f*multip;
+            z += sin(theta)*0.3f*multip;
         } else if (glfwGetKey(window, GLFW_KEY_S ) == GLFW_PRESS) {
 //            glm::mat4 move = glm::translate(glm::mat4(), glm::vec3(0,0,-0.1f));
             //            View = move * View;
-            x -= cos(theta)*0.3f;
-            z -= sin(theta)*0.3f;
+            x -= cos(theta)*0.3f*multip;
+            z -= sin(theta)*0.3f*multip;
         }
         if (glfwGetKey(window, GLFW_KEY_Q ) == GLFW_PRESS) {
 //            glm::mat4 move = glm::translate(glm::mat4(), glm::vec3(0,0.1f,0));
 //            View = View * move;
-            y += .5f;
+            y += .5f*multip;
         } else if (glfwGetKey(window, GLFW_KEY_E ) == GLFW_PRESS) {
 //            glm::mat4 move = glm::translate(glm::mat4(), glm::vec3(0,-0.1f,0));
 //            View = View * move;
-            y -= .5f;
+            y -= .5f*multip;
         }
         
     }

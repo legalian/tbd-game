@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include "renderterrain.h"
+#include "constants.h"
 #include <vector>
 
 

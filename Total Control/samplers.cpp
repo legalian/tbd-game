@@ -85,7 +85,6 @@ void BoxSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& world) {
             }
         }
     }
-    world.hermitify(x,y,z);
     delete [] test;
 }
 void SimpleTerrainSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& world) {
@@ -107,6 +106,7 @@ void SimpleTerrainSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& wor
         }
     }
     world.loadportion(x,y,z,ids);
+    float offset = .01;
     for (int xi=0;xi<CHSIZE;xi++) {
         for (int yi=0;yi<CHSIZE;yi++) {
             for (int zi=0;zi<CHSIZE;zi++) {
@@ -114,13 +114,28 @@ void SimpleTerrainSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& wor
                 BlockLoc yt = ASBLOCKLOC(yi + (y<<CHPOWER));
                 BlockLoc zt = ASBLOCKLOC(zi + (z<<CHPOWER));
                 if (ids[xi][yi][zi] != ids[xi+1][yi][zi]) {
-                    world.data->xcon(xt,yt,zt) = Edgedat(1,0,0,fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi+1][yi][zi]));
+                    float push = fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi+1][yi][zi]);
+                    float xdelta = sample(xi+(x<<CHPOWER)+push+offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER)+push-offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER));
+                    float ydelta = sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER)+offset,zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER)-offset,zi+(z<<CHPOWER));
+                    float zdelta = sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER),zi+(z<<CHPOWER)+offset)-sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER),zi+(z<<CHPOWER)-offset);
+                    float delta = sqrt(xdelta*xdelta+ydelta*ydelta+zdelta*zdelta);
+                    world.data->xcon(xt,yt,zt) = Edgedat(xdelta/delta,ydelta/delta,zdelta/delta,push);
                 }
                 if (ids[xi][yi][zi] != ids[xi][yi+1][zi]) {
-                    world.data->ycon(xt,yt,zt) = Edgedat(0,1,0,fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi][yi+1][zi]));
+                    float push = fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi][yi+1][zi]);
+                    float xdelta = sample(xi+(x<<CHPOWER)+offset,yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER)-offset,yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER));
+                    float ydelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push+offset,zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push-offset,zi+(z<<CHPOWER));
+                    float zdelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER)+offset)-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER)-offset);
+                    float delta = sqrt(xdelta*xdelta+ydelta*ydelta+zdelta*zdelta);
+                    world.data->ycon(xt,yt,zt) = Edgedat(xdelta/delta,ydelta/delta,zdelta/delta,push);
                 }
                 if (ids[xi][yi][zi] != ids[xi][yi][zi+1]) {
-                    world.data->zcon(xt,yt,zt) = Edgedat(0,0,1,fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi][yi][zi+1]));
+                    float push = fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi][yi][zi+1]);
+                    float xdelta = sample(xi+(x<<CHPOWER)+offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push)-sample(xi+(x<<CHPOWER)-offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push);
+                    float ydelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+offset,zi+(z<<CHPOWER)+push)-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)-offset,zi+(z<<CHPOWER)+push);
+                    float zdelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push+offset)-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push-offset);
+                    float delta = sqrt(xdelta*xdelta+ydelta*ydelta+zdelta*zdelta);
+                    world.data->zcon(xt,yt,zt) = Edgedat(xdelta/delta,ydelta/delta,zdelta/delta,push);
                 }
             }
         }
@@ -151,6 +166,9 @@ inline float SimpleTerrainSample::sample(float x,float y,float z) {
     density += sample3.sample(x/(mu*32),y/(mu*32),z/(mu*32))*72;
     density += sample3.sample(x/(mu*64),y/(mu*64),z/(mu*64))*148;
     density -= 32*(TRUNC_DIV(y/2.0,32));
+//    float density = (x*x)+(y*y)+(z*z);
+//    density = 40-sqrt(density);
+//    float density = cos(x/5.0)*sin(y/5.0)+cos(y/5.0)*sin(z/5.0)+cos(z/5.0)*sin(x/5.0);
     return density;
     
 //    float xdif = fmodf(fabsf(x),CHSIZE) - (CHSIZE/2.0);

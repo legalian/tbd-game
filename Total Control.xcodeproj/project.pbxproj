@@ -18,14 +18,15 @@
 		5BD5E87F1C4AF52F008DECC6 /* generators.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD5E87D1C4AF52F008DECC6 /* generators.cpp */; };
 		5BD778861CCAF88300C2FA03 /* libboost_filesystem.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD778851CCAF88200C2FA03 /* libboost_filesystem.dylib */; };
 		5BD778881CCAF95900C2FA03 /* libboost_system.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD778871CCAF95800C2FA03 /* libboost_system.dylib */; };
+		5BD778A41CDED6DC00C2FA03 /* qef.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BD778A21CDED6DC00C2FA03 /* qef.cpp */; };
 		5BDA34481C1E2F7B000CF569 /* renderterrain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BDA34461C1E2F7B000CF569 /* renderterrain.cpp */; };
 		5BDA344B1C285EBE000CF569 /* vox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BDA34491C285EBE000CF569 /* vox.cpp */; };
-		5BDA735F1CB5B73300CBE012 /* filesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BDA735D1CB5B73300CBE012 /* filesystem.cpp */; };
 		5BDACC651CAC178900100BC7 /* samplers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BDACC631CAC178900100BC7 /* samplers.cpp */; };
 		5BDE05B71B718D5B00202240 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BDE05B61B718D5B00202240 /* main.cpp */; };
 		5BDE05C21B719FEC00202240 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BDE05C11B719FEC00202240 /* OpenGL.framework */; };
 		5BDE05C91B75735100202240 /* shader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BDE05C71B75735100202240 /* shader.cpp */; };
 		5BDE05CC1B7573B300202240 /* texture.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BDE05CA1B7573B200202240 /* texture.cpp */; };
+		5BE3F2FE1CEA6937003256C1 /* octreeseparator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BE3F2FD1CEA6937003256C1 /* octreeseparator.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,12 +55,12 @@
 		5BD5E87E1C4AF52F008DECC6 /* generators.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = generators.h; sourceTree = "<group>"; };
 		5BD778851CCAF88200C2FA03 /* libboost_filesystem.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libboost_filesystem.dylib; path = ../../../../usr/local/Cellar/boost/1.60.0_1/lib/libboost_filesystem.dylib; sourceTree = "<group>"; };
 		5BD778871CCAF95800C2FA03 /* libboost_system.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libboost_system.dylib; path = ../../../../usr/local/Cellar/boost/1.60.0_1/lib/libboost_system.dylib; sourceTree = "<group>"; };
+		5BD778A21CDED6DC00C2FA03 /* qef.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = qef.cpp; sourceTree = "<group>"; };
+		5BD778A31CDED6DC00C2FA03 /* qef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = qef.h; sourceTree = "<group>"; };
 		5BDA34461C1E2F7B000CF569 /* renderterrain.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = renderterrain.cpp; sourceTree = "<group>"; };
 		5BDA34471C1E2F7B000CF569 /* renderterrain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = renderterrain.h; sourceTree = "<group>"; };
 		5BDA34491C285EBE000CF569 /* vox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vox.cpp; sourceTree = "<group>"; };
 		5BDA344A1C285EBE000CF569 /* vox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vox.h; sourceTree = "<group>"; };
-		5BDA735D1CB5B73300CBE012 /* filesystem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = filesystem.cpp; sourceTree = "<group>"; };
-		5BDA735E1CB5B73300CBE012 /* filesystem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = filesystem.h; sourceTree = "<group>"; };
 		5BDACC631CAC178900100BC7 /* samplers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = samplers.cpp; sourceTree = "<group>"; };
 		5BDACC641CAC178900100BC7 /* samplers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = samplers.h; sourceTree = "<group>"; };
 		5BDE05B31B718D5B00202240 /* Total Control */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Total Control"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -69,6 +70,7 @@
 		5BDE05C81B75735100202240 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
 		5BDE05CA1B7573B200202240 /* texture.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = texture.cpp; sourceTree = "<group>"; };
 		5BDE05CB1B7573B300202240 /* texture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = texture.h; sourceTree = "<group>"; };
+		5BE3F2FD1CEA6937003256C1 /* octreeseparator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octreeseparator.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,9 +137,10 @@
 				5BDA34491C285EBE000CF569 /* vox.cpp */,
 				5BDA344A1C285EBE000CF569 /* vox.h */,
 				5BD28F4C1C84960200B84035 /* octree.cpp */,
+				5BE3F2FD1CEA6937003256C1 /* octreeseparator.cpp */,
 				5BD28F4D1C84960200B84035 /* octree.h */,
-				5BDA735D1CB5B73300CBE012 /* filesystem.cpp */,
-				5BDA735E1CB5B73300CBE012 /* filesystem.h */,
+				5BD778A21CDED6DC00C2FA03 /* qef.cpp */,
+				5BD778A31CDED6DC00C2FA03 /* qef.h */,
 				5BA155B11C9D9DFF0044E103 /* geometryoctree.cpp */,
 				5BA155B21C9D9DFF0044E103 /* geometryoctree.h */,
 				5B24BE851C8F5B0600106A57 /* constants.h */,
@@ -212,11 +215,12 @@
 				5BD5E87C1C41DE42008DECC6 /* environment.cpp in Sources */,
 				5BA155B01C99DC5E0044E103 /* materials.cpp in Sources */,
 				5BDA344B1C285EBE000CF569 /* vox.cpp in Sources */,
+				5BE3F2FE1CEA6937003256C1 /* octreeseparator.cpp in Sources */,
 				5BD5E87F1C4AF52F008DECC6 /* generators.cpp in Sources */,
 				5BDACC651CAC178900100BC7 /* samplers.cpp in Sources */,
 				5BD28F4E1C84960200B84035 /* octree.cpp in Sources */,
+				5BD778A41CDED6DC00C2FA03 /* qef.cpp in Sources */,
 				5BA155B31C9D9DFF0044E103 /* geometryoctree.cpp in Sources */,
-				5BDA735F1CB5B73300CBE012 /* filesystem.cpp in Sources */,
 				5BDE05B71B718D5B00202240 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
