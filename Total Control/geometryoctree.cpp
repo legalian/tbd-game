@@ -25,6 +25,7 @@ bool GeometryOctreeSegment::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 GeometryOctreeLeaf* GeometryOctreeSegment::getgeomat(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 GeometryOctreeSegment::GeometryOctreeSegment(BlockLoc i,BlockLoc j,BlockLoc k,int rec) : xs(i),ys(j),zs(k),recurs(rec) {}
 bool GeometryOctreeSegment::checkbounds(const glm::mat4& matr) {
+    return true;
     if (recurs>3) {return true;}
     bool hitplanes[6] = {false,false,false,false,false,false};
     extern glm::mat4 camera;
@@ -112,14 +113,16 @@ bool GeometryOctreeBranch::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
 
 GeometryOctreeLeaf::GeometryOctreeLeaf(BlockLoc i,BlockLoc j,BlockLoc k,int rec) : GeometryOctreeSegment(i,j,k,rec) {}
 void GeometryOctreeLeaf::render(const glm::mat4& matr){
-    
-    if (checkbounds(matr)) {
+    if (nextpasscleanup!=NULL) {
+        delete nextpasscleanup;
+        nextpasscleanup = NULL;
+    }
+    if (checkbounds(matr) and geometry!=NULL) {
         
-        for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
+        for(auto iterator = geometry->begin(); iterator != geometry->end(); iterator++) {
             // iterator->first = key
             // iterator->second = value
             // Repeat if you also want to iterate through the second map.
-            iterator->second.open = open;
             registergeom(iterator->first,&iterator->second);
         }
     }
@@ -221,7 +224,7 @@ void GeometryOctree::insertinto(BlockLoc x, BlockLoc y, BlockLoc z, GeometryOctr
     data->insertinto(flipbits(x),flipbits(y),flipbits(z),depth,newguy,data);
 }
 void GeometryOctreeLeaf::matrixmap(glm::mat4 *matr) {
-    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
+    for(auto iterator = geometry->begin(); iterator != geometry->end(); iterator++) {
         iterator->second.matrix = matr;
     }
 }
@@ -230,12 +233,6 @@ void GeometryOctreeLeaf::matrixmap(glm::mat4 *matr) {
 //        iterator->second.dumpextrabits();
 //    }
 //}
-void GeometryOctreeLeaf::erase() {
-//    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
-//        iterator->second.dumpextrabits();
-//    }
-    geometry.erase(geometry.begin(),geometry.end());
-}
 //void GeometryOctreeLeaf::removeseal() {
 //    for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
 //        iterator->second.baked = false;

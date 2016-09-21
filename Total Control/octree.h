@@ -26,8 +26,11 @@
 #include <set>
 #include <boost/filesystem.hpp>
 
-class Octree;
-class OctreePortionAwareBranch;
+struct Octree;
+struct OctreeSegment;
+struct OctreeBranch;
+struct OctreePortionAwareBranch;
+class Environment;
 
 
 
@@ -60,6 +63,14 @@ struct PathTesterPool {
     void add(Location,int);
     int getpromising();
     Location poppromising(int);
+};
+struct BranchRegistry {
+    std::vector<std::vector<std::pair<Location,OctreeBranch*>>> registry;
+    Environment& capsulepointer;
+    BranchRegistry(Environment&);
+    void add(Location,OctreeBranch*);
+    void prune(OctreeSegment*);
+    bool contains(OctreeBranch*);
 };
 struct Feature {
     uint8_t x;
@@ -122,18 +133,14 @@ struct OctreeSegment {
     //    bool isfilled;
     virtual MatrixCarriage getqef();
     virtual void vertify(BlockLoc,BlockLoc,BlockLoc,int);
-//    virtual void vertifyselection(BlockLoc,BlockLoc,BlockLoc,int);
-    virtual void geomify(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int);
-//    virtual void geomifyselectionX(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId);
-//    virtual void geomifyselectionY(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId);
-//    virtual void geomifyselectionZ(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId);
+    virtual bool isvbaked(BlockLoc,BlockLoc,BlockLoc);
+    virtual void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int);
     virtual void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
-//    virtual void hermitifyselection(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
-    virtual OctreeSegment* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z);
+    virtual OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z);
     virtual BlockId getser(BlockLoc,BlockLoc,BlockLoc);
     virtual BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc);
-    virtual int getlodat(BlockLoc,BlockLoc,BlockLoc);
-    virtual void setlodat(BlockLoc,BlockLoc,BlockLoc,int);
+//    virtual int getlodat(BlockLoc,BlockLoc,BlockLoc);
+//    virtual void setlodat(BlockLoc,BlockLoc,BlockLoc,int);
     
 //    virtual void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&);
 //    virtual void collapse(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*&);
@@ -145,28 +152,28 @@ struct OctreeSegment {
     virtual glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int);
     virtual glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int);
 //    virtual BlockId getsimpid();
-    virtual void insertinto(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,OctreeSegment*&);
+    virtual void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&);
 //    virtual bool featuresque(BlockLoc,BlockLoc,BlockLoc);
     
-    virtual void runseperation(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
-    virtual void testconnected(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
-    virtual bool giveXflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*);
-    virtual bool giveYflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*);
-    virtual bool giveZflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*);
-    virtual bool giveWflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*);
+    virtual void testconnected(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*,BranchRegistry*);
+    virtual OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&);
+    virtual uint8_t giveconflag(BlockLoc,BlockLoc,BlockLoc,int);
 };
+
 struct OctreeFeature : OctreeSegment {
-    BlockId fillvalue;
-    Feature point;
     MatrixCarriage qef = MatrixCarriage();
+    Feature point;
+    BlockId fillvalue;
+    uint8_t conflag;
     
-    OctreeFeature(BlockId);
+    
+    OctreeFeature(BlockId,uint8_t);
 //    BlockId getsimpid() override;
     
     MatrixCarriage getqef() override;
     
 #ifdef WIREFRAMEDEBUG
-    void geomify(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int) override;
+    void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
 #endif
     glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int) override;
     glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
@@ -178,22 +185,19 @@ struct OctreeFeature : OctreeSegment {
 //    void vertifyselection(BlockLoc,BlockLoc,BlockLoc,int target) override;
 //    void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
     void filesave(std::ostream&) override;
-//    bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
+    //    bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
+    uint8_t giveconflag(BlockLoc,BlockLoc,BlockLoc,int) override;
     
-    bool giveXflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveYflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveZflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveWflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
 };
 struct OctreeLeaf : OctreeFeature {
     Edgedat xcondat;
     Edgedat ycondat;
     Edgedat zcondat;
-    OctreeLeaf(BlockId);
-    OctreeLeaf(BlockId,int8_t[12]);
+    OctreeLeaf(BlockId,uint8_t);
+    OctreeLeaf(BlockId,uint8_t,int8_t[12]);
     
     //    bool uniqueat(long,long,long,int) override;
-    void geomify(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int) override;
+    void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
 //    void geomifyselectionX(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
 //    void geomifyselectionY(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
 //    void geomifyselectionZ(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
@@ -201,31 +205,37 @@ struct OctreeLeaf : OctreeFeature {
     Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc) override;
+    
+//    bool giveXflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
+//    bool giveYflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
+//    bool giveZflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
+//    bool giveWflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
 };
 struct OctreeBud : OctreeSegment {
     BlockId fillvalue;
     
     OctreeBud(BlockId);
     
+    
+    bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
 //    void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
 //    bool uniqueat(long,long,long,int) override;
     void filesave(std::ostream&) override;
 //    BlockId getsimpid() override;
-    void insertinto(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,OctreeSegment*&) override;
+    void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&) override;
 //    bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
     
     //    void runseperation(BlockLoc x,BlockLoc y,BlockLoc z,int,OctreeSegment*) override;
-    bool giveXflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveYflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveZflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveWflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
+    
+    uint8_t giveconflag(BlockLoc,BlockLoc,BlockLoc,int) override;
 };
 struct OctreeBranch : OctreeSegment {
     int depth;
     uint8_t connections = 0;
     uint8_t DEBUGDEBUG = 0;
+//    uint8_t DEBUGDEBUGDEBUG = 0;
     
     Feature point;
     OctreeSegment* subdivisions[2][2][2];
@@ -237,18 +247,19 @@ struct OctreeBranch : OctreeSegment {
     //    void geomifyportion(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*) override;
     MatrixCarriage getqef() override;
 //    void drawgeometry(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*);
-    void vertify(BlockLoc,BlockLoc,BlockLoc,int target) override;
-    void geomify(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int) override;
+    void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
+    bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
+    void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
     void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
-    int getlodat(BlockLoc,BlockLoc,BlockLoc) override;
-    void setlodat(BlockLoc,BlockLoc,BlockLoc,int) override;
+//    int getlodat(BlockLoc,BlockLoc,BlockLoc) override;
+//    void setlodat(BlockLoc,BlockLoc,BlockLoc,int) override;
 //    void vertifyselection(BlockLoc,BlockLoc,BlockLoc,int target) override;
 //    void geomifyselectionX(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
 //    void geomifyselectionY(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
 //    void geomifyselectionZ(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
 //    void hermitifyselection(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
 //    void hermitifyportion(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
-    OctreeSegment* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
+    OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
 //    void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
@@ -262,38 +273,51 @@ struct OctreeBranch : OctreeSegment {
     glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int) override;
     glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
 //    BlockId getsimpid() override;
-    void insertinto(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,OctreeSegment*&) override;
+    void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&) override;
 //    bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
     
-    void runseperation(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*) override;
-    void testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*) override;
-    bool giveXflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveYflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveZflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-    bool giveWflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
+    void testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*,BranchRegistry*) override;
+    bool phase2check(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*,Environment*);
+    
+    OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&) override;
+    
+    uint8_t giveconflag(BlockLoc,BlockLoc,BlockLoc,int) override;
 };
 struct OctreePortionAwareBranch : OctreeBranch {
+    bool changed = false;
+    int bakeddetails = 0;
     int curlod = -1;
+    int lodserial[7] = {-1,-1,-1,-1,-1,-1,-1};
+    std::map<uint8_t,GeomTerrain>* geometry = NULL;
+    std::map<uint8_t,GeomTerrain>* nextpasscleanup = NULL;
     OctreePortionAwareBranch(OctreeSegment*,OctreeSegment*,
                  OctreeSegment*,OctreeSegment*,
                  OctreeSegment*,OctreeSegment*,
-                 OctreeSegment*,OctreeSegment*,int);
+                             OctreeSegment*,OctreeSegment*,int);
+    void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
+    bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
     glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
     BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
-    int getlodat(BlockLoc,BlockLoc,BlockLoc) override;
-    void setlodat(BlockLoc,BlockLoc,BlockLoc,int) override;
+//    int getlodat(BlockLoc,BlockLoc,BlockLoc) override;
+//    void setlodat(BlockLoc,BlockLoc,BlockLoc,int) override;
+    OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
+    OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&) override;
 };
 class Octree {
-private:
+//private:
+public:
     void expand(BlockLoc,BlockLoc,BlockLoc);
     void expandchunk(BlockLoc,BlockLoc,BlockLoc);
+    void expandarbit(BlockLoc,BlockLoc,BlockLoc,int);
     void expand(int);
     int underpressure(BlockLoc,BlockLoc,BlockLoc);
     int depth = 0;
-public:
+    int popular;
+    BranchRegistry currenttests;
+    
 //    GeometryOctreeLeaf* opengeoforediting(BlockLoc x,BlockLoc y,BlockLoc z);
     GeometryOctree realworld;
-    Octree(glm::mat4&);
+    Octree(glm::mat4&,Environment&,int);
     OctreeSegment* data = new OctreeBud(0);
     void loadportion(BlockLoc,BlockLoc,BlockLoc,BlockId (*)[CHSIZE+1][CHSIZE+1]);
 //    void loadfromfile(BlockLoc,BlockLoc,BlockLoc,int,std::string);
@@ -312,18 +336,18 @@ public:
 #ifdef WIREFRAMEDEBUG
 void drawdebugcube(float,float,float,float,float,float,GeometryOctreeLeaf*,float,float,float);
 #endif
-inline void Xstitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,BlockId,BlockId);
-inline void Ystitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,BlockId,BlockId);
-inline void Zstitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,BlockId,BlockId);
+inline void Xstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
+inline void Ystitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
+inline void Zstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
 //inline void Xstitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId,BlockId);
 //inline void Ystitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId,BlockId);
 //inline void Zstitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId,BlockId);
 //glm::vec3 omgqef(glm::vec3[],glm::vec3[],int);
-bool testConnection(BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*);
-bool testConnection(Location,Location,int,OctreeSegment*,PathTesterPool*);
+void tearaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,Environment*);
+bool testConnection(BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,Environment*);
 OctreeSegment* makeOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
-OctreeSegment* makePortionOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
+//OctreeSegment* makePortionOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
 OctreeSegment* makeOctree(std::ifstream&,int);
-OctreeSegment* makePortionOctree(std::ifstream&,int);
+//OctreeSegment* makePortionOctree(std::ifstream&,int);
 
 #endif /* defined(__Total_Control__octree__) */

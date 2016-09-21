@@ -123,7 +123,7 @@ int main()
     
     double x = 8;
     double y = 6;
-    double z = -6;
+    double z = 6;
     double theta = 0;
     
 //    float meteorangle = 0;
@@ -136,9 +136,9 @@ int main()
     
     
     Environment world;
-    world.addstructure(Structure("test"));
-    Structure* temppoint = world.getstructure("test");
+    Structure* temppoint = new Structure("test",world,true);
     temppoint->source = new SimpleTerrainSample();
+    world.addstructure(temppoint);
     world.opensavedirectory();
     world.beginthread();
     

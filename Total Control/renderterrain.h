@@ -33,7 +33,6 @@ class GeomTerrain {
 public:
     int size = 0;
     bool baked = false;
-    bool open = true;
     std::vector<glm::vec3> indexed_vertices;
     std::vector<glm::vec3> indexed_normals;
     GLuint vertexbuffer;

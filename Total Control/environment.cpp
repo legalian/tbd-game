@@ -21,13 +21,13 @@ void Environment::beginthread() {
 }
 Structure* Environment::getstructure(std::string targetid) {
     for (int istr = 0;istr<structures.size();istr++) {
-        if (structures[istr].structureid == targetid) {
-            return &structures[istr];
+        if (structures[istr]->structureid == targetid) {
+            return structures[istr];
         }
     }
     throw;
 }
-void Environment::addstructure(Structure newst) {
+void Environment::addstructure(Structure* newst) {
     structures.push_back(newst);
 }
 void Environment::loadnextchunk() {
@@ -44,19 +44,22 @@ void Environment::loadnextchunk() {
         
         
         for (int k=0;k<structures.size();k++) {
-            structures[k].updatequeue(epix,epiy,epiz);
+            structures[k]->updatequeue(epix,epiy,epiz);
         }
 //        std::cout<<structures[0].loadstage<<"\n";
 //        std::cout<<structures[0].queue.back().x;
-        Structure* min = &(structures[0]);
+        Structure* min = structures[0];
         for (int k=1;k<structures.size();k++) {
-            if (structures[k].loadstage<(min->loadstage)) {
-                min = &(structures[k]);
-            }
-            if (structures[k].loadstage==(min->loadstage) && structures[k].queue.size()>(min->queue.size())) {
-                min = &(structures[k]);
+            if (structures[k]->queue.size()>0) {
+                if (structures[k]->loadstage<(min->loadstage)) {
+                    min = structures[k];
+                }
+                if (structures[k]->loadstage==(min->loadstage) && structures[k]->queue.size()>(min->queue.size())) {
+                    min = structures[k];
+                }
             }
         }
+        std::cout<<structures.size()<<"\n";
 //        min->sortqueue(view/((float)CHSIZE));
         glm::vec4 thiscoor = (glm::inverse(min->transform)*glm::vec4(epix,epiy,epiz,1))/((float)CHSIZE);
 //        std::cout<<min->structureid<<" summoned: "<<thiscoor.x<<","<<thiscoor.y<<","<<thiscoor.z<<"\n";
@@ -91,14 +94,14 @@ void Environment::loadnextchunk() {
 void Environment::opensavedirectory() {
     boost::filesystem::create_directory(savedir);
     for (int k=0;k<structures.size();k++) {
-        boost::filesystem::create_directory(savedir + "/" + structures[k].structureid);
+        boost::filesystem::create_directory(savedir + "/" + structures[k]->structureid);
     }
 }
 void Environment::draw() {
     glm::vec4 thisvert;
 //    bool hitplanes[6] = {false,false,false,false,false,false};
     for (int k=0;k<structures.size();k++) {
-        structures[k].render();
+        structures[k]->render();
     }
     renderall();
 //        for (std::map<Location,GeomTerrain>::iterator it = structures[k].geoms.begin();it!=structures[k].geoms.end();it++) {
@@ -142,6 +145,9 @@ void Environment::cleanup() {
     keepexecution = false;
     pthread_join(loadingthread,NULL);
 }
+std::string Environment::nextshardname() {
+    return std::to_string(shards++);
+}
 //
 void* loaderthread(void* me) {
     Environment* dest = (Environment*)me;
@@ -154,6 +160,63 @@ void* loaderthread(void* me) {
 //
 
 
+
+
+
+
+void tearaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world,Environment* overflowbucket) {
+//    return;
+    Structure* newguy = new Structure(overflowbucket->nextshardname(),*overflowbucket,false);
+//    std::cout<<"working\n";
+//    return;
+    Location startpoint = Location(x,y,z);
+    PathTesterPool nodes = PathTesterPool(startpoint,recur);
+    PathTesterPool spent = PathTesterPool(startpoint,recur);
+    nodes.add(startpoint,nodes.hash(startpoint));
+    Location toinserts[6];
+    while (true) {
+        int dist = nodes.getpromising();
+        if (dist==-1) {break;}
+        Location xyz = nodes.poppromising(dist);
+        
+        spent.add(xyz,dist);
+        int l = 0;
+        if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&16) {toinserts[l] = Location(xyz.x+(1<<recur),xyz.y,xyz.z);l++;}
+        if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&32) {toinserts[l] = Location(xyz.x,xyz.y+(1<<recur),xyz.z);l++;}
+        if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&64) {toinserts[l] = Location(xyz.x,xyz.y,xyz.z+(1<<recur));l++;}
+        if (world->giveconflag(xyz.x-(1<<recur),xyz.y,xyz.z,recur)&16) {toinserts[l] = Location(xyz.x-(1<<recur),xyz.y,xyz.z);l++;}
+        if (world->giveconflag(xyz.x,xyz.y-(1<<recur),xyz.z,recur)&32) {toinserts[l] = Location(xyz.x,xyz.y-(1<<recur),xyz.z);l++;}
+        if (world->giveconflag(xyz.x,xyz.y,xyz.z-(1<<recur),recur)&64) {toinserts[l] = Location(xyz.x,xyz.y,xyz.z-(1<<recur));l++;}
+        for (int k=0;k<l;k++) {
+            Location toinsert = toinserts[k];
+            int hash = nodes.hash(toinsert);
+            if (!spent.contains(toinsert, hash)) {
+                nodes.add(toinsert,hash);
+                
+                if (world->getser(toinsert.x,toinsert.y,toinsert.z)==0) {
+                    throw;
+                }
+            }
+        }
+    }
+    
+    while (true) {
+        int dist = spent.getpromising();
+        if (dist==-1) {break;}
+        Location xyz = spent.poppromising(dist);
+        
+        OctreeSegment* tomove = world->pullaway(xyz.x,xyz.y,xyz.z,recur,world);
+        if (tomove->giveconflag(0,0,0,recur)&8) {
+            newguy->world.expandarbit(xyz.x,xyz.y,xyz.z,recur);
+            newguy->world.data->insertinto(xyz.x,xyz.y,xyz.z,recur,newguy->world.depth,tomove,newguy->world.data);
+        }
+        
+    }
+    
+    
+    //overflowbucket->addstructure(newguy);
+    
+}
 
 
 

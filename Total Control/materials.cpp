@@ -51,11 +51,10 @@ void renderall() {
         if (thisframerender[imaterial].size()>0) {
             materials[imaterial]->open();
             for (int igeom=0;igeom<thisframerender[imaterial].size();igeom++){
-                if (!thisframerender[imaterial][igeom]->open) {
-                    thisframerender[imaterial][igeom]->bake();
-                }
+                thisframerender[imaterial][igeom]->bake();
                 if (thisframerender[imaterial][igeom]->baked) {
                     materials[imaterial]->draw(thisframerender[imaterial][igeom]);
+                    
                 }
             }
             materials[imaterial]->close();

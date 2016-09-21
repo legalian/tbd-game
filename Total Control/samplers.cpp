@@ -158,16 +158,25 @@ inline float SimpleTerrainSample::sample(float x,float y,float z) {
     extern NoiseVolume sample3;
     float density = -y/2.0;
     const float mu = 128.0*3;
-    density += sample1.sample(x/(mu   ),y/(mu   ),z/(mu   ))*3;
-    density += sample2.sample(x/(mu*2 ),y/(mu*2 ),z/(mu*2 ))*6;
-    density += sample3.sample(x/(mu*4 ),y/(mu*4 ),z/(mu*4 ))*12;
-    density += sample1.sample(x/(mu*8 ),y/(mu*8 ),z/(mu*8 ))*24;
-    density += sample2.sample(x/(mu*16),y/(mu*16),z/(mu*16))*48;
-    density += sample3.sample(x/(mu*32),y/(mu*32),z/(mu*32))*72;
-    density += sample3.sample(x/(mu*64),y/(mu*64),z/(mu*64))*148;
     density -= 32*(TRUNC_DIV(y/2.0,32));
-//    float density = (x*x)+(y*y)+(z*z);
-//    density = 40-sqrt(density);
+    if (density < -127*3 or density > 127*3) {return density;}
+    density += sample3.sample(x/(mu*64),y/(mu*64),z/(mu*64))*148;
+    if (density < -63*3 or density > 63*3) {return density;}
+    density += sample3.sample(x/(mu*32),y/(mu*32),z/(mu*32))*72;
+    if (density < -31*3 or density > 31*3) {return density;}
+    density += sample2.sample(x/(mu*16),y/(mu*16),z/(mu*16))*48;
+    if (density < -15*3 or density > 15*3) {return density;}
+    density += sample1.sample(x/(mu*8 ),y/(mu*8 ),z/(mu*8 ))*24;
+    if (density < -7*3 or density > 7*3) {return density;}
+    density += sample3.sample(x/(mu*4 ),y/(mu*4 ),z/(mu*4 ))*12;
+    if (density < -3*3 or density > 3*3) {return density;}
+    density += sample2.sample(x/(mu*2 ),y/(mu*2 ),z/(mu*2 ))*6;
+    if (density < -1*3 or density > 1*3) {return density;}
+    density += sample1.sample(x/(mu   ),y/(mu   ),z/(mu   ))*3;
+//    float density = 40-sqrt((x*x)+(y*y)+(z*z));
+//    float density = 40-(abs(x)+abs(y)+abs(z));
+//    float density = 40-std::max(std::max(abs(x),abs(y)),abs(z));
+//    float density = 40-std::min(std::min(abs(x),abs(y)),abs(z));
 //    float density = cos(x/5.0)*sin(y/5.0)+cos(y/5.0)*sin(z/5.0)+cos(z/5.0)*sin(x/5.0);
     return density;
     

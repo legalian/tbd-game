@@ -164,10 +164,11 @@ Feature MatrixCarriage::evaluate(int lod) {
     svd_solve_ATA_ATb(ATA, ATb, x);
     
     //qef_calc_error(ATA, x, ATb);
-    
+//    std::cout<<Mt;
     x += masspoint;
     if (x.x<0 or x.x>(1<<lod) or x.y<0 or x.y>(1<<lod) or x.z<0 or x.z>(1<<lod)) {
         x=masspoint;
+        throw;
     }
     
 //    if (lod>2) {
@@ -187,9 +188,10 @@ MatrixCarriage OctreeSegment::getqef() {return MatrixCarriage();}
 //void OctreeSegment::geomifyselectionZ(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,int* lod,BlockId otherfill) {}
 //void OctreeSegment::hermitifyselection(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
 void OctreeSegment::vertify(BlockLoc x,BlockLoc y,BlockLoc z,int target) {}
-void OctreeSegment::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,int lod) {}
+bool OctreeSegment::isvbaked(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
+void OctreeSegment::geomify(BlockLoc x,BlockLoc y,BlockLoc z,std::map<uint8_t,GeomTerrain>* geometry,OctreeSegment* world,int lod) {}
 void OctreeSegment::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
-OctreeSegment* OctreeSegment::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {return this;}
+OctreePortionAwareBranch* OctreeSegment::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {return NULL;}
 //void OctreeSegment::hermitifyportion(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
 BlockId OctreeSegment::getser(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 BlockId OctreeSegment::getserwrt(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
@@ -199,17 +201,19 @@ BlockId OctreeSegment::getserwrt(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 Edgedat& OctreeSegment::xcon(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 Edgedat& OctreeSegment::ycon(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 Edgedat& OctreeSegment::zcon(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
-glm::vec3 OctreeSegment::feat(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {throw 79;}
+glm::vec3 OctreeSegment::feat(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {throw;}
 glm::vec3 OctreeSegment::featwrt(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {return glm::vec3(0,0,0);}
-void OctreeSegment::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* toinsert,OctreeSegment*& self) {throw;}
+void OctreeSegment::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,int thisdep,OctreeSegment* toinsert,OctreeSegment*& self) {throw;}
 void OctreeSegment::filesave(std::ostream& file) {throw;}
 //BlockId OctreeSegment::getsimpid() {throw;}
 //bool OctreeSegment::featuresque(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
-int OctreeSegment::getlodat(BlockLoc x, BlockLoc y, BlockLoc z) {return -2;}
-void OctreeSegment::setlodat(BlockLoc x, BlockLoc y, BlockLoc z,int newlod) {}
+//int OctreeSegment::getlodat(BlockLoc x, BlockLoc y, BlockLoc z) {return -2;}
+//void OctreeSegment::setlodat(BlockLoc x, BlockLoc y, BlockLoc z,int newlod) {}
+
+OctreeSegment* OctreeSegment::pullaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment*& self) {self = new OctreeBud(1);return this;}
 
 MatrixCarriage OctreeFeature::getqef() {return qef;}
-OctreeFeature::OctreeFeature(BlockId fill) : fillvalue(fill) {}
+OctreeFeature::OctreeFeature(BlockId fill,uint8_t conn) : fillvalue(fill) , conflag(conn) {}
 BlockId OctreeFeature::getser(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
 BlockId OctreeFeature::getserwrt(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
 //void OctreeFeature::setser(BlockLoc x,BlockLoc y,BlockLoc z,BlockId newid,int recur,OctreeSegment*& self) {fillvalue = newid;}
@@ -220,6 +224,7 @@ void OctreeFeature::filesave(std::ostream& file) {
     char towrite = 'f';
     file.write(&towrite,1);
     file.write((char*)&fillvalue, sizeof(BlockId));
+    file.write((char*)&conflag, sizeof(uint8_t));
 }
 //bool OctreeFeature::featuresque(BlockLoc x,BlockLoc y,BlockLoc z) {return true;}
 
@@ -270,8 +275,8 @@ void OctreeFeature::vertify(BlockLoc x,BlockLoc y,BlockLoc z,int target) {
 //    }
 }
 
-OctreeLeaf::OctreeLeaf(BlockId fill) : OctreeFeature(fill) {}
-OctreeLeaf::OctreeLeaf(BlockId fill,int8_t n[12]) : OctreeFeature(fill),
+OctreeLeaf::OctreeLeaf(BlockId fill,uint8_t conn) : OctreeFeature(fill,conn) {}
+OctreeLeaf::OctreeLeaf(BlockId fill,uint8_t conn,int8_t n[12]) : OctreeFeature(fill,conn),
     xcondat(n[0],n[1],n[2],n[3]),
     ycondat(n[4],n[5],n[6],n[7]),
     zcondat(n[8],n[9],n[10],n[11])  {}
@@ -286,7 +291,7 @@ OctreeLeaf::OctreeLeaf(BlockId fill,int8_t n[12]) : OctreeFeature(fill),
 //    Zstitch(x,y,z,geometry,world,lod,fillvalue,otherfill);
 //}
 #ifdef WIREFRAMEDEBUG
-void OctreeFeature::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,int lod) {
+void OctreeFeature::geomify(BlockLoc x,BlockLoc y,BlockLoc z,std::map<uint8_t,GeomTerrain>* geometry,OctreeSegment* world,int lod) {
     //drawdebugcube(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)),1,geometry,1.0,1.0,1.0);
 //    if (giveXflag(x,y,z,0,world)) {
 //        drawdebugcube(x-(ASBLOCKLOC(0))+1,y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)),0,1,1,geometry,1,0,0);
@@ -299,7 +304,7 @@ void OctreeFeature::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf*
 //    }
 }
 #endif
-void OctreeLeaf::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,int lod) {
+void OctreeLeaf::geomify(BlockLoc x,BlockLoc y,BlockLoc z,std::map<uint8_t,GeomTerrain>* geometry,OctreeSegment* world,int lod) {
 //    if ( ((x&(CHSIZE-1)) != CHSIZE-1) and ((y&(CHSIZE-1)) != CHSIZE-1) and ((z&(CHSIZE-1)) != CHSIZE-1) and
 //         ((x&(CHSIZE-1)) != 0       ) and ((y&(CHSIZE-1)) != 0       ) and ((z&(CHSIZE-1)) != 0       ) ) {
 //        geomifyselection(x,y,z,geometry,world,lod);
@@ -373,6 +378,7 @@ void OctreeLeaf::filesave(std::ostream& file) {
     char towrite = 'l';
     file.write(&towrite,1);
     file.write((char*)&fillvalue,sizeof(uint8_t));
+    file.write((char*)&conflag, sizeof(uint8_t));
     file.write((char*)&xcondat.t,sizeof(uint8_t));
     file.write((char*)&xcondat.x,sizeof(int8_t));
     file.write((char*)&xcondat.y,sizeof(int8_t));
@@ -388,6 +394,8 @@ void OctreeLeaf::filesave(std::ostream& file) {
 }
 
 OctreeBud::OctreeBud(BlockId fill) : fillvalue(fill) {}
+
+bool OctreeBud::isvbaked(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue!=0;}
 BlockId OctreeBud::getser(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
 BlockId OctreeBud::getserwrt(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
 //void OctreeBud::setser(BlockLoc x,BlockLoc y,BlockLoc z,BlockId newid,int recur,OctreeSegment*& self) {
@@ -405,17 +413,24 @@ BlockId OctreeBud::getserwrt(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue
 //    }
 //}
 //bool OctreeBud::uniqueat(long x,long y,long z,int recur) {throw;}
-void OctreeBud::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* toinsert,OctreeSegment*& self) {
-    if (recur==0) {
+void OctreeBud::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,int thisdep,OctreeSegment* toinsert,OctreeSegment*& self) {
+    if (thisdep==recur) {
         delete self;
         self = toinsert;
     } else {
         delete self;
-        self = new OctreeBranch(new OctreeBud(fillvalue),new OctreeBud(fillvalue),
-                                new OctreeBud(fillvalue),new OctreeBud(fillvalue),
-                                new OctreeBud(fillvalue),new OctreeBud(fillvalue),
-                                new OctreeBud(fillvalue),new OctreeBud(fillvalue),recur+CHPOWER-1);
-        self->insertinto(x,y,z,recur,toinsert,self);
+        if (thisdep==7) {
+            self = new OctreePortionAwareBranch(new OctreeBud(fillvalue),new OctreeBud(fillvalue),
+                                                new OctreeBud(fillvalue),new OctreeBud(fillvalue),
+                                                new OctreeBud(fillvalue),new OctreeBud(fillvalue),
+                                                new OctreeBud(fillvalue),new OctreeBud(fillvalue),thisdep-1);
+        } else {
+            self = new OctreeBranch(new OctreeBud(fillvalue),new OctreeBud(fillvalue),
+                                    new OctreeBud(fillvalue),new OctreeBud(fillvalue),
+                                    new OctreeBud(fillvalue),new OctreeBud(fillvalue),
+                                    new OctreeBud(fillvalue),new OctreeBud(fillvalue),thisdep-1);
+        }
+        self->insertinto(x,y,z,recur,thisdep,toinsert,self);
     }
 }
 //BlockId OctreeBud::getsimpid() {return fillvalue;}
@@ -429,13 +444,33 @@ OctreePortionAwareBranch::OctreePortionAwareBranch(OctreeSegment* a,OctreeSegmen
                                                    OctreeSegment* c,OctreeSegment* d,
                                                    OctreeSegment* e,OctreeSegment* f,
                                                    OctreeSegment* g,OctreeSegment* h, int dep) : OctreeBranch(a,b,c,d,e,f,g,h,dep) {}
-int OctreePortionAwareBranch::getlodat(BlockLoc x, BlockLoc y, BlockLoc z) {
-    return curlod;
-}
-void OctreePortionAwareBranch::setlodat(BlockLoc x, BlockLoc y, BlockLoc z,int newlod) {
-    curlod = newlod;
+//int OctreePortionAwareBranch::getlodat(BlockLoc x, BlockLoc y, BlockLoc z) {
+//    return curlod;
+//}
+//void OctreePortionAwareBranch::setlodat(BlockLoc x, BlockLoc y, BlockLoc z,int newlod) {
+//    curlod = newlod;
+//}
+void OctreePortionAwareBranch::vertify(BlockLoc x, BlockLoc y, BlockLoc z, int target) {
+    
+    if (!(bakeddetails&(1<<target))) {
+        bakeddetails |= (1<<target);
+        BlockLoc mask = 1<<depth;
+        subdivisions[0][0][0]->vertify(x     ,y     ,z     ,target);
+        subdivisions[1][0][0]->vertify(x|mask,y     ,z     ,target);
+        subdivisions[0][1][0]->vertify(x     ,y|mask,z     ,target);
+        subdivisions[1][1][0]->vertify(x|mask,y|mask,z     ,target);
+        subdivisions[0][0][1]->vertify(x     ,y     ,z|mask,target);
+        subdivisions[1][0][1]->vertify(x|mask,y     ,z|mask,target);
+        subdivisions[0][1][1]->vertify(x     ,y|mask,z|mask,target);
+        subdivisions[1][1][1]->vertify(x|mask,y|mask,z|mask,target);
+    }
 }
 
+bool OctreePortionAwareBranch::isvbaked(BlockLoc x,BlockLoc y,BlockLoc z) {
+    
+    if (curlod == -1) {return false;}
+    return bakeddetails&(1<<curlod);
+}
 #define SNAP(x,y) (x&(BLOCKLOCFULLMASK^((1<<y)-1)))
 glm::vec3 OctreePortionAwareBranch::featwrt(BlockLoc x, BlockLoc y, BlockLoc z, int lod) {
 //    std::cout<<curlod<<"\n";
@@ -458,6 +493,23 @@ BlockId OctreePortionAwareBranch::getserwrt(BlockLoc x, BlockLoc y, BlockLoc z) 
 }
 #undef SNAP
 
+OctreeSegment* OctreePortionAwareBranch::pullaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment*& self) {
+    changed = true;
+    if (depth<recur) {
+//                DEBUGDEBUG = 1;
+        self = new OctreeBud(1);
+        return this;
+    } else {
+        return subdivisions XYZINDEX->pullaway(x,y,z,recur,subdivisions XYZINDEX);
+    }
+}
+OctreePortionAwareBranch* OctreePortionAwareBranch::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {
+    
+    return this;
+}
+
+
+
 OctreeBranch::OctreeBranch(OctreeSegment* a,OctreeSegment* b,
                            OctreeSegment* c,OctreeSegment* d,
                            OctreeSegment* e,OctreeSegment* f,
@@ -470,6 +522,15 @@ OctreeBranch::OctreeBranch(OctreeSegment* a,OctreeSegment* b,
     subdivisions[1][0][1] = f;
     subdivisions[0][1][1] = g;
     subdivisions[1][1][1] = h;
+    connections =
+    (subdivisions[0][0][0]->giveconflag(0,0,0,depth)&(17*(8+0)) )|
+    (subdivisions[1][0][0]->giveconflag(0,0,0,depth)&(17*(8+1)) )|
+    (subdivisions[0][1][0]->giveconflag(0,0,0,depth)&(17*(8+2)) )|
+    (subdivisions[1][1][0]->giveconflag(0,0,0,depth)&(17*(8+3)) )|
+    (subdivisions[0][0][1]->giveconflag(0,0,0,depth)&(17*(8+4)) )|
+    (subdivisions[1][0][1]->giveconflag(0,0,0,depth)&(17*(8+5)) )|
+    (subdivisions[0][1][1]->giveconflag(0,0,0,depth)&(17*(8+6)) )|
+    (subdivisions[1][1][1]->giveconflag(0,0,0,depth)&(17*(8+7)) );
 }
 
 MatrixCarriage OctreeBranch::getqef() {
@@ -509,124 +570,117 @@ void OctreeBranch::vertify(BlockLoc x,BlockLoc y,BlockLoc z,int target) {
         subdivisions[1][1][1]->vertify(x|mask,y|mask,z|mask,target);
     }
 }
-int OctreeBranch::getlodat(BlockLoc x, BlockLoc y, BlockLoc z) {
-    return subdivisions XYZINDEX->getlodat(x, y, z);
-}
-void OctreeBranch::setlodat(BlockLoc x, BlockLoc y, BlockLoc z,int newlod) {
-    subdivisions XYZINDEX->setlodat(x, y, z, newlod);
-}
 
-//void OctreeBranch::drawgeometry(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,Octree* world,bool needy) {
-//    extern uint8_t gtable[2][6][2];
-//    extern uint8_t materialprops[];
-//    int lod = depth+1;
-//    uint8_t anx = world->getser(x+(1<<lod),y,z);
-//    uint8_t any = world->getser(x,y+(1<<lod),z);
-//    uint8_t anz = world->getser(x,y,z+(1<<lod));
-//    uint8_t fillvalue = getser(0,0,0);
-//    BlockLoc xo = x - (ASBLOCKLOC(0));
-//    BlockLoc yo = y - (ASBLOCKLOC(0));
-//    BlockLoc zo = z - (ASBLOCKLOC(0));
-//    if (materialprops[fillvalue]>materialprops[anx]) {
-//        for (int ik=0;ik<6;ik++) {
-//            geometry->geometry[fillvalue].addVert(glm::vec3(xo,yo-(gtable[1][ik][0]<<lod),zo-(gtable[1][ik][1]<<lod))+
-//                                                  world->feat(x,y-(gtable[1][ik][0]<<lod),z-(gtable[1][ik][1]<<lod),lod).get(lod));
-//        }
-//    } else if (materialprops[fillvalue]<materialprops[anx]) {
-//        for (int ik=0;ik<6;ik++) {
-//            geometry->geometry[anx].addVert(glm::vec3(xo,yo-(gtable[0][ik][0]<<lod),zo-(gtable[0][ik][1]<<lod))+
-//                                            world->feat(x,y-(gtable[0][ik][0]<<lod),z-(gtable[0][ik][1]<<lod),lod).get(lod));
-//        }
-//    }
-//    if (materialprops[fillvalue]>materialprops[any]) {
-//        for (int ik=0;ik<6;ik++) {
-//            geometry->geometry[fillvalue].addVert(glm::vec3(xo-(gtable[0][ik][0]<<lod),yo,zo-(gtable[0][ik][1]<<lod))+
-//                                                  world->feat(x-(gtable[0][ik][0]<<lod),y,z-(gtable[0][ik][1]<<lod),lod).get(lod));
-//        }
-//    } else if (materialprops[fillvalue]<materialprops[any]) {
-//        for (int ik=0;ik<6;ik++) {
-//            geometry->geometry[any].addVert(glm::vec3(xo-(gtable[1][ik][0]<<lod),yo,zo-(gtable[1][ik][1]<<lod))+
-//                                            world->feat(x-(gtable[1][ik][0]<<lod),y,z-(gtable[1][ik][1]<<lod),lod).get(lod));
-//        }
-//    }
-//    if (materialprops[fillvalue]>materialprops[anz]) {
-//        //                    std::cout<<"made a face. z";
-//        for (int ik=0;ik<6;ik++) {
-//            geometry->geometry[fillvalue].addVert(glm::vec3(xo-(gtable[1][ik][0]<<lod),yo-(gtable[1][ik][1]<<lod),zo)+
-//                                                  world->feat(x-(gtable[1][ik][0]<<lod),y-(gtable[1][ik][1]<<lod),z,lod).get(lod));
-//        }
-//    } else if (materialprops[fillvalue]<materialprops[anz]) {
-//        for (int ik=0;ik<6;ik++) {
-//            geometry->geometry[anz].addVert(glm::vec3(xo-(gtable[0][ik][0]<<lod),yo-(gtable[0][ik][1]<<lod),zo)+
-//                                            world->feat(x-(gtable[0][ik][0]<<lod),y-(gtable[0][ik][1]<<lod),z,lod).get(lod));
-//        }
-//    }
-//
-//    
+bool OctreeBranch::isvbaked(BlockLoc x,BlockLoc y,BlockLoc z) {return subdivisions XYZINDEX->isvbaked(x,y,z);}
+//int OctreeBranch::getlodat(BlockLoc x, BlockLoc y, BlockLoc z) {
+//    return subdivisions XYZINDEX->getlodat(x, y, z);
 //}
+//void OctreeBranch::setlodat(BlockLoc x, BlockLoc y, BlockLoc z,int newlod) {
+//    subdivisions XYZINDEX->setlodat(x, y, z, newlod);
+//}
+
+
 #ifdef WIREFRAMEDEBUG
-void drawdebugcube(float x,float y,float z,float a,float b,float c,GeometryOctreeLeaf* geometry,float u,float v,float w) {
+void drawdebugcube(float x,float y,float z,float a,float b,float c,std::map<uint8_t,GeomTerrain>* geometry,float u,float v,float w) {
     glm::vec3 base = glm::vec3(x,y,z);
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, 0, 0));geometry->geometry[0].addWireVert(base+glm::vec3(a, 0, 0));
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, b, 0));geometry->geometry[0].addWireVert(base+glm::vec3(a, b, 0));
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, 0, c));geometry->geometry[0].addWireVert(base+glm::vec3(a, 0, c));
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, b, c));geometry->geometry[0].addWireVert(base+glm::vec3(a, b, c));
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, 0, 0));geometry->geometry[0].addWireVert(base+glm::vec3(0, b, 0));
-    geometry->geometry[0].addWireVert(base+glm::vec3(a, 0, 0));geometry->geometry[0].addWireVert(base+glm::vec3(a, b, 0));
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, 0, c));geometry->geometry[0].addWireVert(base+glm::vec3(0, b, c));
-    geometry->geometry[0].addWireVert(base+glm::vec3(a, 0, c));geometry->geometry[0].addWireVert(base+glm::vec3(a, b, c));
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, 0, 0));geometry->geometry[0].addWireVert(base+glm::vec3(0, 0, c));
-    geometry->geometry[0].addWireVert(base+glm::vec3(a, 0, 0));geometry->geometry[0].addWireVert(base+glm::vec3(a, 0, c));
-    geometry->geometry[0].addWireVert(base+glm::vec3(0, b, 0));geometry->geometry[0].addWireVert(base+glm::vec3(0, b, c));
-    geometry->geometry[0].addWireVert(base+glm::vec3(a, b, 0));geometry->geometry[0].addWireVert(base+glm::vec3(a, b, c));
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
-    geometry->geometry[0].addWireColor(u,v,w);geometry->geometry[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireVert(base+glm::vec3(0, 0, 0));(*geometry)[0].addWireVert(base+glm::vec3(a, 0, 0));
+    (*geometry)[0].addWireVert(base+glm::vec3(0, b, 0));(*geometry)[0].addWireVert(base+glm::vec3(a, b, 0));
+    (*geometry)[0].addWireVert(base+glm::vec3(0, 0, c));(*geometry)[0].addWireVert(base+glm::vec3(a, 0, c));
+    (*geometry)[0].addWireVert(base+glm::vec3(0, b, c));(*geometry)[0].addWireVert(base+glm::vec3(a, b, c));
+    (*geometry)[0].addWireVert(base+glm::vec3(0, 0, 0));(*geometry)[0].addWireVert(base+glm::vec3(0, b, 0));
+    (*geometry)[0].addWireVert(base+glm::vec3(a, 0, 0));(*geometry)[0].addWireVert(base+glm::vec3(a, b, 0));
+    (*geometry)[0].addWireVert(base+glm::vec3(0, 0, c));(*geometry)[0].addWireVert(base+glm::vec3(0, b, c));
+    (*geometry)[0].addWireVert(base+glm::vec3(a, 0, c));(*geometry)[0].addWireVert(base+glm::vec3(a, b, c));
+    (*geometry)[0].addWireVert(base+glm::vec3(0, 0, 0));(*geometry)[0].addWireVert(base+glm::vec3(0, 0, c));
+    (*geometry)[0].addWireVert(base+glm::vec3(a, 0, 0));(*geometry)[0].addWireVert(base+glm::vec3(a, 0, c));
+    (*geometry)[0].addWireVert(base+glm::vec3(0, b, 0));(*geometry)[0].addWireVert(base+glm::vec3(0, b, c));
+    (*geometry)[0].addWireVert(base+glm::vec3(a, b, 0));(*geometry)[0].addWireVert(base+glm::vec3(a, b, c));
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
+    (*geometry)[0].addWireColor(u,v,w);(*geometry)[0].addWireColor(u,v,w);
     
 }
 #endif
-void OctreeBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,int lod) {
+BranchRegistry* SWO;
+void OctreeBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z,std::map<uint8_t,GeomTerrain>* geometry,OctreeSegment* world,int lod) {
     
 #ifdef WIREFRAMEDEBUG
-    if (connections&16) {
+    extern BranchRegistry* SWO;
+    
+    if (DEBUGDEBUG!=0) {
         drawdebugcube(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)),(1<<(depth+1)),(1<<(depth+1)),(1<<(depth+1)),geometry,
                       1,1,1);
-        for (int n=0;n<8;n++) {
-            if (DEBUGDEBUG&(1<<n)) {
-                int sx = (n&1)<<depth;
-                int sy = ((n&2)>>1)<<depth;
-                int sz = ((n&4)>>2)<<depth;
-                drawdebugcube(x-(ASBLOCKLOC(0))+.25+sx,y-(ASBLOCKLOC(0))+.25+sy,z-(ASBLOCKLOC(0))+.25+sz,(1<<(depth))-.5,(1<<(depth))-.5,(1<<(depth))-.5,geometry,
-                              1,0,0);
-                
-            }
-        }
+//    }
+//        for (int n=0;n<8;n++) {
+//            if (DEBUGDEBUG&(1<<n)) {
+//                int sx = (n&1)<<depth;
+//                int sy = ((n&2)>>1)<<depth;
+//                int sz = ((n&4)>>2)<<depth;
+//                drawdebugcube(x-(ASBLOCKLOC(0))+.25+sx,y-(ASBLOCKLOC(0))+.25+sy,z-(ASBLOCKLOC(0))+.25+sz,(1<<(depth))-.5,(1<<(depth))-.5,(1<<(depth))-.5,geometry,
+//                              1,0,0);
+//                
+//            }
+//        }
     }
-//    if (giveXflag(x,y,z,depth-1,world)) {
-//        drawdebugcube(x-(ASBLOCKLOC(0))+(1<<(depth+1)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)),0,(1<<(depth+1)),(1<<(depth+1)),geometry,1,0,0);
-//    }
-//    if (giveYflag(x,y,z,depth-1,world)) {
-//        drawdebugcube(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0))+(1<<(depth+1)),z-(ASBLOCKLOC(0)),(1<<(depth+1)),0,(1<<(depth+1)),geometry,0,1,0);
-//    }
-//    if (giveZflag(x,y,z,depth-1,world)) {
-//        drawdebugcube(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0))+(1<<(depth+1)),(1<<(depth+1)),(1<<(depth+1)),0,geometry,0,0,1);
+//        if (giveXflag(x,y,z,depth+1,world)) {
+//            drawdebugcube(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)),0,(1<<(depth+1)),(1<<(depth+1)),geometry,1,0,0);
+//        }
+//        if (giveYflag(x,y,z,depth+1,world)) {
+//            drawdebugcube(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)),(1<<(depth+1)),0,(1<<(depth+1)),geometry,0,1,0);
+//        }
+//        if (giveZflag(x,y,z,depth+1,world)) {
+//            drawdebugcube(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)),(1<<(depth+1)),(1<<(depth+1)),0,geometry,0,0,1);
+//        }
+        
+//    for (int n=0;n<8;n++) {
+//        if ((DEBUGDEBUG&(DEBUGDEBUGDEBUG^255))&(1<<n)) {
+//            int sx = (n&1)<<depth;
+//            int sy = ((n&2)>>1)<<depth;
+//            int sz = ((n&4)>>2)<<depth;
+//            drawdebugcube(x-(ASBLOCKLOC(0))+.25+sx,y-(ASBLOCKLOC(0))+.25+sy,z-(ASBLOCKLOC(0))+.25+sz,(1<<(depth))-.5,(1<<(depth))-.5,(1<<(depth))-.5,geometry,
+//                          1,0,0);
+//        }
+//        if (DEBUGDEBUGDEBUG&(1<<n)) {
+//            int sx = (n&1)<<depth;
+//            int sy = ((n&2)>>1)<<depth;
+//            int sz = ((n&4)>>2)<<depth;
+//            drawdebugcube(x-(ASBLOCKLOC(0))+.25+sx,y-(ASBLOCKLOC(0))+.25+sy,z-(ASBLOCKLOC(0))+.25+sz,(1<<(depth))-.5,(1<<(depth))-.5,(1<<(depth))-.5,geometry,
+//                          0,0,1);
+//        }
+////        int sx = (n&1)<<depth;
+////        int sy = ((n&2)>>1)<<depth;
+////        int sz = ((n&4)>>2)<<depth;
+////        
+////        if (giveconflag(x+sx,y+sy,z+sz,depth)&16) {
+////            drawdebugcube(x-(ASBLOCKLOC(0))+sx,y-(ASBLOCKLOC(0))+sy,z-(ASBLOCKLOC(0))+sz,0,(1<<(depth)),(1<<(depth)),geometry,1,0,0);
+////        }
+////        if (giveconflag(x+sx,y+sy,z+sz,depth)&32) {
+////            drawdebugcube(x-(ASBLOCKLOC(0))+sx,y-(ASBLOCKLOC(0))+sy,z-(ASBLOCKLOC(0))+sz,(1<<(depth)),0,(1<<(depth)),geometry,0,1,0);
+////        }
+////        if (giveconflag(x+sx,y+sy,z+sz,depth)&64) {
+////            drawdebugcube(x-(ASBLOCKLOC(0))+sx,y-(ASBLOCKLOC(0))+sy,z-(ASBLOCKLOC(0))+sz,(1<<(depth)),(1<<(depth)),0,geometry,0,0,1);
+////        }
+//    
 //    }
 #endif
     if (depth<lod) {
 //        int mask = CHSIZE-(1<<lod);
 //        if (((x&mask) != mask) and ((y&mask) != mask) and ((z&mask) != mask) and
         //            ((x&mask) != 0   ) and ((y&mask) != 0   ) and ((z&mask) != 0   )) {
-        int lodmin = std::min(std::min(std::min(world->getlodat(x-1,y,z)  ,world->getlodat(x,y-1,z)  ),world->getlodat(x,y,z-1)  ),
-                              std::min(std::min(world->getlodat(x-1,y-1,z),world->getlodat(x,y-1,z-1)),world->getlodat(x-1,y,z-1)));
+//#define CURLODGRAB(d) (expr=d)!=NULL?expr->curlod:-2
+//        OctreePortionAwareBranch* expr;
+        int lodmin = std::min(std::min(std::min(world->getvoxunit(x-1,y,z)->curlod  ,world->getvoxunit(x,y-1,z)->curlod  ),world->getvoxunit(x,y,z-1)->curlod  ),
+                              std::min(std::min(world->getvoxunit(x-1,y-1,z)->curlod,world->getvoxunit(x,y-1,z-1)->curlod),world->getvoxunit(x-1,y,z-1)->curlod));
+        
 //        int lodmax = std::max(std::max(std::max(world->getlodat(x-1,y,z)  ,world->getlodat(x,y-1,z)  ),world->getlodat(x,y,z-1)  ),
 //                              std::max(std::max(world->getlodat(x-1,y-1,z),world->getlodat(x,y-1,z-1)),world->getlodat(x-1,y,z-1)));
         if (lodmin>=lod) {
@@ -655,6 +709,7 @@ void OctreeBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* 
             }
         }
     } else {
+        
         BlockLoc mask = 1<<depth;
         subdivisions[0][0][0]->geomify(x     ,y     ,z     ,geometry,world,lod);
         subdivisions[1][0][0]->geomify(x|mask,y     ,z     ,geometry,world,lod);
@@ -701,12 +756,8 @@ void OctreeBranch::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* wor
     subdivisions[0][1][1]->hermitify(x     ,y|mask,z|mask,world);
     subdivisions[1][1][1]->hermitify(x|mask,y|mask,z|mask,world);
 }
-OctreeSegment* OctreeBranch::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {
-    if (depth<CHPOWER) {
-        return this;
-    } else {
-        return subdivisions XYZINDEX->getvoxunit(x,y,z);
-    }
+OctreePortionAwareBranch* OctreeBranch::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) {
+    return subdivisions XYZINDEX->getvoxunit(x,y,z);
 }
 
 BlockId OctreeBranch::getser(BlockLoc x,BlockLoc y,BlockLoc z) {
@@ -747,12 +798,13 @@ glm::vec3 OctreeBranch::featwrt(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {
         return subdivisions XYZINDEX->featwrt(x,y,z,lod);
     }
 }
-void OctreeBranch::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* toinsert,OctreeSegment*& self) {
-    if (recur==0) {
+void OctreeBranch::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,int thisdep,OctreeSegment* toinsert,OctreeSegment*& self) {
+    if (recur==thisdep) {
         delete self;//possible memory leak; todo:make branches delete their children in deconstructors
         self = toinsert;
+        
     } else {
-        subdivisions XYZINDEX->insertinto(x,y,z,recur-1,toinsert,subdivisions XYZINDEX);
+        subdivisions XYZINDEX->insertinto(x,y,z,recur,depth,toinsert,subdivisions XYZINDEX);
     }
 }
 void OctreeBranch::filesave(std::ostream& file) {
@@ -767,43 +819,74 @@ void OctreeBranch::filesave(std::ostream& file) {
     subdivisions[0][1][1]->filesave(file);
     subdivisions[1][1][1]->filesave(file);
 }
+
+
+OctreeSegment* OctreeBranch::pullaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment*& self) {
+    if (depth<recur) {
+//        DEBUGDEBUG = 1;a
+        self = new OctreeBud(1);
+        return this;
+    } else {
+        return subdivisions XYZINDEX->pullaway(x,y,z,recur,subdivisions XYZINDEX);
+    }
+}
 //BlockId OctreeBranch::getsimpid() {return 0;}
 //bool OctreeBranch::featuresque(BlockLoc x,BlockLoc y,BlockLoc z) {
 //    return subdivisions XYZINDEX->featuresque(x,y,z);
 //}
 
-void Octree::expand(BlockLoc x,BlockLoc y,BlockLoc z) {expand(underpressure(x,y,z));}
+void Octree::expand(BlockLoc x,BlockLoc y,BlockLoc z) {throw;expand(underpressure(x,y,z));}
 void Octree::expandchunk(BlockLoc x,BlockLoc y,BlockLoc z) {
-    expand(std::max(underpressure(x<<CHPOWER,y<<CHPOWER,z<<CHPOWER),
-                    underpressure(((x+1)<<CHPOWER)-1,((y+1)<<CHPOWER)-1,((z+1)<<CHPOWER)-1 )));
-    
+//        expand(std::max(underpressure(x<<CHPOWER,y<<CHPOWER,z<<CHPOWER),
+//                        underpressure(((x+1)<<CHPOWER)-1,((y+1)<<CHPOWER)-1,((z+1)<<CHPOWER)-1 )));
+    expand(std::max(underpressure(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z)),
+                    underpressure(ASCHUNKLOC(x+1)-1,ASCHUNKLOC(y+1)-1,ASCHUNKLOC(z+1)-1)));
+}
+void Octree::expandarbit(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
+    expand(std::max(underpressure(x,y,z),
+                    underpressure(x+(1<<recur)-1,y+(1<<recur)-1,z+(1<<recur)-1)));
 }
 void Octree::expand(int desireddepth) {
 //    int desireddepth = ;//+bias;
-    while (desireddepth>depth) {
+    while (desireddepth>=depth+1) {
         depth++;
-        if (depth&1) {
-            data = new OctreeBranch(new OctreeBud(0),new OctreeBud(0),
-                                    new OctreeBud(0),new OctreeBud(0),
-                                    new OctreeBud(0),new OctreeBud(0),
-                                    new OctreeBud(0),data,depth-1);
+        if (depth!=7) {
+            if (depth&1) {
+                data = new OctreeBranch(new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),data,depth-1);
+            } else {
+                data = new OctreeBranch(data,new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),depth-1);
+            }
         } else {
-            data = new OctreeBranch(data,new OctreeBud(0),
-                                    new OctreeBud(0),new OctreeBud(0),
-                                    new OctreeBud(0),new OctreeBud(0),
-                                    new OctreeBud(0),new OctreeBud(0),depth-1);
+            if (depth&1) {
+                data = new OctreePortionAwareBranch(new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),data,depth-1);
+            } else {
+                data = new OctreePortionAwareBranch(data,new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),depth-1);
+            }
         }
     }
 }
 int Octree::underpressure(BlockLoc x,BlockLoc y,BlockLoc z) {
-    //    std::cout<<((ALTERNATOR+z)^ALTERNATOR)<<"\n";
-    x -= ALTERNATOR&(CHSIZE-1);
-    y -= ALTERNATOR&(CHSIZE-1);
-    z -= ALTERNATOR&(CHSIZE-1);
-    x = (x+ALTERNATOR)^ALTERNATOR;
-    y = (y+ALTERNATOR)^ALTERNATOR;
-    z = (z+ALTERNATOR)^ALTERNATOR;
-//    long mo = std::max(std::max(x,y),z);
+//        x -= ALTERNATOR&(CHSIZE-1);
+//        y -= ALTERNATOR&(CHSIZE-1);
+//        z -= ALTERNATOR&(CHSIZE-1);
+//        x = (x+ALTERNATOR)^ALTERNATOR;
+//        y = (y+ALTERNATOR)^ALTERNATOR;
+//        z = (z+ALTERNATOR)^ALTERNATOR;
+    x ^= ASBLOCKLOC(0);
+    y ^= ASBLOCKLOC(0);
+    z ^= ASBLOCKLOC(0);
     int r;
     for (r=0;(1<<r)<=x or (1<<r)<=y or (1<<r)<=z;r++) {}
     return r;
@@ -814,77 +897,115 @@ OctreeSegment* makeOctree(std::ifstream& file,int recur) {
     file.read(&tester,1);
     if (tester == 'l') {
         uint8_t id;
+        uint8_t conflag;
         int8_t ids[12];
         file.read((char*) &id,sizeof(uint8_t));
+        file.read((char*) &conflag,sizeof(uint8_t));
         file.read((char*) &ids,sizeof(int8_t)*12);
-        return new OctreeLeaf(id,ids);
+        return new OctreeLeaf(id,conflag,ids);
     } else if (tester == 's') {
         uint8_t id;
         file.read((char*) &id,sizeof(uint8_t));
         return new OctreeBud(id);
     } else if (tester == 'f') {
         uint8_t id;
+        uint8_t conflag;
         file.read((char*) &id,sizeof(uint8_t));
-        return new OctreeFeature(id);
+        file.read((char*) &conflag,sizeof(uint8_t));
+        return new OctreeFeature(id,conflag);
     } else if (tester == 'c') {
         recur--;
-        return new OctreeBranch(makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),recur);
+        if (recur == 6) {
+            return new OctreePortionAwareBranch(makeOctree(file,recur),
+                                                makeOctree(file,recur),
+                                                makeOctree(file,recur),
+                                                makeOctree(file,recur),
+                                                makeOctree(file,recur),
+                                                makeOctree(file,recur),
+                                                makeOctree(file,recur),
+                                                makeOctree(file,recur),recur);
+        } else {
+            return new OctreeBranch(makeOctree(file,recur),
+                                    makeOctree(file,recur),
+                                    makeOctree(file,recur),
+                                    makeOctree(file,recur),
+                                    makeOctree(file,recur),
+                                    makeOctree(file,recur),
+                                    makeOctree(file,recur),
+                                    makeOctree(file,recur),recur);
+        }
     } else {
         throw;
     }
 }
-OctreeSegment* makePortionOctree(std::ifstream& file,int recur) {
-    char tester;
-    file.read(&tester,1);
-    if (tester == 'l') {
-        uint8_t id;
-        int8_t ids[12];
-        file.read((char*) &id,sizeof(uint8_t));
-        file.read((char*) &ids,sizeof(int8_t)*12);
-        return new OctreeLeaf(id,ids);
-    } else if (tester == 's') {
-        uint8_t id;
-        file.read((char*) &id,sizeof(uint8_t));
-        return new OctreeBud(id);
-    } else if (tester == 'f') {
-        uint8_t id;
-        file.read((char*) &id,sizeof(uint8_t));
-        return new OctreeFeature(id);
-    } else if (tester == 'c') {
-        recur--;
-        return new OctreePortionAwareBranch(makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),
-                                makeOctree(file,recur),recur);
-    } else {
-        throw;
-    }
-}
+//OctreeSegment* makePortionOctree(std::ifstream& file,int recur) {
+//    char tester;
+//    file.read(&tester,1);
+//    if (tester == 'l') {
+//        uint8_t id;
+//        uint8_t conflag;
+//        int8_t ids[12];
+//        file.read((char*) &id,sizeof(uint8_t));
+//        file.read((char*) &conflag,sizeof(uint8_t));
+//        file.read((char*) &ids,sizeof(int8_t)*12);
+//        return new OctreeLeaf(id,conflag,ids);
+//    } else if (tester == 's') {
+//        uint8_t id;
+//        file.read((char*) &id,sizeof(uint8_t));
+//        return new OctreeBud(id);
+//    } else if (tester == 'f') {
+//        uint8_t id;
+//        uint8_t conflag;
+//        file.read((char*) &id,sizeof(uint8_t));
+//        file.read((char*) &conflag,sizeof(uint8_t));
+//        return new OctreeFeature(id,conflag);
+//    } else if (tester == 'c') {
+//        recur--;
+//        return new OctreePortionAwareBranch(makeOctree(file,recur),
+//                                makeOctree(file,recur),
+//                                makeOctree(file,recur),
+//                                makeOctree(file,recur),
+//                                makeOctree(file,recur),
+//                                makeOctree(file,recur),
+//                                makeOctree(file,recur),
+//                                makeOctree(file,recur),recur);
+//    } else {
+//        throw;
+//    }
+//}
 
 
 OctreeSegment* makeOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,int recur) {
+    extern uint8_t materialattribs[];
     if (recur == 0) {
         uint8_t equi = data[x][y][z];
+        uint8_t meshcomp = (materialattribs[data[x+1][y+1][z+1]]&1);
+        uint8_t volumecomp = (materialattribs[equi]&1);
+        
+        uint8_t connectionflag =
+        ((meshcomp^(materialattribs[data[x][y][z]]&1))*(8) ) |
+        ((meshcomp^(materialattribs[data[x+1][y][z]]&1))*(1+8+16) ) |
+        ((meshcomp^(materialattribs[data[x][y+1][z]]&1))*(2+8+32) ) |
+        ((meshcomp^(materialattribs[data[x][y][z+1]]&1))*(4+8+64) ) |
+        ((meshcomp^(materialattribs[data[x][y+1][z+1]]&1))*(2+4+8+32+64) ) |
+        ((meshcomp^(materialattribs[data[x+1][y][z+1]]&1))*(1+4+8+16+64) ) |
+        ((meshcomp^(materialattribs[data[x+1][y+1][z]]&1))*(1+2+8+16+32) );
+        if ((connectionflag&8)|volumecomp) {
+            connectionflag |=
+            ((materialattribs[data[x+1][y][z]]&1)<<4) |
+            ((materialattribs[data[x][y+1][z]]&1)<<5) |
+            ((materialattribs[data[x][y][z+1]]&1)<<6) |
+            128;
+        }
         
         if (equi==data[x+1][y][z] and equi==data[x][y+1][z] and equi==data[x][y][z+1]) {
             if (equi==data[x+1][y+1][z] and equi==data[x+1][y][z+1] and equi==data[x][y+1][z+1] and equi==data[x+1][y+1][z+1]) {
                 return new OctreeBud(data[x][y][z]);
             } else {
-                return new OctreeFeature(data[x][y][z]);
+                return new OctreeFeature(data[x][y][z],connectionflag);
             }
         } else {
-            return new OctreeLeaf(data[x][y][z]);
+            return new OctreeLeaf(data[x][y][z],connectionflag);
         }
     }
     BlockLoc add = (1<<recur)+1;
@@ -902,69 +1023,62 @@ OctreeSegment* makeOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,
                     OctreeSegment* f = makeOctree(data,x+k,y,z+k,recur-1);
                     OctreeSegment* g = makeOctree(data,x,y+k,z+k,recur-1);
                     OctreeSegment* h = makeOctree(data,x+k,y+k,z+k,recur-1);
-                    return new OctreeBranch(a,b,c,d,e,f,g,h,recur-1);
+                    if (recur == 7) {return new OctreePortionAwareBranch(a,b,c,d,e,f,g,h,recur-1);}
+                    else {return new OctreeBranch(a,b,c,d,e,f,g,h,recur-1);}
                 }
             }
         }
     }
     return new OctreeBud(equi);
 }
-OctreeSegment* makePortionOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,int recur) {
-    if (recur == 0) {
-        uint8_t equi = data[x][y][z];
-        
-        if (equi==data[x+1][y][z] and equi==data[x][y+1][z] and equi==data[x][y][z+1]) {
-            if (equi==data[x+1][y+1][z] and equi==data[x+1][y][z+1] and equi==data[x][y+1][z+1] and equi==data[x+1][y+1][z+1]) {
-                return new OctreeBud(data[x][y][z]);
-            } else {
-                return new OctreeFeature(data[x][y][z]);
-            }
-        } else {
-            return new OctreeLeaf(data[x][y][z]);
-        }
-    }
-    BlockLoc add = (1<<recur)+1;
-    BlockId equi = data[x][y][z];
-    for (BlockLoc xi=x;xi<x+add;xi++) {
-        for (BlockLoc yi=y;yi<y+add;yi++) {
-            for (BlockLoc zi=z;zi<z+add;zi++) {
-                if (data[xi][yi][zi] != equi) {
-                    int k = (1<<(recur-1));
-                    OctreeSegment* a = makeOctree(data,x,y,z,recur-1);
-                    OctreeSegment* b = makeOctree(data,x+k,y,z,recur-1);
-                    OctreeSegment* c = makeOctree(data,x,y+k,z,recur-1);
-                    OctreeSegment* d = makeOctree(data,x+k,y+k,z,recur-1);
-                    OctreeSegment* e = makeOctree(data,x,y,z+k,recur-1);
-                    OctreeSegment* f = makeOctree(data,x+k,y,z+k,recur-1);
-                    OctreeSegment* g = makeOctree(data,x,y+k,z+k,recur-1);
-                    OctreeSegment* h = makeOctree(data,x+k,y+k,z+k,recur-1);
-                    return new OctreePortionAwareBranch(a,b,c,d,e,f,g,h,recur-1);
-                }
-            }
-        }
-    }
-    return new OctreeBud(equi);
-}
+//OctreeSegment* makePortionOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,int recur) {
+//    BlockLoc add = (1<<recur)+1;
+//    BlockId equi = data[x][y][z];
+//    for (BlockLoc xi=x;xi<x+add;xi++) {
+//        for (BlockLoc yi=y;yi<y+add;yi++) {
+//            for (BlockLoc zi=z;zi<z+add;zi++) {
+//                if (data[xi][yi][zi] != equi) {
+//                    int k = (1<<(recur-1));
+//                    OctreeSegment* a = makeOctree(data,x,y,z,recur-1);
+//                    OctreeSegment* b = makeOctree(data,x+k,y,z,recur-1);
+//                    OctreeSegment* c = makeOctree(data,x,y+k,z,recur-1);
+//                    OctreeSegment* d = makeOctree(data,x+k,y+k,z,recur-1);
+//                    OctreeSegment* e = makeOctree(data,x,y,z+k,recur-1);
+//                    OctreeSegment* f = makeOctree(data,x+k,y,z+k,recur-1);
+//                    OctreeSegment* g = makeOctree(data,x,y+k,z+k,recur-1);
+//                    OctreeSegment* h = makeOctree(data,x+k,y+k,z+k,recur-1);
+//                    
+//                }
+//            }
+//        }
+//    }
+//    return new OctreeBud(equi);
+//}
 
 void Octree::loadportion(BlockLoc x,BlockLoc y,BlockLoc z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
     expandchunk(x,y,z);
-    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),depth-CHPOWER,makePortionOctree(dat,0,0,0,CHPOWER),data);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(dat,0,0,0,CHPOWER),data);
 }
 
 
-Octree::Octree(glm::mat4& trans) : realworld(trans) {}
+Octree::Octree(glm::mat4& trans,Environment& backref,int pop) : realworld(trans), currenttests(backref), popular(pop) {}
 
 void Octree::filepushportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
     //    file =
     std::ofstream file = std::ofstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::out|std::ios::binary|std::ios::trunc);
-    data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))->filesave(file);
+    OctreePortionAwareBranch* look = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+    if (look!=NULL) {
+        look->filesave(file);
+    } else {
+        OctreeBud(data->getser(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))).filesave(file);
+    }
     file.close();
 }
 void Octree::filepullportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
     //    file =
     std::ifstream file = std::ifstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::in|std::ios::binary);
     expandchunk(x,y,z);
-    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),depth-CHPOWER,makePortionOctree(file,CHPOWER),data);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(file,CHPOWER),data);
     file.close();
 }
 bool Octree::dataexists(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
@@ -975,39 +1089,32 @@ void Octree::render() {
     realworld.render();
 }
 bool Octree::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
-    if (underpressure(x<<CHPOWER,y<<CHPOWER,z<<CHPOWER)>depth) {
-        return false;
+    if (underpressure(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))>depth) {
+        return popular!=0;
     }
     return data->getser(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))!=0;
 }
 void Octree::h_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
-    
     if (existsat(x  ,y  ,z  ) and existsat(x+1,y  ,z  ) and
         existsat(x  ,y+1,z  ) and existsat(x+1,y+1,z  ) and
         existsat(x  ,y  ,z+1) and existsat(x+1,y  ,z+1) and
         existsat(x  ,y+1,z+1) and existsat(x+1,y+1,z+1)) {
-        OctreeSegment* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
         
-        portion->hermitify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),data);
-        GeometryOctreeLeaf* newguy = new GeometryOctreeLeaf(x,y,z,0);
-        realworld.expand(x,y,z);
-        realworld.insertinto(x,y,z,newguy);
+        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+        if (portion != NULL) {
+            portion->hermitify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),data);
+        }
     }
 }
 void Octree::v_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
-    
     if (existsat(x  ,y  ,z  ) and existsat(x+1,y  ,z  ) and
         existsat(x  ,y+1,z  ) and existsat(x+1,y+1,z  ) and
         existsat(x  ,y  ,z+1) and existsat(x+1,y  ,z+1) and
         existsat(x  ,y+1,z+1) and existsat(x+1,y+1,z+1)) {
-        int lod = data->getlodat(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
         
-        OctreeSegment* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-        GeometryOctreeLeaf* newguy = realworld.getgeomat(x,y,z);
-        
-        if (!(newguy->bakeddetails&(1<<lod))) {
-            portion->vertify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),lod);
-            newguy->bakeddetails |= (1<<lod);
+        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+        if (portion != NULL) {
+            portion->vertify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),portion->curlod);
         }
     }
 }
@@ -1018,443 +1125,58 @@ void Octree::g_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
 //    if (newguy->currentlod!=-1) {
 //        
 //    }
-    if (realworld.existsat(x-1,y-1,z-1) and realworld.existsat(x  ,y-1,z-1) and
-        realworld.existsat(x-1,y  ,z-1) and realworld.existsat(x  ,y  ,z-1) and
-        realworld.existsat(x-1,y-1,z  ) and realworld.existsat(x  ,y-1,z  ) and
-        realworld.existsat(x-1,y  ,z  ) and realworld.existsat(x  ,y  ,z  ) ){
+    if (data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y-1),ASCHUNKLOC(z-1)) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y-1),ASCHUNKLOC(z-1)) and
+        data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y  ),ASCHUNKLOC(z-1)) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y  ),ASCHUNKLOC(z-1)) and
+        data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y-1),ASCHUNKLOC(z  )) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y-1),ASCHUNKLOC(z  )) and
+        data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y  ),ASCHUNKLOC(z  )) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y  ),ASCHUNKLOC(z  )) ){
+        
+        if (!realworld.existsat(x, y, z)) {
+            GeometryOctreeLeaf* newguy = new GeometryOctreeLeaf(x,y,z,0);
+            realworld.expand(x,y,z);
+            realworld.insertinto(x,y,z,newguy);
+        }//REMOVE DIS
+        
         GeometryOctreeLeaf* newguy = realworld.getgeomat(x,y,z);
         
-        const int lodlookup[7][3] = {{0,0,0},{-1,0,0},{0,-1,0},{-1,-1,0},{0,0,-1},{-1,0,-1},{0,-1,-1}};
-        bool needchange = false;
-        for (int i=0;i<7;i++) {
-            int lod = data->getlodat(ASCHUNKLOC(x+lodlookup[i][0]),ASCHUNKLOC(y+lodlookup[i][1]),ASCHUNKLOC(z+lodlookup[i][2]));
-            if (newguy->lodserial[i] !=lod) {
-                newguy->lodserial[i]=lod;
-                needchange=true;
+        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+        
+        if (portion!=NULL) {
+            
+//            std::cout<<"fixed "<<std::max(std::max(abs(x),abs(y)),abs(z))<<", location :"<<Location(x,y,z).tostring()<<"\n";
+            const int lodlookup[7][3] = {{0,0,0},{-1,0,0},{0,-1,0},{-1,-1,0},{0,0,-1},{-1,0,-1},{0,-1,-1}};
+            bool needchange = false;
+            for (int i=0;i<7;i++) {
+                OctreePortionAwareBranch* ext = data->getvoxunit(ASCHUNKLOC(x+lodlookup[i][0]),ASCHUNKLOC(y+lodlookup[i][1]),ASCHUNKLOC(z+lodlookup[i][2]));
+                int lod = ext!=NULL?ext->curlod:-2;
+                if (portion->lodserial[i]!=lod) {
+                    portion->lodserial[i]=lod;
+                    needchange=true;
+                }
+            }
+            if (needchange) {
+                int lod = portion->curlod;
+                
+    //            newguy->erase();
+        //        newguy->removeseal();
+                
+                extern BranchRegistry* SWO;
+                SWO = &currenttests;
+                std::map<uint8_t,GeomTerrain>* newgeometry = new std::map<uint8_t,GeomTerrain>();
+                portion->geomify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),newgeometry,data,lod);
+            //    realworld.data->insertinto(realworld.flipbits(x),realworld.flipbits(y),realworld.flipbits(z),realworld.depth,newguy,realworld.data);
+                
+                newguy->nextpasscleanup = newguy->geometry;
+                newguy->geometry = newgeometry;
+        
+                newguy->matrixmap(&realworld.matrix);
+    //            newguy->securecore();
+                
             }
         }
-        if (needchange) {
-            int lod = data->getlodat(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-            OctreeSegment* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-            
-            newguy->open = true;
-            newguy->erase();
-    //        newguy->removeseal();
-            portion->geomify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),newguy,data,lod);
-        //    realworld.data->insertinto(realworld.flipbits(x),realworld.flipbits(y),realworld.flipbits(z),realworld.depth,newguy,realworld.data);
-            newguy->matrixmap(&realworld.matrix);
-//            newguy->securecore();
-            newguy->open = false;
-            
-        }
-        
-//        if (data->getlodat(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))==-1) {
-//            data->setlodat(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),lod);
-//            OctreeSegment* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-//            GeometryOctreeLeaf* newguy = realworld.getgeomat(x,y,z);
-//            newguy->open = true;
-//            newguy->erase();
-//    //        newguy->removeseal();
-//            portion->geomify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),newguy,data,lod);
-//        //    realworld.data->insertinto(realworld.flipbits(x),realworld.flipbits(y),realworld.flipbits(z),realworld.depth,newguy,realworld.data);
-//            newguy->matrixmap(&realworld.matrix);
-//            newguy->securecore();
-//            newguy->open = false;
-//        }
     }
-//    for(auto iterator = newguy->geometry.begin(); iterator != newguy->geometry.end(); iterator++) {
-//        iterator->second.matrix = &realworld.matrix;
-//        std::cout<<"created geometry with material "<<(int)iterator->first<<"\n";
-//    }
-//    std::cout<<"finished generation.\n";
-
 }
-//
-//void Octree::firstpreparevoxXskirt
-//void Octree::voxXskirt(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geo) {
-//    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
-//        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
-//            data->hermitifyselection(ASCHUNKLOC(x+1)-1,yi,zi,data);
-//            data->vertifyselection(ASCHUNKLOC(x+1)-1,yi,zi)
-//        }
-//    }
-//    for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
-//        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
-//            data->geomifyselection(ASCHUNKLOC(x+1)-1,yi,zi,geo,data,0);
-//            data->geomifyselection(ASCHUNKLOC(x+1),yi,zi,geo,data,0);
-//        }
-//    }
-//}
-//void Octree::voxYskirt(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geo) {
-//    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
-//        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
-//            data->hermitifyselection(xi,ASCHUNKLOC(y+1)-1,zi,data);
-//        }
-//    }
-//    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
-//        for (int zi=ASCHUNKLOC(z)+1;zi<ASCHUNKLOC(z+1)-1;zi++) {
-//            data->geomifyselection(xi,ASCHUNKLOC(y+1)-1,zi,geo,data,0);
-//            data->geomifyselection(xi,ASCHUNKLOC(y+1),zi,geo,data,0);
-//        }
-//    }
-//}
-//void Octree::voxZskirt(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geo) {
-//    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
-//        for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
-//            data->hermitifyselection(xi,yi,ASCHUNKLOC(z+1)-1,data);
-//        }
-//    }
-//    for (int xi=ASCHUNKLOC(x)+1;xi<ASCHUNKLOC(x+1)-1;xi++) {
-//        for (int yi=ASCHUNKLOC(y)+1;yi<ASCHUNKLOC(y+1)-1;yi++) {
-//            data->geomifyselection(xi,yi,ASCHUNKLOC(z+1)-1,geo,data,0);
-//            data->geomifyselection(xi,yi,ASCHUNKLOC(z+1),geo,data,0);
-//        }
-//    }
-//}
 
-//GeometryOctreeLeaf* Octree::opengeoforediting(BlockLoc x,BlockLoc y,BlockLoc z) {
-//    GeometryOctreeLeaf* geo = realworld.getgeomat(x,y,z);
-//    geo->open = true;
-//    opengeos.push_back(geo);
-//    return geo;
-//}
-//void Octree::cleanupedits() {
-//    for (int i = 0;i<opengeos.size();i++) {
-//        opengeos[i]->matrixmap(&realworld.matrix);
-//        opengeos[i]->open = false;
-//    }
-//    opengeos.clear();
-//}
-//void Octree::voxsnippets(BlockLoc x,BlockLoc y,BlockLoc z) {
-//
-//#define SNAP(x,y) (x&(BLOCKLOCFULLMASK^((1<<y)-1)))
-//#define geoget(x,y,z) GeometryOctreeLeaf* geo=realworld.getgeomat(x,y,z);if(!geo->open){touchedgeoms.push_back(geo);geo->open=true;}BlockLoc xw=x;BlockLoc yw=y;BlockLoc zw=z;int orilod = geo->currentlod;
-//#define giterX for (int xi=ASCHUNKLOC(xw)+(1<<minyamum);xi<ASCHUNKLOC(xw+1)-(1<<orilod);xi+=(1<<minyamum)) {
-//#define giterY for (int yi=ASCHUNKLOC(yw)+(1<<minyamum);yi<ASCHUNKLOC(yw+1)-(1<<orilod);yi+=(1<<minyamum)) {
-//#define giterZ for (int zi=ASCHUNKLOC(zw)+(1<<minyamum);zi<ASCHUNKLOC(zw+1)-(1<<orilod);zi+=(1<<minyamum)) {
-//#define iterX for (int xi=ASCHUNKLOC(xw);xi<ASCHUNKLOC(xw+1)-1;xi++) {
-//#define iterY for (int yi=ASCHUNKLOC(yw);yi<ASCHUNKLOC(yw+1)-1;yi++) {
-//#define iterZ for (int zi=ASCHUNKLOC(zw);zi<ASCHUNKLOC(zw+1)-1;zi++) {
-//#define maxX ASCHUNKLOC(xw+1)-1
-//#define maxY ASCHUNKLOC(yw+1)-1
-//#define maxZ ASCHUNKLOC(zw+1)-1
-//#define ifmask(f,lod) ( !((bool) (f&((1<<lod)-1))  ) )
-////#define WA ((1<<otherlod)-(1<<orilod))
-//    
-//    //#define INTLODONE
-////    int otherlod = realworld.getgeomat(x,y,z)->currentlod;
-////    if (otherlod != 1) {return;}
-//    std::vector<GeometryOctreeLeaf*> touchedgeoms;
-//    for (int xo=0;xo<2;xo++) {
-//        if (existsat(x-1+(xo*2), y, z)) {
-//            geoget(x-1+xo,y,z)
-//            int otherlod = realworld.getgeomat(x+xo,y,z)->currentlod;
-//            int lod[] = {otherlod,orilod,otherlod,orilod,otherlod,orilod,otherlod,orilod};
-//            int lodone[] = {orilod,orilod,orilod,orilod,orilod,orilod,orilod,orilod};
-//            iterY iterZ data->hermitifyselection(maxX,yi,zi,data);}}
-//            iterY iterZ if (ifmask(yi,orilod) and ifmask(zi,otherlod)) {data->vertifyselection(maxX,yi,zi,orilod);}}}
-//            int minyamum = std::min(otherlod,orilod);
-//            int maxyamum = std::max(otherlod,orilod);
-//            giterY giterZ
-//                    int anchor = data->getser(SNAP(maxX,orilod),SNAP(yi,orilod),SNAP(zi,orilod));
-//
-//                    Xstitch(SNAP(maxX,orilod),yi,zi,geo,data, lodone,anchor,
-//                            data->getser(maxX+1           ,SNAP(yi,otherlod)            ,SNAP(zi,otherlod)));
-//                    Ystitch(SNAP(maxX,orilod),yi,zi,geo,data, lodone,anchor,
-//                            data->getser(SNAP(maxX,orilod),SNAP(yi+(1<<minyamum),orilod),SNAP(zi,orilod)));
-//                    Zstitch(SNAP(maxX,orilod),yi,zi,geo,data, lodone,anchor,
-//                            data->getser(SNAP(maxX,orilod),SNAP(yi,orilod)              ,SNAP(zi+(1<<minyamum),orilod)));
-//
-//                    int anchor2 = data->getser(maxX+1,SNAP(yi,otherlod),SNAP(zi,otherlod));
-//                    //
-//                    Xstitch(maxX+1,yi,zi,geo,data, lod,anchor2,
-//                            data->getser(maxX+1+(1<<otherlod),SNAP(yi,otherlod)              ,SNAP(zi,otherlod)));
-//                    Ystitch(maxX+1,yi,zi,geo,data, lod,anchor2,
-//                            data->getser(maxX+1              ,SNAP(yi+(1<<minyamum),otherlod),SNAP(zi,otherlod)));
-//                    Zstitch(maxX+1,yi,zi,geo,data, lod,anchor2,
-//                            data->getser(maxX+1              ,SNAP(yi,otherlod)              ,SNAP(zi+(1<<minyamum),otherlod)));
-//            }}
-//        }
-//    }
-//    for (int yo=0;yo<2;yo++) {
-//        if (existsat(x, y-1+(yo*2), z)) {
-//            geoget(x,y-1+yo,z)
-//            int otherlod = realworld.getgeomat(x,y+yo,z)->currentlod;
-//            int lod[] = {otherlod,otherlod,orilod,orilod,otherlod,otherlod,orilod,orilod};
-//            int lodone[] = {orilod,orilod,orilod,orilod,orilod,orilod,orilod,orilod};
-//            iterX iterZ data->hermitifyselection(xi,maxY,zi,data);}}
-//            iterX iterZ if (ifmask(xi,orilod) and ifmask(zi,otherlod)) {data->vertifyselection(xi,maxY,zi,orilod);}}}
-//            int minyamum = std::min(otherlod,orilod);
-//            int maxyamum = std::max(otherlod,orilod);
-//            giterX giterZ
-//                int anchor = data->getser(SNAP(xi,orilod),SNAP(maxY,orilod),SNAP(zi,orilod));
-//
-//                Ystitch(xi,SNAP(maxY,orilod),zi,geo,data, lodone,anchor,
-//                        data->getser(SNAP(xi,otherlod)            ,maxY+1           ,SNAP(zi,otherlod)));
-//                Xstitch(xi,SNAP(maxY,orilod),zi,geo,data, lodone,anchor,
-//                        data->getser(SNAP(xi+(1<<minyamum),orilod),SNAP(maxY,orilod),SNAP(zi,orilod)));
-//                Zstitch(xi,SNAP(maxY,orilod),zi,geo,data, lodone,anchor,
-//                        data->getser(SNAP(xi,orilod)              ,SNAP(maxY,orilod),SNAP(zi+(1<<minyamum),orilod)));
-//
-//                int anchor2 = data->getser(SNAP(xi,otherlod),maxY+1,SNAP(zi,otherlod));
-//                //
-//                Ystitch(xi,maxY+1,zi,geo,data, lod,anchor2,
-//                        data->getser(SNAP(xi,otherlod)              ,maxY+1+(1<<otherlod),SNAP(zi,otherlod)));
-//                Xstitch(xi,maxY+1,zi,geo,data, lod,anchor2,
-//                        data->getser(SNAP(xi+(1<<minyamum),otherlod),maxY+1              ,SNAP(zi,otherlod)));
-//                Zstitch(xi,maxY+1,zi,geo,data, lod,anchor2,
-//                        data->getser(SNAP(xi,otherlod)              ,maxY+1              ,SNAP(zi+(1<<minyamum),otherlod)));
-//            }}
-//        }
-//    }
-//    for (int zo=0;zo<2;zo++) {
-//        if (existsat(x, y, z-1+(zo*2))) {
-//            geoget(x,y,z-1+zo)
-//            int otherlod = realworld.getgeomat(x,y,z+zo)->currentlod;
-//            int lod[] = {otherlod,otherlod,otherlod,otherlod,orilod,orilod,orilod,orilod};
-//            int lodone[] = {orilod,orilod,orilod,orilod,orilod,orilod,orilod,orilod};
-//            iterX iterY data->hermitifyselection(xi,yi,maxZ,data);}}
-//            iterX iterY if (ifmask(xi,orilod) and ifmask(yi,otherlod)) {data->vertifyselection(xi,yi,maxZ,orilod);}}}
-//            int minyamum = std::min(otherlod,orilod);
-//            int maxyamum = std::max(otherlod,orilod);
-//            giterX giterY
-//                int anchor = data->getser(SNAP(xi,orilod),SNAP(yi,orilod),SNAP(maxZ,orilod));
-//
-//                Zstitch(xi,yi,SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                        data->getser(SNAP(xi,otherlod)            ,SNAP(yi,otherlod)            ,maxZ+1           ));
-//                Xstitch(xi,yi,SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                        data->getser(SNAP(xi+(1<<minyamum),orilod),SNAP(yi,orilod)              ,SNAP(maxZ,orilod)));
-//                Ystitch(xi,yi,SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                        data->getser(SNAP(xi,orilod)              ,SNAP(yi+(1<<minyamum),orilod),SNAP(maxZ,orilod)));
-//
-//                int anchor2 = data->getser(SNAP(xi,otherlod),SNAP(yi,otherlod),maxZ+1);
-//
-//                Zstitch(xi,yi,maxZ+1,geo,data, lod,anchor2,
-//                        data->getser(SNAP(xi,otherlod)              ,SNAP(yi,otherlod)              ,maxZ+1+(1<<otherlod)));
-//                Xstitch(xi,yi,maxZ+1,geo,data, lod,anchor2,
-//                        data->getser(SNAP(xi+(1<<minyamum),otherlod),SNAP(yi,otherlod)              ,maxZ+1              ));
-//                Ystitch(xi,yi,maxZ+1,geo,data, lod,anchor2,
-//                        data->getser(SNAP(xi,otherlod)              ,SNAP(yi+(1<<minyamum),otherlod),maxZ+1              ));
-//            }}
-//        }
-//    }
-//    for (int yo1=-1;yo1<=0;yo1++) {
-//        for (int zo1=-1;zo1<=0;zo1++) {
-//            bool count = true;
-//            for (int yo2=0;yo2<=1;yo2++) {
-//                for (int zo2=0;zo2<=1;zo2++) {
-//                    if (!existsat(x,y+yo1+yo2,z+zo1+zo2)) {
-//                        count = false;
-//                    }
-//                }
-//            }
-//            if (count) {
-//                geoget(x,y+yo1,z+zo1)
-//                int otherlody  = realworld.getgeomat(x,y+yo1+1,z+zo1)->currentlod;
-//                int otherlodz  = realworld.getgeomat(x,y+yo1,z+zo1+1)->currentlod;
-//                int otherlodyz = realworld.getgeomat(x,y+yo1+1,z+zo1+1)->currentlod;
-//                int lodone[] = {orilod,orilod,orilod,orilod,orilod,orilod,orilod,orilod};
-//                int lody[]  = {otherlody,otherlody,orilod,orilod,otherlody,otherlody,orilod,orilod};
-//                int lodz[]  = {otherlodz,otherlodz,otherlodz,otherlodz,orilod,orilod,orilod,orilod};
-//                int lodyz[] = {otherlodyz,otherlodyz,otherlodz,otherlodz,otherlody,otherlody,orilod,orilod};
-//                iterX data->hermitifyselection(xi,maxY,maxZ,data);}
-//                iterX if (ifmask(xi,orilod)) {data->vertifyselection(xi,maxY,maxZ,orilod);}}
-//                int minyamum = std::min(std::min(otherlody,orilod),std::min(otherlodz,otherlodyz));
-//                int maxyamum = std::max(std::max(otherlody,orilod),std::max(otherlodz,otherlodyz));
-//                giterX
-//                    int anchor = data->getser(SNAP(xi,orilod),SNAP(maxY,orilod),SNAP(maxZ,orilod));
-//        
-//                    Xstitch(xi,SNAP(maxY,orilod),SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                            data->getser(SNAP(xi+(1<<minyamum),orilod),SNAP(maxY,orilod)            ,SNAP(maxZ,orilod)));
-//                    Ystitch(xi,SNAP(maxY,orilod),SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                            data->getser(SNAP(xi,otherlody)           ,maxY+1                       ,SNAP(maxZ,otherlody)));
-//                    Zstitch(xi,SNAP(maxY,orilod),SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                            data->getser(SNAP(xi,otherlodz)           ,SNAP(maxY,otherlodz)         ,maxZ+1           ));
-//        
-//                    int anchor2 = data->getser(SNAP(xi,otherlody),maxY+1,SNAP(maxZ,otherlody));
-//        
-//                    Xstitch(xi,maxY+1,SNAP(maxZ,orilod),geo,data, lody,anchor2,
-//                            data->getser(SNAP(xi+(1<<minyamum),otherlody),maxY+1                       ,SNAP(maxZ,otherlody)));
-//                    Ystitch(xi,maxY+1,SNAP(maxZ,orilod),geo,data, lody,anchor2,
-//                            data->getser(SNAP(xi,otherlody)              ,maxY+1+(1<<otherlody)        ,SNAP(maxZ,otherlody)));
-//                    Zstitch(xi,maxY+1,SNAP(maxZ,orilod),geo,data, lody,anchor2,
-//                            data->getser(SNAP(xi,otherlodyz)             ,maxY+1                       ,maxZ+1           ));
-//                    
-//                    int anchor3 = data->getser(SNAP(xi,otherlodz),SNAP(maxY,otherlodz),maxZ+1);
-//        
-//                    Xstitch(xi,SNAP(maxY,orilod),maxZ+1,geo,data, lodz,anchor3,
-//                            data->getser(SNAP(xi+(1<<minyamum),otherlodz),SNAP(maxY,otherlodz)         ,maxZ+1               ));
-//                    Ystitch(xi,SNAP(maxY,orilod),maxZ+1,geo,data, lodz,anchor3,
-//                            data->getser(SNAP(xi,otherlodyz)             ,maxY+1                       ,maxZ+1               ));
-//                    Zstitch(xi,SNAP(maxY,orilod),maxZ+1,geo,data, lodz,anchor3,
-//                            data->getser(SNAP(xi,otherlodz)              ,SNAP(maxY,otherlodz)         ,maxZ+1+(1<<otherlodz)));
-//                    
-//                    int anchor4 = data->getser(SNAP(xi,otherlodyz),maxY+1,maxZ+1);
-//        
-//                    Xstitch(xi,maxY+1,maxZ+1,geo,data, lodyz,anchor4,
-//                            data->getser(SNAP(xi+(1<<minyamum),otherlodyz),maxY+1                       ,maxZ+1                ));
-//                    Ystitch(xi,maxY+1,maxZ+1,geo,data, lodyz,anchor4,
-//                            data->getser(SNAP(xi,otherlodyz)              ,maxY+1+(1<<otherlodyz)       ,maxZ+1                ));
-//                    Zstitch(xi,maxY+1,maxZ+1,geo,data, lodyz,anchor4,
-//                            data->getser(SNAP(xi,otherlodyz)              ,maxY+1                       ,maxZ+1+(1<<otherlodyz)));
-//                }
-//            }
-//        }
-//    }
-//    for (int xo1=-1;xo1<=0;xo1++) {
-//        for (int zo1=-1;zo1<=0;zo1++) {
-//            bool count = true;
-//            for (int xo2=0;xo2<=1;xo2++) {
-//                for (int zo2=0;zo2<=1;zo2++) {
-//                    if (!existsat(x+xo1+xo2,y,z+zo1+zo2)) {
-//                        count = false;
-//                    }
-//                }
-//            }
-//            if (count) {
-//                geoget(x+xo1,y,z+zo1)
-//                int otherlodx = realworld.getgeomat(x+xo1+1,y,z+zo1)->currentlod;
-//                int otherlodz = realworld.getgeomat(x+xo1,y,z+zo1+1)->currentlod;
-//                int otherlodxz = realworld.getgeomat(x+xo1+1,y,z+zo1+1)->currentlod;
-//                int lodone[] = {orilod,orilod,orilod,orilod,orilod,orilod,orilod,orilod};
-//                int lodx[] = {otherlodx,orilod,otherlodx,orilod,otherlodx,orilod,otherlodx,orilod};
-//                int lodz[] = {otherlodz,otherlodz,otherlodz,otherlodz,orilod,orilod,orilod,orilod};
-//                int lodxz[] = {otherlodxz,otherlodz,otherlodxz,otherlodz,otherlodx,orilod,otherlodx,orilod};
-//                iterY data->hermitifyselection(maxX,yi,maxZ,data);}
-//                iterY if (ifmask(yi,orilod)) {data->vertifyselection(maxX,yi,maxZ,orilod);}}
-//                int minyamum = std::min(std::min(otherlodx,orilod),std::min(otherlodz,otherlodxz));
-//                int maxyamum = std::max(std::max(otherlodx,orilod),std::max(otherlodz,otherlodxz));
-//                giterY
-//                    int anchor = data->getser(SNAP(maxX,orilod),SNAP(yi,orilod),SNAP(maxZ,orilod));
-//                    
-//                    Xstitch(SNAP(maxX,orilod),yi,SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                            data->getser(maxX+1                       ,SNAP(yi,otherlodx)           ,SNAP(maxZ,otherlodx)));
-//                    Ystitch(SNAP(maxX,orilod),yi,SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                            data->getser(SNAP(maxX,orilod)            ,SNAP(yi+(1<<minyamum),orilod),SNAP(maxZ,orilod)));
-//                    Zstitch(SNAP(maxX,orilod),yi,SNAP(maxZ,orilod),geo,data, lodone,anchor,
-//                            data->getser(SNAP(maxX,otherlodz)         ,SNAP(yi,otherlodz)           ,maxZ+1           ));
-//                    
-//                    int anchor2 = data->getser(maxX+1,SNAP(yi,otherlodx),SNAP(maxZ,otherlodx));
-//                    
-//                    Xstitch(maxX+1,yi,SNAP(maxZ,orilod),geo,data, lodx,anchor2,
-//                            data->getser(maxX+1+(1<<otherlodx)        ,SNAP(yi,otherlodx)              ,SNAP(maxZ,otherlodx)));
-//                    Ystitch(maxX+1,yi,SNAP(maxZ,orilod),geo,data, lodx,anchor2,
-//                            data->getser(maxX+1                       ,SNAP(yi+(1<<minyamum),otherlodx),SNAP(maxZ,otherlodx)));
-//                    Zstitch(maxX+1,yi,SNAP(maxZ,orilod),geo,data, lodx,anchor2,
-//                            data->getser(maxX+1                       ,SNAP(yi,otherlodxz)             ,maxZ+1           ));
-//                    
-//                    int anchor3 = data->getser(SNAP(maxX,otherlodz),SNAP(yi,otherlodz),maxZ+1);
-//                    
-//                    Xstitch(SNAP(maxX,orilod),yi,maxZ+1,geo,data, lodz,anchor3,
-//                            data->getser(maxX+1                       ,SNAP(yi,otherlodxz)             ,maxZ+1               ));
-//                    Ystitch(SNAP(maxX,orilod),yi,maxZ+1,geo,data, lodz,anchor3,
-//                            data->getser(SNAP(maxX,otherlodz)         ,SNAP(yi+(1<<minyamum),otherlodz),maxZ+1               ));
-//                    Zstitch(SNAP(maxX,orilod),yi,maxZ+1,geo,data, lodz,anchor3,
-//                            data->getser(SNAP(maxX,otherlodz)         ,SNAP(yi,otherlodz)              ,maxZ+1+(1<<otherlodz)));
-//                    
-//                    int anchor4 = data->getser(maxX+1,SNAP(yi,otherlodxz),maxZ+1);
-//                    
-//                    Xstitch(maxX+1,yi,maxZ+1,geo,data, lodxz,anchor4,
-//                            data->getser(maxX+1+(1<<otherlodxz)       ,SNAP(yi,otherlodxz)              ,maxZ+1                ));
-//                    Ystitch(maxX+1,yi,maxZ+1,geo,data, lodxz,anchor4,
-//                            data->getser(maxX+1                       ,SNAP(yi+(1<<minyamum),otherlodxz),maxZ+1                ));
-//                    Zstitch(maxX+1,yi,maxZ+1,geo,data, lodxz,anchor4,
-//                            data->getser(maxX+1                       ,SNAP(yi,otherlodxz)              ,maxZ+1+(1<<otherlodxz)));
-//                }
-//            }
-//        }
-//    }
-//    for (int xo1=-1;xo1<=0;xo1++) {
-//        for (int yo1=-1;yo1<=0;yo1++) {
-//            bool count = true;
-//            for (int xo2=0;xo2<=1;xo2++) {
-//                for (int yo2=0;yo2<=1;yo2++) {
-//                    if (!existsat(x+xo1+xo2,y+yo1+yo2,z)) {
-//                        count = false;
-//                    }
-//                }
-//            }
-//            if (count) {
-//                geoget(x+xo1,y+yo1,z)
-//                int otherlodx  = realworld.getgeomat(x+xo1+1,y+yo1,z)->currentlod;
-//                int otherlody  = realworld.getgeomat(x+xo1,y+yo1+1,z)->currentlod;
-//                int otherlodxy = realworld.getgeomat(x+xo1+1,y+yo1+1,z)->currentlod;
-//                int lodone[] = {orilod,orilod,orilod,orilod,orilod,orilod,orilod,orilod};
-//                int lodx[]  = {otherlodx,orilod,otherlodx,orilod,otherlodx,orilod,otherlodx,orilod};
-//                int lody[]  = {otherlody,otherlody,orilod,orilod,otherlody,otherlody,orilod,orilod};
-//                int lodxy[] = {otherlodxy,otherlody,otherlodx,orilod,otherlodxy,otherlody,otherlodx,orilod};
-//                iterZ data->hermitifyselection(maxX,maxY,zi,data);}
-//                iterZ if (ifmask(zi,orilod)) {data->vertifyselection(maxX,maxY,zi,orilod);}}
-//                int minyamum = std::min(std::min(otherlodx,orilod),std::min(otherlody,otherlodxy));
-//                int maxyamum = std::max(std::max(otherlodx,orilod),std::max(otherlody,otherlodxy));
-//                giterZ
-//                    int anchor = data->getser(SNAP(maxX,orilod),SNAP(maxY,orilod),SNAP(zi,orilod));
-//                    
-//                    Xstitch(SNAP(maxX,orilod),SNAP(maxY,orilod),zi,geo,data, lodone,anchor,
-//                            data->getser(maxX+1                       ,SNAP(maxY,otherlodx),SNAP(zi,otherlodx)           ));
-//                    Ystitch(SNAP(maxX,orilod),SNAP(maxY,orilod),zi,geo,data, lodone,anchor,
-//                            data->getser(SNAP(maxX,otherlody)         ,maxY+1              ,SNAP(zi,otherlody)           ));
-//                    Zstitch(SNAP(maxX,orilod),SNAP(maxY,orilod),zi,geo,data, lodone,anchor,
-//                            data->getser(SNAP(maxX,orilod)            ,SNAP(maxY,orilod)   ,SNAP(zi+(1<<minyamum),orilod)));
-//                    
-//                    int anchor2 = data->getser(maxX+1,SNAP(maxY,otherlodx),SNAP(zi,otherlodx));
-//                    
-//                    Xstitch(maxX+1,SNAP(maxY,orilod),zi,geo,data, lodx,anchor2,
-//                            data->getser(maxX+1+(1<<otherlodx)        ,SNAP(maxY,otherlodx),SNAP(zi,otherlodx)              ));
-//                    Ystitch(maxX+1,SNAP(maxY,orilod),zi,geo,data, lodx,anchor2,
-//                            data->getser(maxX+1                       ,maxY+1              ,SNAP(zi,otherlodxy)             ));
-//                    Zstitch(maxX+1,SNAP(maxY,orilod),zi,geo,data, lodx,anchor2,
-//                            data->getser(maxX+1                       ,SNAP(maxY,otherlodx),SNAP(zi+(1<<minyamum),otherlodx)));
-//                    
-//                    int anchor3 = data->getser(SNAP(maxX,otherlody),maxY+1,SNAP(zi,otherlody));
-//                    
-//                    Xstitch(SNAP(maxX,orilod),maxY+1,zi,geo,data, lody,anchor3,
-//                            data->getser(maxX+1                       ,maxY+1               ,SNAP(zi,otherlodxy)             ));
-//                    Ystitch(SNAP(maxX,orilod),maxY+1,zi,geo,data, lody,anchor3,
-//                            data->getser(SNAP(maxX,otherlody)         ,maxY+1+(1<<otherlody),SNAP(zi,otherlody)              ));
-//                    Zstitch(SNAP(maxX,orilod),maxY+1,zi,geo,data, lody,anchor3,
-//                            data->getser(SNAP(maxX,otherlody)         ,maxY+1               ,SNAP(zi+(1<<minyamum),otherlody)));
-//                    
-//                    int anchor4 = data->getser(maxX+1,maxY+1,SNAP(zi,otherlodxy));
-//                    
-//                    Xstitch(maxX+1,maxY+1,zi,geo,data, lodxy,anchor4,
-//                            data->getser(maxX+1+(1<<otherlodxy)       ,maxY+1                ,SNAP(zi,otherlodxy)              ));
-//                    Ystitch(maxX+1,maxY+1,zi,geo,data, lodxy,anchor4,
-//                            data->getser(maxX+1                       ,maxY+1+(1<<otherlodxy),SNAP(zi,otherlodxy)              ));
-//                    Zstitch(maxX+1,maxY+1,zi,geo,data, lodxy,anchor4,
-//                            data->getser(maxX+1                       ,maxY+1                ,SNAP(zi+(1<<minyamum),otherlodxy)));
-//                }
-//            }
-//        }
-//    }
-//    for (int xo1=-1;xo1<=0;xo1++) {
-//        for (int yo1=-1;yo1<=0;yo1++) {
-//            for (int zo1=-1;zo1<=0;zo1++) {
-//                bool count = true;
-//                for (int xo2=0;xo2<=1;xo2++) {
-//                    for (int yo2=0;yo2<=1;yo2++) {
-//                        for (int zo2=0;zo2<=1;zo2++) {
-//                            if (!existsAt(x+xo1+xo2,y+yo1+yo2,z+zo1+zo2)) {
-//                                count = false;
-//                            }
-//                        }
-//                    }
-//                }
-//                if (count) {
-//                    voxXYZcorner(x+xo1,y+yo1,z+zo1);
-//                }
-//            }
-//        }
-//    }
-//    for (int i = 0;i<touchedgeoms.size();i++) {
-//        touchedgeoms[i]->matrixmap(&realworld.matrix);
-//        touchedgeoms[i]->open = false;
-//        touchedgeoms[i]->removeseal();
-//    }
-//#undef geoget
-//}
-
-void Xstitch(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,BlockId fillvalue,BlockId anx) {
+void Xstitch(BlockLoc x,BlockLoc y,BlockLoc z,std::map<uint8_t,GeomTerrain>* geometry,OctreeSegment* world,BlockId fillvalue,BlockId anx) {
     extern uint8_t gtable[2][6];
     extern uint8_t materialprops[];
     if (materialprops[fillvalue]!=materialprops[anx]) {
@@ -1466,16 +1188,16 @@ void Xstitch(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,Octre
         };
         if (materialprops[fillvalue]>materialprops[anx]) {
             for (int ik=0;ik<6;ik++) {
-                geometry->geometry[fillvalue].addVert(buf[gtable[1][ik]]);
+                (*geometry)[fillvalue].addVert(buf[gtable[1][ik]]);
             }
         } else {//if (materialprops[fillvalue]<materialprops[anx]) {
             for (int ik=0;ik<6;ik++) {
-                geometry->geometry[anx].addVert(buf[gtable[0][ik]]);
+                (*geometry)[anx].addVert(buf[gtable[0][ik]]);
             }
         }
     }
 }
-void Ystitch(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,BlockId fillvalue,BlockId any) {
+void Ystitch(BlockLoc x,BlockLoc y,BlockLoc z,std::map<uint8_t,GeomTerrain>* geometry,OctreeSegment* world,BlockId fillvalue,BlockId any) {
     extern uint8_t gtable[2][6];
     extern uint8_t materialprops[];
     if (materialprops[fillvalue]!=materialprops[any]) {
@@ -1487,16 +1209,16 @@ void Ystitch(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,Octre
         };
         if (materialprops[fillvalue]>materialprops[any]) {
             for (int ik=0;ik<6;ik++) {
-                geometry->geometry[fillvalue].addVert(buf[gtable[0][ik]]);
+                (*geometry)[fillvalue].addVert(buf[gtable[0][ik]]);
             }
         } else {// if (materialprops[fillvalue]<materialprops[any]) {
             for (int ik=0;ik<6;ik++) {
-                geometry->geometry[any].addVert(buf[gtable[1][ik]]);
+                (*geometry)[any].addVert(buf[gtable[1][ik]]);
             }
         }
     }
 }
-void Zstitch(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,OctreeSegment* world,BlockId fillvalue,BlockId anz) {
+void Zstitch(BlockLoc x,BlockLoc y,BlockLoc z,std::map<uint8_t,GeomTerrain>* geometry,OctreeSegment* world,BlockId fillvalue,BlockId anz) {
     extern uint8_t gtable[2][6];
     extern uint8_t materialprops[];
     if (materialprops[fillvalue]!=materialprops[anz]) {
@@ -1508,11 +1230,11 @@ void Zstitch(BlockLoc x,BlockLoc y,BlockLoc z,GeometryOctreeLeaf* geometry,Octre
         };
         if (materialprops[fillvalue]>materialprops[anz]) {
             for (int ik=0;ik<6;ik++) {
-                geometry->geometry[fillvalue].addVert(buf[gtable[1][ik]]);
+                (*geometry)[fillvalue].addVert(buf[gtable[1][ik]]);
             }
         } else {// if (materialprops[fillvalue]<materialprops[anz]) {
             for (int ik=0;ik<6;ik++) {
-                geometry->geometry[anz].addVert(buf[gtable[0][ik]]);
+                (*geometry)[anz].addVert(buf[gtable[0][ik]]);
             }
         }
     }

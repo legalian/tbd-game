@@ -20,7 +20,7 @@ class Environment {
 private:
 //    std::vector<std::pair<Location*,Structure*>> loadqueue;
 //    std::vector<GeomTerrain*> bakequeue;
-    std::vector<Structure> structures;
+    std::vector<Structure*> structures;
 //    boost::filesystem::path savedir = boost::filesystem::path("testworld");
     std::string savedir = "testworld";
 //    glm::vec4 view = glm::vec4(0,0,0,1);
@@ -30,6 +30,7 @@ private:
     double epix = 0;
     double epiy = 0;
     double epiz = 0;
+    int shards = 0;
     
     
 public:
@@ -38,11 +39,12 @@ public:
     void opensavedirectory();
     void loadnextchunk();
     void beginthread();
-    void addstructure(Structure newst);
+    void addstructure(Structure* newst);
     void draw();
     void checkup(double x,double y,double z);
     Structure* getstructure(std::string targetid);
     void cleanup();
+    std::string nextshardname();
 };
 //
 void* loaderthread(void*);

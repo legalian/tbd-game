@@ -61,6 +61,38 @@ int PathTesterPool::getpromising() {
     }
     return -1;
 }
+
+BranchRegistry::BranchRegistry(Environment& backref) : capsulepointer(backref) {
+    
+}
+void BranchRegistry::add(Location place,OctreeBranch* toadd) {
+    while (toadd->depth>=registry.size()) {
+        registry.push_back(std::vector<std::pair<Location,OctreeBranch*>>());
+    }
+    registry[toadd->depth].push_back(std::pair<Location,OctreeBranch*>(place,toadd));
+}
+void BranchRegistry::prune(OctreeSegment* world) {
+    for (int e=0;e<registry.size();e++) {
+        for (int i=(int)registry[e].size()-1;i>=0;i--) {
+            Location place = registry[e][i].first;
+            if (registry[e][i].second->phase2check(place.x,place.y,place.z,world,&capsulepointer)) {
+                registry[e].erase(registry[e].begin() + i);
+            }
+        }
+    }
+}
+bool BranchRegistry::contains(OctreeBranch* ref) {
+    if (ref->depth>=registry.size()) {
+        return false;
+    }
+    for (int i=0;i<registry[ref->depth].size();i++) {
+        if (registry[ref->depth][i].second == ref) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Location PathTesterPool::poppromising(int hash) {
     Location toreturn = buckets[hash]->node;
     PathTesterBucket* temp = buckets[hash]->next;
@@ -81,42 +113,20 @@ PathTesterPool::~PathTesterPool() {
 
 
 
-void OctreeSegment::runseperation(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
-void OctreeSegment::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
+void OctreeSegment::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world,BranchRegistry*) {}
 //void OctreeSegment::createflags(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {}
 //uint8_t OctreeSegment::grabedgeflags(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 //void OctreeSegment::calculateflags(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {}
-bool OctreeSegment::giveXflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {throw;}
-bool OctreeSegment::giveYflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {throw;}
-bool OctreeSegment::giveZflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {throw;}
-bool OctreeSegment::giveWflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {throw;}
+uint8_t OctreeSegment::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {throw;}
 
 
-
-bool OctreeFeature::giveXflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
+uint8_t OctreeFeature::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {return conflag;}
+uint8_t OctreeBud::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
     extern uint8_t materialattribs[];
-    if (materialattribs[fillvalue]&1) {
-        return materialattribs[world->getser(x+1,y,z)]&1;
+    if (fillvalue == 0) {
+        return 255;
     }
-    return false;
-}
-bool OctreeFeature::giveYflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
-    extern uint8_t materialattribs[];
-    if (materialattribs[fillvalue]&1) {
-        return materialattribs[world->getser(x,y+1,z)]&1;
-    }
-    return false;
-}
-bool OctreeFeature::giveZflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
-    extern uint8_t materialattribs[];
-    if (materialattribs[fillvalue]&1) {
-        return materialattribs[world->getser(x,y,z+1)]&1;
-    }
-    return false;
-}
-bool OctreeFeature::giveWflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
-    extern uint8_t materialattribs[];
-    return materialattribs[fillvalue]&1;
+    return (materialattribs[fillvalue]&1)*(128+64+32+16);
 }
 //uint8_t OctreeFeature::grabedgeflags(BlockLoc x,BlockLoc y,BlockLoc z) {
 //    extern uint8_t materialattribs[];
@@ -127,10 +137,6 @@ bool OctreeFeature::giveWflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeS
 //    }
 //}
 
-bool OctreeBud::giveXflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {extern uint8_t materialattribs[];return materialattribs[fillvalue]&1;}
-bool OctreeBud::giveYflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {extern uint8_t materialattribs[];return materialattribs[fillvalue]&1;}
-bool OctreeBud::giveZflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {extern uint8_t materialattribs[];return materialattribs[fillvalue]&1;}
-bool OctreeBud::giveWflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {extern uint8_t materialattribs[];return materialattribs[fillvalue]&1;}
 //uint8_t OctreeBud::grabedgeflags(BlockLoc x,BlockLoc y,BlockLoc z) {
 //    extern uint8_t materialattribs[];
 //    if (materialattribs[fillvalue]&1) {
@@ -140,96 +146,35 @@ bool OctreeBud::giveWflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegme
 //    }
 //}
 
-void OctreeBranch::runseperation(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
-    BlockLoc mask = 1<<depth;
-    subdivisions[0][0][0]->runseperation(x     ,y     ,z     ,world);
-    subdivisions[1][0][0]->runseperation(x|mask,y     ,z     ,world);
-    subdivisions[0][1][0]->runseperation(x     ,y|mask,z     ,world);
-    subdivisions[1][1][0]->runseperation(x|mask,y|mask,z     ,world);
-    subdivisions[0][0][1]->runseperation(x     ,y     ,z|mask,world);
-    subdivisions[1][0][1]->runseperation(x|mask,y     ,z|mask,world);
-    subdivisions[0][1][1]->runseperation(x     ,y|mask,z|mask,world);
-    subdivisions[1][1][1]->runseperation(x|mask,y|mask,z|mask,world);
-
-    if (subdivisions[1][0][0]->giveXflag(x|mask,y     ,z     ,depth,world) or
-        subdivisions[1][1][0]->giveXflag(x|mask,y|mask,z     ,depth,world) or
-        subdivisions[1][0][1]->giveXflag(x|mask,y     ,z|mask,depth,world) or
-        subdivisions[1][1][1]->giveXflag(x|mask,y|mask,z|mask,depth,world)) {
-        connections |= 1;
-    }
-    if (subdivisions[0][1][0]->giveYflag(x     ,y|mask,z     ,depth,world) or
-        subdivisions[1][1][0]->giveYflag(x|mask,y|mask,z     ,depth,world) or
-        subdivisions[0][1][1]->giveYflag(x     ,y|mask,z|mask,depth,world) or
-        subdivisions[1][1][1]->giveYflag(x|mask,y|mask,z|mask,depth,world)) {
-        connections |= 2;
-    }
-    if (subdivisions[0][0][1]->giveZflag(x     ,y     ,z|mask,depth,world) or
-        subdivisions[1][0][1]->giveZflag(x|mask,y     ,z|mask,depth,world) or
-        subdivisions[0][1][1]->giveZflag(x     ,y|mask,z|mask,depth,world) or
-        subdivisions[1][1][1]->giveZflag(x|mask,y|mask,z|mask,depth,world)) {
-        connections |= 4;
-    }
-    if (subdivisions[0][0][0]->giveWflag(x     ,y     ,z     ,depth,world) or
-        subdivisions[1][0][0]->giveWflag(x|mask,y     ,z     ,depth,world) or
-        subdivisions[0][1][0]->giveWflag(x     ,y|mask,z     ,depth,world) or
-        subdivisions[1][1][0]->giveWflag(x|mask,y|mask,z     ,depth,world) or
-        subdivisions[0][0][1]->giveWflag(x     ,y     ,z|mask,depth,world) or
-        subdivisions[1][0][1]->giveWflag(x|mask,y     ,z|mask,depth,world) or
-        subdivisions[0][1][1]->giveWflag(x     ,y|mask,z|mask,depth,world) or
-        subdivisions[1][1][1]->giveWflag(x|mask,y|mask,z|mask,depth,world)) {
-        connections |= 8;
-    }
-}
-bool OctreeBranch::giveXflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
+uint8_t OctreeBranch::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
     if (recur<=depth) {
-        return subdivisions XYZINDEX->giveXflag(x,y,z,recur,world);
+        return subdivisions XYZINDEX->giveconflag(x,y,z,recur);
     } else {
-        return (connections&1)!=0;
+        return connections;
     }
 }
-bool OctreeBranch::giveYflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
-    if (recur<=depth) {
-        return subdivisions XYZINDEX->giveYflag(x,y,z,recur,world);
-    } else {
-        return (connections&2)!=0;
-    }
-}
-bool OctreeBranch::giveZflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
-    if (recur<=depth) {
-        return subdivisions XYZINDEX->giveZflag(x,y,z,recur,world);
-    } else {
-        return (connections&4)!=0;
-    }
-}
-bool OctreeBranch::giveWflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world) {
-    if (recur<=depth) {
-        return subdivisions XYZINDEX->giveWflag(x,y,z,recur,world);
-    } else {
-        return (connections&8)!=0;
-    }
-}
-void OctreeBranch::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
+void OctreeBranch::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world,BranchRegistry* registry) {
     int mask = 1<<depth;
-    subdivisions[0][0][0]->testconnected(x     ,y     ,z     ,world);
-    subdivisions[1][0][0]->testconnected(x|mask,y     ,z     ,world);
-    subdivisions[0][1][0]->testconnected(x     ,y|mask,z     ,world);
-    subdivisions[1][1][0]->testconnected(x|mask,y|mask,z     ,world);
-    subdivisions[0][0][1]->testconnected(x     ,y     ,z|mask,world);
-    subdivisions[1][0][1]->testconnected(x|mask,y     ,z|mask,world);
-    subdivisions[0][1][1]->testconnected(x     ,y|mask,z|mask,world);
-    subdivisions[1][1][1]->testconnected(x|mask,y|mask,z|mask,world);
-    int target =  ((int)subdivisions[0][0][0]->giveWflag(x     ,y     ,z     ,depth,world))+
-                 (((int)subdivisions[1][0][0]->giveWflag(x|mask,y     ,z     ,depth,world))<<1)+
-                 (((int)subdivisions[0][1][0]->giveWflag(x     ,y|mask,z     ,depth,world))<<2)+
-                 (((int)subdivisions[1][1][0]->giveWflag(x|mask,y|mask,z     ,depth,world))<<3)+
-                 (((int)subdivisions[0][0][1]->giveWflag(x     ,y     ,z|mask,depth,world))<<4)+
-                 (((int)subdivisions[1][0][1]->giveWflag(x|mask,y     ,z|mask,depth,world))<<5)+
-                 (((int)subdivisions[0][1][1]->giveWflag(x     ,y|mask,z|mask,depth,world))<<6)+
-                 (((int)subdivisions[1][1][1]->giveWflag(x|mask,y|mask,z|mask,depth,world))<<7);
+    subdivisions[0][0][0]->testconnected(x     ,y     ,z     ,world,registry);
+    subdivisions[1][0][0]->testconnected(x|mask,y     ,z     ,world,registry);
+    subdivisions[0][1][0]->testconnected(x     ,y|mask,z     ,world,registry);
+    subdivisions[1][1][0]->testconnected(x|mask,y|mask,z     ,world,registry);
+    subdivisions[0][0][1]->testconnected(x     ,y     ,z|mask,world,registry);
+    subdivisions[1][0][1]->testconnected(x|mask,y     ,z|mask,world,registry);
+    subdivisions[0][1][1]->testconnected(x     ,y|mask,z|mask,world,registry);
+    subdivisions[1][1][1]->testconnected(x|mask,y|mask,z|mask,world,registry);
+    int target =  ((subdivisions[0][0][0]->giveconflag(0,0,0,depth)&128)?1:0)+
+                 (((subdivisions[1][0][0]->giveconflag(0,0,0,depth)&128)?1:0)<<1)+
+                 (((subdivisions[0][1][0]->giveconflag(0,0,0,depth)&128)?1:0)<<2)+
+                 (((subdivisions[1][1][0]->giveconflag(0,0,0,depth)&128)?1:0)<<3)+
+                 (((subdivisions[0][0][1]->giveconflag(0,0,0,depth)&128)?1:0)<<4)+
+                 (((subdivisions[1][0][1]->giveconflag(0,0,0,depth)&128)?1:0)<<5)+
+                 (((subdivisions[0][1][1]->giveconflag(0,0,0,depth)&128)?1:0)<<6)+
+                 (((subdivisions[1][1][1]->giveconflag(0,0,0,depth)&128)?1:0)<<7);
     if (target==0) {return;}
     int starter;
-    if (target&(2+8+32+128)) {
-        if (target&(8+128)) {
+    if (target&170) {
+        if (target&136) {
             if (target&128) {starter = 128;}
             else {starter = 8;}
         } else {
@@ -237,7 +182,7 @@ void OctreeBranch::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*
             else {starter = 2;}
         }
     } else {
-        if (target&(4+64)) {
+        if (target&68) {
             if (target&64) {starter = 64;}
             else {starter = 4;}
         } else {
@@ -245,129 +190,155 @@ void OctreeBranch::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*
             else {starter = 1;}
         }
     }
-    int ostart = starter;
     int compare;
     do {
         compare = starter;
         //X FLAGS
-        if ((starter&3  ) && subdivisions[0][0][0]->giveXflag(x     ,y     ,z     ,depth,world)) {starter = starter|3;}
-        if ((starter&12 ) && subdivisions[0][1][0]->giveXflag(x     ,y|mask,z     ,depth,world)) {starter = starter|12;}
-        if ((starter&48 ) && subdivisions[0][0][1]->giveXflag(x     ,y     ,z|mask,depth,world)) {starter = starter|48;}
-        if ((starter&192) && subdivisions[0][1][1]->giveXflag(x     ,y|mask,z|mask,depth,world)) {starter = starter|192;}
+        if ((starter&3  ) && subdivisions[0][0][0]->giveconflag(0,0,0,depth)&16) {starter |= 3;}
+        if ((starter&12 ) && subdivisions[0][1][0]->giveconflag(0,0,0,depth)&16) {starter |= 12;}
+        if ((starter&48 ) && subdivisions[0][0][1]->giveconflag(0,0,0,depth)&16) {starter |= 48;}
+        if ((starter&192) && subdivisions[0][1][1]->giveconflag(0,0,0,depth)&16) {starter |= 192;}
         //Y FLAGS
-        if ((starter&5  ) && subdivisions[0][0][0]->giveYflag(x     ,y     ,z     ,depth,world)) {starter = starter|5;}
-        if ((starter&10 ) && subdivisions[1][0][0]->giveYflag(x|mask,y     ,z     ,depth,world)) {starter = starter|10;}
-        if ((starter&80 ) && subdivisions[0][0][1]->giveYflag(x     ,y     ,z|mask,depth,world)) {starter = starter|80;}
-        if ((starter&160) && subdivisions[1][0][1]->giveYflag(x|mask,y     ,z|mask,depth,world)) {starter = starter|160;}
+        if ((starter&5  ) && subdivisions[0][0][0]->giveconflag(0,0,0,depth)&32) {starter |= 5;}
+        if ((starter&10 ) && subdivisions[1][0][0]->giveconflag(0,0,0,depth)&32) {starter |= 10;}
+        if ((starter&80 ) && subdivisions[0][0][1]->giveconflag(0,0,0,depth)&32) {starter |= 80;}
+        if ((starter&160) && subdivisions[1][0][1]->giveconflag(0,0,0,depth)&32) {starter |= 160;}
         //Z FLAGS
-        if ((starter&17 ) && subdivisions[0][0][0]->giveZflag(x     ,y     ,z     ,depth,world)) {starter = starter|17;}
-        if ((starter&34 ) && subdivisions[1][0][0]->giveZflag(x|mask,y     ,z     ,depth,world)) {starter = starter|34;}
-        if ((starter&68 ) && subdivisions[0][1][0]->giveZflag(x     ,y|mask,z     ,depth,world)) {starter = starter|68;}
-        if ((starter&136) && subdivisions[1][1][0]->giveZflag(x|mask,y|mask,z     ,depth,world)) {starter = starter|136;}
+        if ((starter&17 ) && subdivisions[0][0][0]->giveconflag(0,0,0,depth)&64) {starter |= 17;}
+        if ((starter&34 ) && subdivisions[1][0][0]->giveconflag(0,0,0,depth)&64) {starter |= 34;}
+        if ((starter&68 ) && subdivisions[0][1][0]->giveconflag(0,0,0,depth)&64) {starter |= 68;}
+        if ((starter&136) && subdivisions[1][1][0]->giveconflag(0,0,0,depth)&64) {starter |= 136;}
     } while (compare!=starter);
     if (starter==target) {return;}
-    connections|=16;
-    DEBUGDEBUG = target;
-    return;
-    std::cout<<target<<" , "<<ostart<<" , "<<starter<<"\n";
-    BlockLoc sx = x + (ostart&(2+8+32+128)?1:0);
-    BlockLoc sy = y + (ostart&(4+8+64+128)?1:0);
-    BlockLoc sz = z + (ostart&(16+32+64+128)?1:0);
-    if ((target&1   and !(starter&1  )) && !testConnection(x     ,y     ,z     ,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    if ((target&2   and !(starter&2  )) && !testConnection(x|mask,y     ,z     ,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    if ((target&4   and !(starter&4  )) && !testConnection(x     ,y|mask,z     ,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    if ((target&8   and !(starter&8  )) && !testConnection(x|mask,y|mask,z     ,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    if ((target&16  and !(starter&16 )) && !testConnection(x     ,y     ,z|mask,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    if ((target&32  and !(starter&32 )) && !testConnection(x|mask,y     ,z|mask,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    if ((target&64  and !(starter&64 )) && !testConnection(x     ,y|mask,z|mask,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    if ((target&128 and !(starter&128)) && !testConnection(x|mask,y|mask,z|mask,sx,sy,sz,depth,world)) {connections |= 16;return;}
-    return;
+    registry->add(Location(x,y,z),this);
 }
-bool testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world) {
+bool OctreeBranch::phase2check(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world,Environment* obuck) {
+    int mask = 1<<depth;
+    int meshtarget =  ((subdivisions[0][0][0]->giveconflag(0,0,0,depth)&8)?1:0)+
+                     (((subdivisions[1][0][0]->giveconflag(0,0,0,depth)&8)?1:0)<<1)+
+                     (((subdivisions[0][1][0]->giveconflag(0,0,0,depth)&8)?1:0)<<2)+
+                     (((subdivisions[1][1][0]->giveconflag(0,0,0,depth)&8)?1:0)<<3)+
+                     (((subdivisions[0][0][1]->giveconflag(0,0,0,depth)&8)?1:0)<<4)+
+                     (((subdivisions[1][0][1]->giveconflag(0,0,0,depth)&8)?1:0)<<5)+
+                     (((subdivisions[0][1][1]->giveconflag(0,0,0,depth)&8)?1:0)<<6)+
+                     (((subdivisions[1][1][1]->giveconflag(0,0,0,depth)&8)?1:0)<<7);
+    if (meshtarget==0) {return true;}
+    int commonend;
+    if (meshtarget&170) {
+        if (meshtarget&136) {
+            if (meshtarget&128) {commonend = 128;}
+            else {commonend = 8;}
+        } else {
+            if (meshtarget&32) {commonend = 32;}
+            else {commonend = 2;}
+        }
+    } else {
+        if (meshtarget&68) {
+            if (meshtarget&64) {commonend = 64;}
+            else {commonend = 4;}
+        } else {
+            if (meshtarget&16) {commonend = 16;}
+            else {commonend = 1;}
+        }
+    }
+    BlockLoc sx = x + (commonend&(2+8+32+128)?mask:0);
+    BlockLoc sy = y + (commonend&(4+8+64+128)?mask:0);
+    BlockLoc sz = z + (commonend&(16+32+64+128)?mask:0);
+//    DEBUGDEBUG = meshtarget;
+    meshtarget^=commonend;
+    if ((meshtarget&1  ) && (subdivisions[0][0][0]->giveconflag(0,0,0,depth)&8) && !testConnection(x     ,y     ,z     ,sx,sy,sz,depth,world,obuck)) {return false;}
+    if ((meshtarget&2  ) && (subdivisions[1][0][0]->giveconflag(0,0,0,depth)&8) && !testConnection(x|mask,y     ,z     ,sx,sy,sz,depth,world,obuck)) {return false;}
+    if ((meshtarget&4  ) && (subdivisions[0][1][0]->giveconflag(0,0,0,depth)&8) && !testConnection(x     ,y|mask,z     ,sx,sy,sz,depth,world,obuck)) {return false;}
+    if ((meshtarget&8  ) && (subdivisions[1][1][0]->giveconflag(0,0,0,depth)&8) && !testConnection(x|mask,y|mask,z     ,sx,sy,sz,depth,world,obuck)) {return false;}
+    if ((meshtarget&16 ) && (subdivisions[0][0][1]->giveconflag(0,0,0,depth)&8) && !testConnection(x     ,y     ,z|mask,sx,sy,sz,depth,world,obuck)) {return false;}
+    if ((meshtarget&32 ) && (subdivisions[1][0][1]->giveconflag(0,0,0,depth)&8) && !testConnection(x|mask,y     ,z|mask,sx,sy,sz,depth,world,obuck)) {return false;}
+    if ((meshtarget&64 ) && (subdivisions[0][1][1]->giveconflag(0,0,0,depth)&8) && !testConnection(x     ,y|mask,z|mask,sx,sy,sz,depth,world,obuck)) {return false;}
+    if ((meshtarget&128) && (subdivisions[1][1][1]->giveconflag(0,0,0,depth)&8) && !testConnection(x|mask,y|mask,z|mask,sx,sy,sz,depth,world,obuck)) {return false;}
+    return true;
+}
+
+bool testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket) {
     Location endpoint = Location(x2,y2,z2);
     Location startpoint = Location(x1,y1,z1);
     
-    PathTesterPool emptypool = PathTesterPool(endpoint,recur);
-    return testConnection(startpoint,endpoint,recur,world,&emptypool);
-}
-bool testConnection(Location startpoint,Location endpoint,int recur,OctreeSegment* world,PathTesterPool* deadpool) {
-    if (startpoint==endpoint) {return true;}
-    if (recur>4) {return false;}
-    std::cout<<"started: "<<recur<<" \n";
-//    Location endpoint = Location(x2,y2,z2);
-#define SNAPBIGGER(x) (x&(BLOCKLOCFULLMASK^((1<<(recur+1))-1)))
-    Location snappedendpoint = Location(SNAPBIGGER(endpoint.x),SNAPBIGGER(endpoint.y),SNAPBIGGER(endpoint.z));
-    PathTesterPool nodes = PathTesterPool(endpoint,recur);
-    PathTesterPool spentnodes = PathTesterPool(endpoint,recur);
-    PathTesterPool ghostaccepted = PathTesterPool(snappedendpoint,recur+1);
-    PathTesterPool ghostrejected = PathTesterPool(snappedendpoint,recur+1);
+    PathTesterPool forwardnodes = PathTesterPool(endpoint,recur);
+    PathTesterPool forwardspentnodes = PathTesterPool(endpoint,recur);
+    PathTesterPool backwardnodes = PathTesterPool(startpoint,recur);
+    PathTesterPool backwardspentnodes = PathTesterPool(startpoint,recur);
     
-    nodes.add(startpoint,nodes.hash(startpoint));
-//    Location toinsert = Location(x1,y1,z1);
-//    whooshlist.push_back(startpoint);
-//    whooshlist.insert(std::pair<int,Location>(startpoint.roughdistanceto(endpoint),startpoint));
+    forwardnodes.add(startpoint,forwardnodes.hash(startpoint));
+    backwardnodes.add(endpoint,backwardnodes.hash(endpoint));
+
+    Location toinserts[6];
+    int l;
+    int dist;
+    Location xyz;
+    bool lockforward = false;
+    bool lockbackward = false;
+//    int k;
     while (true) {
-//        std::sort(whooshlist.begin(), whooshlist.end(),endpoint);
-//        Location xyz = whooshlist[0];
-        int dist = nodes.getpromising();
-        if (dist==0) {return true;}
-        else if (dist==-1) {return false;}
-        Location xyz = nodes.poppromising(dist);
-        spentnodes.add(xyz,dist);
         
-        
-        Location biggersnap = Location(SNAPBIGGER(xyz.x),SNAPBIGGER(xyz.y),SNAPBIGGER(xyz.z));
-        for (int i=0;i<8;i++) {
-            int xi = (i&1)<<recur;
-            int yi = ((i&2)>>1)<<recur;
-            int zi = ((i&4)>>2)<<recur;
-            Location checker = Location(biggersnap.x+xi,biggersnap.y+yi,biggersnap.z+zi);
-            int hash = nodes.hash(checker);
-            if (!spentnodes.contains(checker,hash) and !deadpool->contains(checker,hash)) {
-                break;
-            }
-        }
-        
-        std::vector<Location> toinserts;
-        if (world->giveXflag(xyz.x,xyz.y,xyz.z,recur,world)) {
-            toinserts.push_back(Location(xyz.x+(1<<recur),xyz.y,xyz.z));
-        }
-        if (world->giveYflag(xyz.x,xyz.y,xyz.z,recur,world)) {
-            toinserts.push_back(Location(xyz.x,xyz.y+(1<<recur),xyz.z));
-        }
-        if (world->giveZflag(xyz.x,xyz.y,xyz.z,recur,world)) {
-            toinserts.push_back(Location(xyz.x,xyz.y,xyz.z+(1<<recur)));
-        }
-        if (world->giveXflag(xyz.x-(1<<recur),xyz.y,xyz.z,recur,world)) {
-            toinserts.push_back(Location(xyz.x-(1<<recur),xyz.y,xyz.z));
-        }
-        if (world->giveYflag(xyz.x,xyz.y-(1<<recur),xyz.z,recur,world)) {
-            toinserts.push_back(Location(xyz.x,xyz.y-(1<<recur),xyz.z));
-        }
-        if (world->giveZflag(xyz.x,xyz.y,xyz.z-(1<<recur),recur,world)) {
-            toinserts.push_back(Location(xyz.x,xyz.y,xyz.z-(1<<recur)));
-        }
-        for (int k=0;k<toinserts.size();k++) {
-            Location toinsert = toinserts[k];
-            Location biggersnap = Location(SNAPBIGGER(toinsert.x),SNAPBIGGER(toinsert.y),SNAPBIGGER(toinsert.z));
-            int hash1 = nodes.hash(toinsert);
-            int hash2 = ghostaccepted.hash(biggersnap);
-            if (!spentnodes.contains(toinsert, hash1) and !deadpool->contains(biggersnap,hash2)) {
-                if (!ghostaccepted.contains(biggersnap, hash2) and !ghostrejected.contains(biggersnap, hash2)) {
-                    if (testConnection(biggersnap,snappedendpoint,recur+1,world, &ghostrejected)) {
-                        ghostaccepted.add(biggersnap,hash2);
-                    } else {
-                        ghostrejected.add(biggersnap,hash2);
+//        k++;
+        if (!lockforward) {
+            dist = forwardnodes.getpromising();
+            if (dist==0) {return true;}
+            else if (dist==-1) {tearaway(startpoint.x,startpoint.y,startpoint.z,recur,world,overflowbucket);return true;}
+            xyz = forwardnodes.poppromising(dist);
+            forwardspentnodes.add(xyz,dist);
+            
+            l = 0;
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&1) {toinserts[l] = Location(xyz.x+(1<<recur),xyz.y,xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&2) {toinserts[l] = Location(xyz.x,xyz.y+(1<<recur),xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&4) {toinserts[l] = Location(xyz.x,xyz.y,xyz.z+(1<<recur));l++;}
+            if (world->giveconflag(xyz.x-(1<<recur),xyz.y,xyz.z,recur)&1) {toinserts[l] = Location(xyz.x-(1<<recur),xyz.y,xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y-(1<<recur),xyz.z,recur)&2) {toinserts[l] = Location(xyz.x,xyz.y-(1<<recur),xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z-(1<<recur),recur)&4) {toinserts[l] = Location(xyz.x,xyz.y,xyz.z-(1<<recur));l++;}
+            
+            for (int k=0;k<l;k++) {
+                Location toinsert = toinserts[k];
+                int hash = forwardnodes.hash(toinsert);
+                if (!forwardspentnodes.contains(toinsert, hash)) {
+                    if (world->getser(toinsert.x,toinsert.y,toinsert.z)==0) {
+                        
+                        
+                        lockforward = true;
+                        
                     }
-                }
-                if (ghostaccepted.contains(biggersnap, hash2)) {
-                    nodes.add(toinsert,hash1);
+                    forwardnodes.add(toinsert,hash);
                 }
             }
+        }
+        
+        if (!lockbackward) {
+            dist = backwardnodes.getpromising();
+            if (dist==0) {return true;}
+            else if (dist==-1) {tearaway(endpoint.x,endpoint.y,endpoint.z,recur,world,overflowbucket);return true;}
+            xyz = backwardnodes.poppromising(dist);
+            backwardspentnodes.add(xyz,dist);
+            
+            l = 0;
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&1) {toinserts[l] = Location(xyz.x+(1<<recur),xyz.y,xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&2) {toinserts[l] = Location(xyz.x,xyz.y+(1<<recur),xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z,recur)&4) {toinserts[l] = Location(xyz.x,xyz.y,xyz.z+(1<<recur));l++;}
+            if (world->giveconflag(xyz.x-(1<<recur),xyz.y,xyz.z,recur)&1) {toinserts[l] = Location(xyz.x-(1<<recur),xyz.y,xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y-(1<<recur),xyz.z,recur)&2) {toinserts[l] = Location(xyz.x,xyz.y-(1<<recur),xyz.z);l++;}
+            if (world->giveconflag(xyz.x,xyz.y,xyz.z-(1<<recur),recur)&4) {toinserts[l] = Location(xyz.x,xyz.y,xyz.z-(1<<recur));l++;}
+            for (int k=0;k<l;k++) {
+                Location toinsert = toinserts[k];
+                int hash = backwardnodes.hash(toinsert);
+                if (!backwardspentnodes.contains(toinsert, hash)) {
+                    if (world->getser(toinsert.x,toinsert.y,toinsert.z)==0) {
+                        lockbackward = true;
+                    }
+                    backwardnodes.add(toinsert,hash);
+                }
+            }
+        }
+        if (lockforward and lockbackward) {
+            return false;
         }
     }
 }
-
 
 
 

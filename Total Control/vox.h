@@ -44,18 +44,17 @@ typedef struct Bounds {
 //
 class Structure {
 public:
-    static EmptySampler emptysampler;
-    Sampler* source = &emptysampler;
+    Sampler* source = NULL;
     std::string structureid;
-    glm::mat4 transform;
-    Octree world = Octree(transform);
+    glm::mat4 transform = glm::mat4(1.0f);
+    Octree world;// = Octree(transform);
 //    GeometryOctree visibleworld = GeometryOctree(transform);
     std::vector<Location> queue;
-    Bounds bounds;
     Location cameraloc;
     int loadstage = 0;
+    bool loadin = false;
     
-    Structure(std::string);
+    Structure(std::string,Environment&,bool);
     void updatequeue(double,double,double);
     void attain(std::string,Location);
     void render();
