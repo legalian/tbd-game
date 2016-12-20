@@ -18,6 +18,7 @@
 //#include <string>
 //#include "generators.h"
 //#include <sys/stat.h>
+#include <map>
 #include "constants.h"
 #include "materials.h"
 #include "geometryoctree.h"
@@ -55,7 +56,7 @@ struct PathTesterBucket {
 struct PathTesterPool {
     Location destination;
     int recur;
-    std::vector<PathTesterBucket*> buckets;
+    std::vector<PathTesterBucket*> buckets = std::vector<PathTesterBucket*>(5);
     PathTesterPool(Location,int);
     ~PathTesterPool();
     int hash(Location);
@@ -63,6 +64,12 @@ struct PathTesterPool {
     void add(Location,int);
     int getpromising();
     Location poppromising(int);
+};
+struct ChunkDistancePool {
+    PathTesterBucket** buckets = new PathTesterBucket*[MAX_WORLDFILE_GEOMSAVE+1];
+    ChunkDistancePool();
+    int hash(Location,Location);
+    void add(Location,int);
 };
 struct BranchRegistry {
     std::vector<std::vector<std::pair<Location,OctreeBranch*>>> registry;
@@ -76,10 +83,9 @@ struct Feature {
     uint8_t x;
     uint8_t y;
     uint8_t z;
-//    glm::vec3 TESTTESTTEST;
     glm::vec3 get(int);
-//    void operator=(const glm::vec3&);
     Feature();
+    Feature(uint8_t x,uint8_t y,uint8_t z);
     Feature(const glm::vec3&,int);
     inline float coef(int);
     inline float invcoef(int);
@@ -122,16 +128,13 @@ struct Edgedat {
     MatrixCarriage calcyqef();
     MatrixCarriage calczqef();
     inline MatrixCarriage calcqef(QefPerc,QefPerc,QefPerc,QefPerc);
-//    glm::vec3 getpointx();
-//    glm::vec3 getpointy();
-//    glm::vec3 getpointz();
 };
 
 
 struct OctreeSegment {
-//    static OctreeSegment* makeOctree(std::istream&,int);
-    //    bool isfilled;
+//    virtual std::pair<Location,bool> getneedsaload(int,int,int,int,int,int);
     virtual MatrixCarriage getqef();
+    virtual void vertifySoftLoads();
     virtual void vertify(BlockLoc,BlockLoc,BlockLoc,int);
     virtual bool isvbaked(BlockLoc,BlockLoc,BlockLoc);
     virtual void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int);
@@ -139,21 +142,16 @@ struct OctreeSegment {
     virtual OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z);
     virtual BlockId getser(BlockLoc,BlockLoc,BlockLoc);
     virtual BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc);
-//    virtual int getlodat(BlockLoc,BlockLoc,BlockLoc);
-//    virtual void setlodat(BlockLoc,BlockLoc,BlockLoc,int);
-    
-//    virtual void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&);
-//    virtual void collapse(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*&);
-//    virtual bool uniqueat(long,long,long,int);
+    virtual void render(const glm::mat4&);
+
     virtual void filesave(std::ostream&);
+    virtual void worldfilesave(std::ostream&,int);
     virtual Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc);
     virtual Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc);
     virtual Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc);
     virtual glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int);
     virtual glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int);
-//    virtual BlockId getsimpid();
     virtual void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&);
-//    virtual bool featuresque(BlockLoc,BlockLoc,BlockLoc);
     
     virtual void testconnected(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*,BranchRegistry*);
     virtual OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&);
@@ -168,8 +166,6 @@ struct OctreeFeature : OctreeSegment {
     
     
     OctreeFeature(BlockId,uint8_t);
-//    BlockId getsimpid() override;
-    
     MatrixCarriage getqef() override;
     
 #ifdef WIREFRAMEDEBUG
@@ -180,12 +176,8 @@ struct OctreeFeature : OctreeSegment {
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
-//    void hermitifyselection(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
     void vertify(BlockLoc,BlockLoc,BlockLoc,int target) override;
-//    void vertifyselection(BlockLoc,BlockLoc,BlockLoc,int target) override;
-//    void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
     void filesave(std::ostream&) override;
-    //    bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
     uint8_t giveconflag(BlockLoc,BlockLoc,BlockLoc,int) override;
     
 };
@@ -196,20 +188,11 @@ struct OctreeLeaf : OctreeFeature {
     OctreeLeaf(BlockId,uint8_t);
     OctreeLeaf(BlockId,uint8_t,int8_t[12]);
     
-    //    bool uniqueat(long,long,long,int) override;
     void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
-//    void geomifyselectionX(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
-//    void geomifyselectionY(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
-//    void geomifyselectionZ(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
     void filesave(std::ostream&) override;
     Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc) override;
-    
-//    bool giveXflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-//    bool giveYflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-//    bool giveZflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
-//    bool giveWflag(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*) override;
 };
 struct OctreeBud : OctreeSegment {
     BlockId fillvalue;
@@ -220,14 +203,9 @@ struct OctreeBud : OctreeSegment {
     bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
-//    void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
-//    bool uniqueat(long,long,long,int) override;
     void filesave(std::ostream&) override;
-//    BlockId getsimpid() override;
+    void worldfilesave(std::ostream&,int) override;
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&) override;
-//    bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
-    
-    //    void runseperation(BlockLoc x,BlockLoc y,BlockLoc z,int,OctreeSegment*) override;
     
     uint8_t giveconflag(BlockLoc,BlockLoc,BlockLoc,int) override;
 };
@@ -235,7 +213,6 @@ struct OctreeBranch : OctreeSegment {
     int depth;
     uint8_t connections = 0;
     uint8_t DEBUGDEBUG = 0;
-//    uint8_t DEBUGDEBUGDEBUG = 0;
     
     Feature point;
     OctreeSegment* subdivisions[2][2][2];
@@ -244,38 +221,32 @@ struct OctreeBranch : OctreeSegment {
                  OctreeSegment*,OctreeSegment*,
                  OctreeSegment*,OctreeSegment*,
                  OctreeSegment*,OctreeSegment*,int);
-    //    void geomifyportion(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*) override;
+    OctreeBranch(OctreeSegment*,OctreeSegment*,
+                 OctreeSegment*,OctreeSegment*,
+                 OctreeSegment*,OctreeSegment*,
+                 OctreeSegment*,OctreeSegment*,int,uint8_t,uint8_t,uint8_t);
+    
+//    std::pair<Location,bool> getneedsaload(int,int,int,int,int,int) override;
+    OctreeBranch(OctreeSegment*,int,uint8_t,uint8_t,uint8_t,uint8_t);
     MatrixCarriage getqef() override;
-//    void drawgeometry(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*);
+    void vertifySoftLoads() override;
+    void worldfilesave(std::ostream&,int) override;
     void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
     bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
     void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
     void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
-//    int getlodat(BlockLoc,BlockLoc,BlockLoc) override;
-//    void setlodat(BlockLoc,BlockLoc,BlockLoc,int) override;
-//    void vertifyselection(BlockLoc,BlockLoc,BlockLoc,int target) override;
-//    void geomifyselectionX(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
-//    void geomifyselectionY(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
-//    void geomifyselectionZ(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId) override;
-//    void hermitifyselection(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
-//    void hermitifyportion(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
     OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
-//    void setser(BlockLoc,BlockLoc,BlockLoc,BlockId,int,OctreeSegment*&) override;
     
-//    void collapse(long,long,long,OctreeSegment*&) override;
-//    bool uniqueat(long,long,long,int) override;
+    void render(const glm::mat4&) override;
     void filesave(std::ostream&) override;
     Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc) override;
     glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int) override;
     glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
-//    BlockId getsimpid() override;
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&) override;
-//    bool featuresque(BlockLoc,BlockLoc,BlockLoc) override;
-    
     void testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*,BranchRegistry*) override;
     bool phase2check(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*,Environment*);
     
@@ -285,42 +256,49 @@ struct OctreeBranch : OctreeSegment {
 };
 struct OctreePortionAwareBranch : OctreeBranch {
     bool changed = false;
+    bool hardLoaded = true;
     int bakeddetails = 0;
     int curlod = -1;
     int lodserial[7] = {-1,-1,-1,-1,-1,-1,-1};
     std::map<uint8_t,GeomTerrain>* geometry = NULL;
     std::map<uint8_t,GeomTerrain>* nextpasscleanup = NULL;
     OctreePortionAwareBranch(OctreeSegment*,OctreeSegment*,
-                 OctreeSegment*,OctreeSegment*,
-                 OctreeSegment*,OctreeSegment*,
-                             OctreeSegment*,OctreeSegment*,int);
+                             OctreeSegment*,OctreeSegment*,
+                             OctreeSegment*,OctreeSegment*,
+                             OctreeSegment*,OctreeSegment*,int,bool);
+    OctreePortionAwareBranch(OctreeSegment*,OctreeSegment*,
+                             OctreeSegment*,OctreeSegment*,
+                             OctreeSegment*,OctreeSegment*,
+                             OctreeSegment*,OctreeSegment*,int,uint8_t,uint8_t,uint8_t);
+    OctreePortionAwareBranch(OctreeSegment*,int,uint8_t,uint8_t,uint8_t,uint8_t);
+    
+//    std::pair<Location,bool> getneedsaload(int,int,int,int,int,int) override;
+    void render(const glm::mat4&) override;
     void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
     bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
     glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
     BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
-//    int getlodat(BlockLoc,BlockLoc,BlockLoc) override;
-//    void setlodat(BlockLoc,BlockLoc,BlockLoc,int) override;
+    uint8_t giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) override;
     OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&) override;
+    
+    void matrixmap(glm::mat4*);
 };
 class Octree {
-//private:
 public:
     void expand(BlockLoc,BlockLoc,BlockLoc);
     void expandchunk(BlockLoc,BlockLoc,BlockLoc);
     void expandarbit(BlockLoc,BlockLoc,BlockLoc,int);
     void expand(int);
     int underpressure(BlockLoc,BlockLoc,BlockLoc);
-    int depth = 0;
+    int depth = CHPOWER;
     int popular;
-    BranchRegistry currenttests;
+    glm::mat4& matrixRef;
     
-//    GeometryOctreeLeaf* opengeoforediting(BlockLoc x,BlockLoc y,BlockLoc z);
-    GeometryOctree realworld;
-    Octree(glm::mat4&,Environment&,int);
-    OctreeSegment* data = new OctreeBud(0);
+    BranchRegistry currenttests;
+    Octree(std::string,glm::mat4&,Environment&,int);
+    OctreeSegment* data;// = new OctreeBud(0);
     void loadportion(BlockLoc,BlockLoc,BlockLoc,BlockId (*)[CHSIZE+1][CHSIZE+1]);
-//    void loadfromfile(BlockLoc,BlockLoc,BlockLoc,int,std::string);
     void render();
     void h_manifest(BlockLoc,BlockLoc,BlockLoc);
     void v_manifest(BlockLoc,BlockLoc,BlockLoc);
@@ -329,25 +307,17 @@ public:
     void filepullportion(std::string,BlockLoc,BlockLoc,BlockLoc);
     void filepushportion(std::string,BlockLoc,BlockLoc,BlockLoc);
     bool dataexists(std::string,BlockLoc,BlockLoc,BlockLoc);
-//    void voxsnippets(BlockLoc,BlockLoc,BlockLoc);
 };
 
-//inline void drawgeometry(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int,BlockId);
-#ifdef WIREFRAMEDEBUG
-void drawdebugcube(float,float,float,float,float,float,GeometryOctreeLeaf*,float,float,float);
-#endif
 inline void Xstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
 inline void Ystitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
 inline void Zstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
-//inline void Xstitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId,BlockId);
-//inline void Ystitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId,BlockId);
-//inline void Zstitch(BlockLoc,BlockLoc,BlockLoc,GeometryOctreeLeaf*,OctreeSegment*,int*,BlockId,BlockId);
-//glm::vec3 omgqef(glm::vec3[],glm::vec3[],int);
+
+OctreeSegment* loadWorldFile(std::ifstream& file,int recur);
 void tearaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,Environment*);
 bool testConnection(BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,Environment*);
 OctreeSegment* makeOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
-//OctreeSegment* makePortionOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
+
 OctreeSegment* makeOctree(std::ifstream&,int);
-//OctreeSegment* makePortionOctree(std::ifstream&,int);
 
 #endif /* defined(__Total_Control__octree__) */

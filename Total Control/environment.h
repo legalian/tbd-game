@@ -22,7 +22,6 @@ private:
 //    std::vector<GeomTerrain*> bakequeue;
     std::vector<Structure*> structures;
 //    boost::filesystem::path savedir = boost::filesystem::path("testworld");
-    std::string savedir = "testworld";
 //    glm::vec4 view = glm::vec4(0,0,0,1);
     
     pthread_t loadingthread;

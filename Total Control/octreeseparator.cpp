@@ -110,6 +110,36 @@ PathTesterPool::~PathTesterPool() {
     }
 }
 
+ChunkDistancePool::ChunkDistancePool() {
+    for (int k=0;k<MAX_WORLDFILE_GEOMSAVE+1;k++) {
+        buckets[k]=NULL;
+    }
+}
+
+int ChunkDistancePool::hash(Location target,Location destination) {
+    return std::max(std::max(abs(target.x-destination.x),abs(target.y-destination.y)),abs(target.z-destination.z));
+}
+
+
+void ChunkDistancePool::add(Location newloc,int lod) {
+    lod=lod>MAX_WORLDFILE_GEOMSAVE?MAX_WORLDFILE_GEOMSAVE+1:lod;
+    if (buckets[lod] == NULL) {
+        buckets[lod] = new PathTesterBucket(newloc);
+    } else {
+        buckets[lod]->addthing(newloc);
+    }
+}
+//bool ChunkDistancePool::hasflush() {
+//    return buckets[MAX_WORLDFILE_GEOMSAVE+1]!=NULL;
+//}
+//Location ChunkDistancePool::getflush() {
+//    PathTesterBucket* todelete = buckets[MAX_WORLDFILE_GEOMSAVE+1];
+//    buckets[MAX_WORLDFILE_GEOMSAVE+1]=buckets[MAX_WORLDFILE_GEOMSAVE+1]->next;
+//    Location result=todelete->node;
+//    delete todelete;
+//    return result;
+//}
+
 
 
 
@@ -148,6 +178,15 @@ uint8_t OctreeBud::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
 
 uint8_t OctreeBranch::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
     if (recur<=depth) {
+        return subdivisions XYZINDEX->giveconflag(x,y,z,recur);
+    } else {
+        return connections;
+    }
+}
+uint8_t OctreePortionAwareBranch::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
+    if (recur<MIN_WORLDFILE_GEOMSAVE && !hardLoaded) {
+        return 255;
+    } else if (recur<=depth) {
         return subdivisions XYZINDEX->giveconflag(x,y,z,recur);
     } else {
         return connections;

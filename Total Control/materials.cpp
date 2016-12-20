@@ -54,7 +54,6 @@ void renderall() {
                 thisframerender[imaterial][igeom]->bake();
                 if (thisframerender[imaterial][igeom]->baked) {
                     materials[imaterial]->draw(thisframerender[imaterial][igeom]);
-                    
                 }
             }
             materials[imaterial]->close();

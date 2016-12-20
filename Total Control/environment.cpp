@@ -31,70 +31,94 @@ void Environment::addstructure(Structure* newst) {
     structures.push_back(newst);
 }
 void Environment::loadnextchunk() {
-//    if (testerbool) {
     if (structures.size()>0) {
-        
-    //    Location* next = loadqueue.back().first;
-    //    Structure* dest = loadqueue.back().second;
-    //    loadqueue.pop_back();
-    //    if (!dest->existsAt(next->x,next->y,next->z)) {
-    //        dest->load(*next);
-    //    }
-        
-        
-        
-        for (int k=0;k<structures.size();k++) {
-            structures[k]->updatequeue(epix,epiy,epiz);
-        }
-//        std::cout<<structures[0].loadstage<<"\n";
-//        std::cout<<structures[0].queue.back().x;
         Structure* min = structures[0];
-        for (int k=1;k<structures.size();k++) {
-            if (structures[k]->queue.size()>0) {
-                if (structures[k]->loadstage<(min->loadstage)) {
-                    min = structures[k];
-                }
-                if (structures[k]->loadstage==(min->loadstage) && structures[k]->queue.size()>(min->queue.size())) {
-                    min = structures[k];
-                }
+        for (int ind=1;ind<structures.size();ind++) {
+            if (structures[ind]->loadstage<min->loadstage) {
+                min=structures[ind];
             }
         }
-        std::cout<<structures.size()<<"\n";
-//        min->sortqueue(view/((float)CHSIZE));
-        glm::vec4 thiscoor = (glm::inverse(min->transform)*glm::vec4(epix,epiy,epiz,1))/((float)CHSIZE);
-//        std::cout<<min->structureid<<" summoned: "<<thiscoor.x<<","<<thiscoor.y<<","<<thiscoor.z<<"\n";
-//        std::cout<<glm::to_string(view)<<"\n";
-        int loadind = 0;
-        double lastcomp = 9000000;
-        for (int k=0;k<min->queue.size();k++) {
-            double xdif = ((min->queue[k].x+.5)-thiscoor.x);
-            double ydif = ((min->queue[k].y+.5)-thiscoor.y);
-            double zdif = ((min->queue[k].z+.5)-thiscoor.z);
-            double thiscomp = xdif*xdif+ydif*ydif+zdif*zdif;
-            if (thiscomp<lastcomp) {
-                loadind = k;
-                lastcomp = thiscomp;
-            }
-        }
-        
-        
-        
-//        Location toload = min->queue.back();
-        
-        min->attain(savedir,min->queue[loadind]);
-//        std::cout<<"loaded "<<min->structureid<<": "<<min->queue[loadind].tostring()<<"\n";
-        min->queue.erase(min->queue.begin() + loadind);
-        //gen.terrain_update(min,toload);
-//        min->queue.pop_back();
+        min->updatequeue(epix,epiy,epiz);
+//        static bool fromcamera=false;
+//        static bool priorityFlip=false;
+//        if (fromcamera) {
+//            for (int k=0;k<structures.size();k++) {
+//                structures[k]->updatequeue(epix,epiy,epiz);
+//            }
+//            Structure* min = structures[0];
+//            for (int k=1;k<structures.size();k++) {
+//                if (structures[k]->queue.size()>0) {
+//                    if (structures[k]->loadstage<(min->loadstage)) {
+//                        min = structures[k];
+//                    }
+//                    if (structures[k]->loadstage==(min->loadstage) && structures[k]->queue.size()>(min->queue.size())) {
+//                        min = structures[k];
+//                    }
+//                }
+//            }
+//            std::cout<<structures.size()<<"\n";
+//            glm::vec4 thiscoor = (glm::inverse(min->transform)*glm::vec4(epix,epiy,epiz,1))/((float)CHSIZE);
+//            int loadind = 0;
+//            double lastcomp = 9000000;
+//            for (int k=0;k<min->queue.size();k++) {
+//                double xdif = ((min->queue[k].x+.5)-thiscoor.x);
+//                double ydif = ((min->queue[k].y+.5)-thiscoor.y);
+//                double zdif = ((min->queue[k].z+.5)-thiscoor.z);
+//                double thiscomp = xdif*xdif+ydif*ydif+zdif*zdif;
+//                if (thiscomp<lastcomp) {
+//                    loadind = k;
+//                    lastcomp = thiscomp;
+//                }
+//            }
+//            min->attain(min->queue[loadind]);
+//            min->queue.erase(min->queue.begin() + loadind);
+//        } else {
+//            for (int tries=0;tries<structures.size();tries++) {
+//                Structure* target=NULL;
+//                if (priorityFlip) {
+//                    for (int k=0;k<structures.size();k++) {
+//                        if (structures[k]->priorityFlip) {
+//                            target=structures[k];
+//                            structures[k]->priorityFlip=false;
+//                            break;
+//                        }
+//                    }
+//                    if (target==NULL) {
+//                        target=structures[0];
+//                        structures[0]->priorityFlip=true;
+//                        priorityFlip=false;
+//                    }
+//                } else {
+//                    for (int k=0;k<structures.size();k++) {
+//                        if (!structures[k]->priorityFlip) {
+//                            target=structures[k];
+//                            structures[k]->priorityFlip=true;
+//                            break;
+//                        }
+//                    }
+//                    if (target==NULL) {
+//                        target=structures[0];
+//                        structures[0]->priorityFlip=false;
+//                        priorityFlip=true;
+//                    }
+//                }
+//                glm::vec4 thiscoor = (glm::inverse(target->transform)*glm::vec4(epix,epiy,epiz,1))/((float)CHSIZE);
+//                std::pair<Location,bool> needsload = target->world.data->getneedsaload(0,0,0,ASCHUNKLOC((int)thiscoor.x),ASCHUNKLOC((int)thiscoor.y),ASCHUNKLOC((int)thiscoor.z));
+//                if (needsload.second) {
+//                    std::cout<<needsload.first.tostring()<<"\n";
+//                    target->attain(needsload.first);
+//                    break;
+//                }
+//            }
+//        }
+//        fromcamera = !fromcamera;
     }
-//        testerbool = false;
-//    }
 }
 
 void Environment::opensavedirectory() {
-    boost::filesystem::create_directory(savedir);
+    boost::filesystem::create_directory(SAVEDIR);
     for (int k=0;k<structures.size();k++) {
-        boost::filesystem::create_directory(savedir + "/" + structures[k]->structureid);
+        boost::filesystem::create_directory(SAVEDIR "/" + structures[k]->structureid);
     }
 }
 void Environment::draw() {
@@ -214,7 +238,7 @@ void tearaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world,En
     }
     
     
-    //overflowbucket->addstructure(newguy);
+//    overflowbucket->addstructure(newguy);
     
 }
 

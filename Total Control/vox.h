@@ -47,45 +47,18 @@ public:
     Sampler* source = NULL;
     std::string structureid;
     glm::mat4 transform = glm::mat4(1.0f);
-    Octree world;// = Octree(transform);
-//    GeometryOctree visibleworld = GeometryOctree(transform);
-    std::vector<Location> queue;
+    Octree world;
+    ChunkDistancePool geomloaded = ChunkDistancePool();
     Location cameraloc;
     int loadstage = 0;
+    bool priorityFlip=false;
     bool loadin = false;
     
     Structure(std::string,Environment&,bool);
     void updatequeue(double,double,double);
-    void attain(std::string,Location);
+    bool attain(Location);
     void render();
     
-//    int loadstage = 0;
-//    Location epicenter;
-//    Location lowestbounds;
-//    Location upperbounds;
-//    bool bounded;q
-//    std::vector<Location> queue;
-    
-    
-    
-//    GeomTerrain* createOrGet(Location);
-//    uint8_t getAt(int,int,int);
-//    int getLodAt(int,int,int);
-//    bool existsAt(int,int,int);
-//    void refreshqueue();
-//    void sortqueue(glm::vec4 position);
-//    void load(Location,Generator*);
-//    void settransform(glm::mat4);
-//    void voxPortion(Location);
-//    void voxSnippets(Location);
-//    void voxXskirt(int,int,int);
-//    void voxYskirt(int,int,int);
-//    void voxZskirt(int,int,int);
-//    void voxXrow(int,int,int);
-//    void voxYrow(int,int,int);
-//    void voxZrow(int,int,int);
-//    void voxXYZcorner(int,int,int);
-//    void addmarch(int,int,int,GeomTerrain*);
 };
 //
 //void MarchCube(int,int,int,GLfloat*,std::vector<glm::vec3>&);
