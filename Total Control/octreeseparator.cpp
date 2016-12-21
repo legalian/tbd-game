@@ -10,8 +10,6 @@
 #include "octree.h"
 
 
-#define XYZINDEX [(x&(1<<depth))>>depth][(y&(1<<depth))>>depth][(z&(1<<depth))>>depth]
-
 
 
 PathTesterBucket::PathTesterBucket(Location first) : node(first),next(NULL){}

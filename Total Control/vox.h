@@ -11,7 +11,6 @@
 //
 #include <stdio.h>
 #include "octree.h"
-#include "geometryoctree.h"
 //#include <map>
 //#include <vector>
 #include <string>

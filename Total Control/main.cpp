@@ -21,7 +21,6 @@ GLFWwindow* window;
 #include "environment.h"
 #include "renderterrain.h"
 #include "octree.h"
-#include "geometryoctree.h"
 #include "materials.h"
 
 #include <pthread.h>
@@ -136,7 +135,7 @@ int main()
     
     
     Environment world;
-    Structure* temppoint = new Structure("test",world,true);
+    Structure* temppoint = new Structure("aaaa",world,true);
     temppoint->source = new SimpleTerrainSample();
     world.addstructure(temppoint);
     world.opensavedirectory();

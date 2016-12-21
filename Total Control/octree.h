@@ -21,7 +21,6 @@
 #include <map>
 #include "constants.h"
 #include "materials.h"
-#include "geometryoctree.h"
 #include "qef.h"
 #include <fstream>
 #include <set>
@@ -34,6 +33,7 @@ struct OctreePortionAwareBranch;
 class Environment;
 
 
+#define XYZINDEX [(x&(1<<depth))>>depth][(y&(1<<depth))>>depth][(z&(1<<depth))>>depth]
 
 struct Location {
     int x;
@@ -141,7 +141,7 @@ struct OctreeSegment {
     virtual void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
     virtual OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z);
     virtual BlockId getser(BlockLoc,BlockLoc,BlockLoc);
-    virtual BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc);
+//    virtual BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc);
     virtual void render(const glm::mat4&);
 
     virtual void filesave(std::ostream&);
@@ -174,7 +174,7 @@ struct OctreeFeature : OctreeSegment {
     glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int) override;
     glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
-    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
+//    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
     void vertify(BlockLoc,BlockLoc,BlockLoc,int target) override;
     void filesave(std::ostream&) override;
@@ -201,7 +201,7 @@ struct OctreeBud : OctreeSegment {
     
     
     bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
-    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
+//    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
     void filesave(std::ostream&) override;
     void worldfilesave(std::ostream&,int) override;
@@ -212,7 +212,7 @@ struct OctreeBud : OctreeSegment {
 struct OctreeBranch : OctreeSegment {
     int depth;
     uint8_t connections = 0;
-    uint8_t DEBUGDEBUG = 0;
+//    int bakeddetails = 0;
     
     Feature point;
     OctreeSegment* subdivisions[2][2][2];
@@ -237,7 +237,7 @@ struct OctreeBranch : OctreeSegment {
     void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
     OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
-    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
+//    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     
     void render(const glm::mat4&) override;
     void filesave(std::ostream&) override;
@@ -257,7 +257,6 @@ struct OctreeBranch : OctreeSegment {
 struct OctreePortionAwareBranch : OctreeBranch {
     bool changed = false;
     bool hardLoaded = true;
-    int bakeddetails = 0;
     int curlod = -1;
     int lodserial[7] = {-1,-1,-1,-1,-1,-1,-1};
     std::map<uint8_t,GeomTerrain>* geometry = NULL;
@@ -274,10 +273,10 @@ struct OctreePortionAwareBranch : OctreeBranch {
     
 //    std::pair<Location,bool> getneedsaload(int,int,int,int,int,int) override;
     void render(const glm::mat4&) override;
-    void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
+//    void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
     bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
     glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
-    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
+//    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     uint8_t giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) override;
     OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&) override;
