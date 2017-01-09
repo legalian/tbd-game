@@ -53,6 +53,8 @@ public:
     void addVert(glm::vec3);
     void addNormal(glm::vec3);
     
+    void erase(int,int);
+    
     void bake();
     glm::mat4* matrix;
 };

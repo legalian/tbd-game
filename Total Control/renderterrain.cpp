@@ -28,6 +28,10 @@ void GeomTerrain::addVert(glm::vec3 vertex) {
 void GeomTerrain::addNormal(glm::vec3 normal) {
     indexed_normals.push_back(normal);
 }
+void GeomTerrain::erase(int start,int size) {
+    indexed_vertices.erase(indexed_vertices.begin()+start*3,indexed_vertices.begin()+(start+size)*3);
+//    indexed_normals.erase(indexed_normals.begin()+start*3,indexed_normals.begin()+(start+size)*3);
+}
 #ifdef WIREFRAMEDEBUG
 void GeomTerrain::addWireVert(double x,double y,double z) {
     glm::vec3 vertex;
@@ -53,9 +57,9 @@ void GeomTerrain::addWireColor(glm::vec3 color) {
 void GeomTerrain::bake(){
     if (!baked) {
         size = (int)indexed_vertices.size();
-        
+        indexed_normals.clear();
         for (int i=(int)indexed_normals.size();i<indexed_vertices.size();i+=3) {
-            glm::vec3 trinormal = glm::normalize(glm::cross(indexed_vertices[i+1]-indexed_vertices[i+0],indexed_vertices[i+2]-indexed_vertices[i+0]));
+            glm::vec3 trinormal = glm::normalize(glm::cross(indexed_vertices[i+1]-indexed_vertices[i],indexed_vertices[i+2]-indexed_vertices[i]));
             indexed_normals.push_back(trinormal);
             indexed_normals.push_back(trinormal);
             indexed_normals.push_back(trinormal);

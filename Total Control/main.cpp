@@ -29,6 +29,12 @@ GLFWwindow* window;
 
 
 //change
+void UNITTEST() {
+//    int flag;
+//    MaterialPolyCount polycount;
+//    
+
+}
 
 
 void initialize(){
@@ -88,6 +94,8 @@ void initialize(){
 
 int main()
 {
+//    UNITTEST();
+//    return 0;
     initialize();
 //    test_qef();
     

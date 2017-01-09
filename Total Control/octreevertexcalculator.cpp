@@ -8,6 +8,8 @@
 
 #include "octree.h"
 
+
+
 void OctreeSegment::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {}
 void OctreeFeature::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world) {
     BlockId buf[2][2][2];
@@ -52,52 +54,76 @@ void OctreeBranch::hermitify(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* wor
     subdivisions[1][1][1]->hermitify(x|mask,y|mask,z|mask,world);
 }
 
-
-
-
-
-
-
-void OctreeSegment::vertify(BlockLoc x,BlockLoc y,BlockLoc z,int target) {}
-void OctreeFeature::vertify(BlockLoc x,BlockLoc y,BlockLoc z,int target) {
+MatrixCarriage OctreeSegment::vertifysmall() {return MatrixCarriage();}
+MatrixCarriage OctreeFeature::vertifysmall() {
     point = qef.evaluate(0);
+    return qef;
 }
-void OctreeBranch::vertify(BlockLoc x,BlockLoc y,BlockLoc z,int target) {
-
-//    if (!(bakeddetails&(1<<target))) {
-//        bakeddetails |= (1<<target);
-        if (depth<target) {
-            point = getqef().evaluate(target);
-        } else {
-            BlockLoc mask = 1<<depth;
-            subdivisions[0][0][0]->vertify(x     ,y     ,z     ,target);
-            subdivisions[1][0][0]->vertify(x|mask,y     ,z     ,target);
-            subdivisions[0][1][0]->vertify(x     ,y|mask,z     ,target);
-            subdivisions[1][1][0]->vertify(x|mask,y|mask,z     ,target);
-            subdivisions[0][0][1]->vertify(x     ,y     ,z|mask,target);
-            subdivisions[1][0][1]->vertify(x|mask,y     ,z|mask,target);
-            subdivisions[0][1][1]->vertify(x     ,y|mask,z|mask,target);
-            subdivisions[1][1][1]->vertify(x|mask,y|mask,z|mask,target);
+MatrixCarriage OctreeBranch::vertifysmall() {
+    if (depth+1<MIN_WORLDFILE_GEOMSAVE) {
+        if (!(lodflags1&4)) {
+            lodflags1|=4;
+            MatrixCarriage q =
+               subdivisions[0][0][0]->vertifysmall()+
+               subdivisions[1][0][0]->vertifysmall().translate(1<<(depth),0         ,0)+
+               subdivisions[0][1][0]->vertifysmall().translate(0         ,1<<(depth),0)+
+               subdivisions[1][1][0]->vertifysmall().translate(1<<(depth),1<<(depth),0)+
+               subdivisions[0][0][1]->vertifysmall().translate(0         ,0         ,1<<(depth))+
+               subdivisions[1][0][1]->vertifysmall().translate(1<<(depth),0         ,1<<(depth))+
+               subdivisions[0][1][1]->vertifysmall().translate(0         ,1<<(depth),1<<(depth))+
+               subdivisions[1][1][1]->vertifysmall().translate(1<<(depth),1<<(depth),1<<(depth));
+            point = q.evaluate(depth+1);
+            return q;
         }
-//    }
-}
-
-void OctreeSegment::vertifySoftLoads() {}
-void OctreeBranch::vertifySoftLoads() {
-
-    if (depth+1>=MIN_WORLDFILE_GEOMSAVE&&depth+1<=MAX_WORLDFILE_GEOMSAVE) {
-        point = getqef().evaluate(depth+1);
+    } else {
+        subdivisions[0][0][0]->vertifysmall();
+        subdivisions[1][0][0]->vertifysmall();
+        subdivisions[0][1][0]->vertifysmall();
+        subdivisions[1][1][0]->vertifysmall();
+        subdivisions[0][0][1]->vertifysmall();
+        subdivisions[1][0][1]->vertifysmall();
+        subdivisions[0][1][1]->vertifysmall();
+        subdivisions[1][1][1]->vertifysmall();
     }
-    subdivisions[0][0][0]->vertifySoftLoads();
-    subdivisions[1][0][0]->vertifySoftLoads();
-    subdivisions[0][1][0]->vertifySoftLoads();
-    subdivisions[1][1][0]->vertifySoftLoads();
-    subdivisions[0][0][1]->vertifySoftLoads();
-    subdivisions[1][0][1]->vertifySoftLoads();
-    subdivisions[0][1][1]->vertifySoftLoads();
-    subdivisions[1][1][1]->vertifySoftLoads();
+    if (depth+2<MIN_WORLDFILE_GEOMSAVE) {
+        return getqef();
+    }
+    return MatrixCarriage();
 }
 
+MatrixCarriage OctreeSegment::vertifyall() {return MatrixCarriage();}
+MatrixCarriage OctreeFeature::vertifyall() {
+    point = qef.evaluate(0);
+    return qef;
+}
+MatrixCarriage OctreeBranch::vertifyall() {
+    if (depth+1<=MAX_WORLDFILE_GEOMSAVE) {
+        if (!(lodflags1&4)) {
+            lodflags1|=4;
+            MatrixCarriage q =
+               subdivisions[0][0][0]->vertifyall()+
+               subdivisions[1][0][0]->vertifyall().translate(1<<(depth),0         ,0)+
+               subdivisions[0][1][0]->vertifyall().translate(0         ,1<<(depth),0)+
+               subdivisions[1][1][0]->vertifyall().translate(1<<(depth),1<<(depth),0)+
+               subdivisions[0][0][1]->vertifyall().translate(0         ,0         ,1<<(depth))+
+               subdivisions[1][0][1]->vertifyall().translate(1<<(depth),0         ,1<<(depth))+
+               subdivisions[0][1][1]->vertifyall().translate(0         ,1<<(depth),1<<(depth))+
+               subdivisions[1][1][1]->vertifyall().translate(1<<(depth),1<<(depth),1<<(depth));
+            point = q.evaluate(depth+1);
+            return q;
+        }
+    } else {
+        subdivisions[0][0][0]->vertifyall();
+        subdivisions[1][0][0]->vertifyall();
+        subdivisions[0][1][0]->vertifyall();
+        subdivisions[1][1][0]->vertifyall();
+        subdivisions[0][0][1]->vertifyall();
+        subdivisions[1][0][1]->vertifyall();
+        subdivisions[0][1][1]->vertifyall();
+        subdivisions[1][1][1]->vertifyall();
+    }
+    return MatrixCarriage();
+}
 
 MatrixCarriage OctreeSegment::getqef() {return MatrixCarriage();}
 MatrixCarriage OctreeFeature::getqef() {return qef;}

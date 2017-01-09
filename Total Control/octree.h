@@ -79,7 +79,7 @@ struct BranchRegistry {
     void prune(OctreeSegment*);
     bool contains(OctreeBranch*);
 };
-struct Feature {
+struct __attribute__((packed)) Feature {
     uint8_t x;
     uint8_t y;
     uint8_t z;
@@ -112,7 +112,7 @@ struct MatrixCarriage {
     MatrixCarriage translate(QefPerc,QefPerc,QefPerc);
     Feature evaluate(int);
 };
-struct Edgedat {
+struct __attribute__((packed)) Edgedat {
     uint8_t t;
     
     int8_t x;
@@ -129,15 +129,39 @@ struct Edgedat {
     MatrixCarriage calczqef();
     inline MatrixCarriage calcqef(QefPerc,QefPerc,QefPerc,QefPerc);
 };
+struct __attribute__((packed)) MaterialPolyCount {
+    union {
+        MaterialPolyCount* nextpoint;
+        int sizes[2];
+    } data;
+    union {
+        int flags;
+        BlockId ids[2];
+    } descriptor;
+    void addoffsets(int,std::map<uint8_t,int>*);
+    int add(int,uint8_t,int);
+    int get(int,uint8_t);
+    int jointo(int,int,MaterialPolyCount*);
+    void destroy(int);
+    void deletesegment(int,std::map<uint8_t,GeomTerrain>*,std::map<uint8_t,int>*);
 
+};
+struct MaterialPolyCountPackage {
+    int flagalone=0;
+    MaterialPolyCount* data=NULL;
+//    inline void add(uint8_t,int);
+    MaterialPolyCountPackage();
+    MaterialPolyCountPackage(int,MaterialPolyCount*);
+};
 
 struct OctreeSegment {
 //    virtual std::pair<Location,bool> getneedsaload(int,int,int,int,int,int);
     virtual MatrixCarriage getqef();
-    virtual void vertifySoftLoads();
-    virtual void vertify(BlockLoc,BlockLoc,BlockLoc,int);
+    virtual MatrixCarriage vertifyall();
+    virtual MatrixCarriage vertifysmall();
     virtual bool isvbaked(BlockLoc,BlockLoc,BlockLoc);
-    virtual void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int);
+    virtual MaterialPolyCountPackage geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,std::map<uint8_t,int>*,OctreeSegment*,bool);
+//    virtual void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int);
     virtual void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*);
     virtual OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z);
     virtual BlockId getser(BlockLoc,BlockLoc,BlockLoc);
@@ -150,8 +174,11 @@ struct OctreeSegment {
     virtual Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc);
     virtual Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc);
     virtual glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int);
-    virtual glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int);
+    virtual glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc);
     virtual void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&);
+    
+    virtual void determinelod(BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,int,bool);
+    virtual int getlod(BlockLoc,BlockLoc,BlockLoc);
     
     virtual void testconnected(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*,BranchRegistry*);
     virtual OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&);
@@ -168,15 +195,13 @@ struct OctreeFeature : OctreeSegment {
     OctreeFeature(BlockId,uint8_t);
     MatrixCarriage getqef() override;
     
-#ifdef WIREFRAMEDEBUG
-    void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
-#endif
     glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int) override;
-    glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
+    glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
 //    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
     void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
-    void vertify(BlockLoc,BlockLoc,BlockLoc,int target) override;
+    MatrixCarriage vertifysmall() override;
+    MatrixCarriage vertifyall() override;
     void filesave(std::ostream&) override;
     uint8_t giveconflag(BlockLoc,BlockLoc,BlockLoc,int) override;
     
@@ -188,7 +213,7 @@ struct OctreeLeaf : OctreeFeature {
     OctreeLeaf(BlockId,uint8_t);
     OctreeLeaf(BlockId,uint8_t,int8_t[12]);
     
-    void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
+    MaterialPolyCountPackage geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,std::map<uint8_t,int>*,OctreeSegment*,bool) override;
     void filesave(std::ostream&) override;
     Edgedat& xcon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc) override;
@@ -212,7 +237,9 @@ struct OctreeBud : OctreeSegment {
 struct OctreeBranch : OctreeSegment {
     int depth;
     uint8_t connections = 0;
-//    int bakeddetails = 0;
+    int lodflags1 = 0;
+    int lodflags2 = 0;
+    MaterialPolyCount materialpolys;
     
     Feature point;
     OctreeSegment* subdivisions[2][2][2];
@@ -227,13 +254,16 @@ struct OctreeBranch : OctreeSegment {
                  OctreeSegment*,OctreeSegment*,int,uint8_t,uint8_t,uint8_t);
     
 //    std::pair<Location,bool> getneedsaload(int,int,int,int,int,int) override;
+    void determinelod(BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,int,bool) override;
+    int getlod(BlockLoc,BlockLoc,BlockLoc) override;
     OctreeBranch(OctreeSegment*,int,uint8_t,uint8_t,uint8_t,uint8_t);
     MatrixCarriage getqef() override;
-    void vertifySoftLoads() override;
+    MatrixCarriage vertifyall() override;
     void worldfilesave(std::ostream&,int) override;
-    void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
+    MatrixCarriage vertifysmall() override;
     bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
-    void geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,int) override;
+    MaterialPolyCountPackage geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,std::map<uint8_t,int>*,OctreeSegment*,bool) override;
+
     void hermitify(BlockLoc,BlockLoc,BlockLoc,OctreeSegment*) override;
     OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
@@ -245,7 +275,7 @@ struct OctreeBranch : OctreeSegment {
     Edgedat& ycon(BlockLoc,BlockLoc,BlockLoc) override;
     Edgedat& zcon(BlockLoc,BlockLoc,BlockLoc) override;
     glm::vec3 feat(BlockLoc,BlockLoc,BlockLoc,int) override;
-    glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
+    glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc) override;
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&) override;
     void testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*,BranchRegistry*) override;
     bool phase2check(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*,Environment*);
@@ -257,8 +287,6 @@ struct OctreeBranch : OctreeSegment {
 struct OctreePortionAwareBranch : OctreeBranch {
     bool changed = false;
     bool hardLoaded = true;
-    int curlod = -1;
-    int lodserial[7] = {-1,-1,-1,-1,-1,-1,-1};
     std::map<uint8_t,GeomTerrain>* geometry = NULL;
     std::map<uint8_t,GeomTerrain>* nextpasscleanup = NULL;
     OctreePortionAwareBranch(OctreeSegment*,OctreeSegment*,
@@ -271,12 +299,9 @@ struct OctreePortionAwareBranch : OctreeBranch {
                              OctreeSegment*,OctreeSegment*,int,uint8_t,uint8_t,uint8_t);
     OctreePortionAwareBranch(OctreeSegment*,int,uint8_t,uint8_t,uint8_t,uint8_t);
     
-//    std::pair<Location,bool> getneedsaload(int,int,int,int,int,int) override;
     void render(const glm::mat4&) override;
-//    void vertify(BlockLoc,BlockLoc,BlockLoc,int) override;
     bool isvbaked(BlockLoc,BlockLoc,BlockLoc) override;
-    glm::vec3 featwrt(BlockLoc,BlockLoc,BlockLoc,int) override;
-//    BlockId getserwrt(BlockLoc,BlockLoc,BlockLoc) override;
+    MaterialPolyCountPackage geomify(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,std::map<uint8_t,int>*,OctreeSegment*,bool) override;
     uint8_t giveconflag(BlockLoc x,BlockLoc y,BlockLoc z,int recur) override;
     OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
     OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&) override;
@@ -299,18 +324,18 @@ public:
     OctreeSegment* data;// = new OctreeBud(0);
     void loadportion(BlockLoc,BlockLoc,BlockLoc,BlockId (*)[CHSIZE+1][CHSIZE+1]);
     void render();
-    void h_manifest(BlockLoc,BlockLoc,BlockLoc);
-    void v_manifest(BlockLoc,BlockLoc,BlockLoc);
-    void g_manifest(BlockLoc,BlockLoc,BlockLoc);
+//    void h_manifest(BlockLoc,BlockLoc,BlockLoc);
+//    void v_manifest(BlockLoc,BlockLoc,BlockLoc);
+//    void g_manifest(BlockLoc,BlockLoc,BlockLoc);
     bool existsat(BlockLoc,BlockLoc,BlockLoc);
     void filepullportion(std::string,BlockLoc,BlockLoc,BlockLoc);
     void filepushportion(std::string,BlockLoc,BlockLoc,BlockLoc);
     bool dataexists(std::string,BlockLoc,BlockLoc,BlockLoc);
 };
 
-inline void Xstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
-inline void Ystitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
-inline void Zstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId);
+inline void Xstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId,MaterialPolyCount*,int&);
+inline void Ystitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId,MaterialPolyCount*,int&);
+inline void Zstitch(BlockLoc,BlockLoc,BlockLoc,std::map<uint8_t,GeomTerrain>*,OctreeSegment*,BlockId,BlockId,MaterialPolyCount*,int&);
 
 OctreeSegment* loadWorldFile(std::ifstream& file,int recur);
 void tearaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*,Environment*);

@@ -178,7 +178,7 @@ Edgedat& OctreeSegment::xcon(BlockLoc x,BlockLoc y,BlockLoc z) {return silence;}
 Edgedat& OctreeSegment::ycon(BlockLoc x,BlockLoc y,BlockLoc z) {return silence;}
 Edgedat& OctreeSegment::zcon(BlockLoc x,BlockLoc y,BlockLoc z) {return silence;}
 glm::vec3 OctreeSegment::feat(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {throw;}
-glm::vec3 OctreeSegment::featwrt(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {return glm::vec3(0,0,0);}
+glm::vec3 OctreeSegment::featwrt(BlockLoc x,BlockLoc y,BlockLoc z) {return glm::vec3(0,0,0);}
 void OctreeSegment::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,int thisdep,OctreeSegment* toinsert,OctreeSegment*& self) {throw;}
 
 
@@ -188,7 +188,7 @@ OctreeFeature::OctreeFeature(BlockId fill,uint8_t conn) : fillvalue(fill) , conf
 BlockId OctreeFeature::getser(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
 //BlockId OctreeFeature::getserwrt(BlockLoc x,BlockLoc y,BlockLoc z) {return fillvalue;}
 glm::vec3 OctreeFeature::feat(BlockLoc x,BlockLoc y,BlockLoc z,int lod)  {return glm::vec3(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)))+point.get(lod);}
-glm::vec3 OctreeFeature::featwrt(BlockLoc x,BlockLoc y,BlockLoc z,int lod)  {return glm::vec3(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)))+point.get(lod);}
+glm::vec3 OctreeFeature::featwrt(BlockLoc x,BlockLoc y,BlockLoc z)  {return glm::vec3(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)))+point.get(0);}
 
 
 
@@ -235,15 +235,15 @@ OctreePortionAwareBranch::OctreePortionAwareBranch(OctreeSegment* a,OctreeSegmen
                                                    OctreeSegment* c,OctreeSegment* d,
                                                    OctreeSegment* e,OctreeSegment* f,
                                                    OctreeSegment* g,OctreeSegment* h, int dep,bool hard) :
-OctreeBranch(a,b,c,d,e,f,g,h,dep),hardLoaded(hard),curlod(hard?-1:MIN_WORLDFILE_GEOMSAVE) {}//bakeddetails=hard?0:WORLDFILE_VBITMASK;}
+OctreeBranch(a,b,c,d,e,f,g,h,dep),hardLoaded(hard) {}//bakeddetails=hard?0:WORLDFILE_VBITMASK;}
 
 OctreePortionAwareBranch::OctreePortionAwareBranch(OctreeSegment* a,OctreeSegment* b,
                                                    OctreeSegment* c,OctreeSegment* d,
                                                    OctreeSegment* e,OctreeSegment* f,
                                                    OctreeSegment* g,OctreeSegment* h, int dep,uint8_t x,uint8_t y,uint8_t z) :
-OctreeBranch(a,b,c,d,e,f,g,h,dep,x,y,z),hardLoaded(false),curlod(MIN_WORLDFILE_GEOMSAVE) {}//bakeddetails=WORLDFILE_VBITMASK;}
+OctreeBranch(a,b,c,d,e,f,g,h,dep,x,y,z),hardLoaded(false) {}//bakeddetails=WORLDFILE_VBITMASK;}
 OctreePortionAwareBranch::OctreePortionAwareBranch(OctreeSegment* a,int dep,uint8_t x,uint8_t y,uint8_t z,uint8_t con) :
-OctreeBranch(a,dep,x,y,z,con),hardLoaded(false),curlod(MIN_WORLDFILE_GEOMSAVE) {}//bakeddetails=WORLDFILE_VBITMASK;}
+OctreeBranch(a,dep,x,y,z,con),hardLoaded(false) {}//bakeddetails=WORLDFILE_VBITMASK;}
 void OctreePortionAwareBranch::render(const glm::mat4& matr){
     if (nextpasscleanup!=NULL) {
         delete nextpasscleanup;
@@ -263,23 +263,22 @@ void OctreePortionAwareBranch::matrixmap(glm::mat4 *matr) {
 }
 
 bool OctreePortionAwareBranch::isvbaked(BlockLoc x,BlockLoc y,BlockLoc z) {
-    if (curlod == -1) {return false;}
-    return bakeddetails&(1<<curlod);
+    return true;
 }
-#define SNAP(x,y) (x&(BLOCKLOCFULLMASK^((1<<y)-1)))
-glm::vec3 OctreePortionAwareBranch::featwrt(BlockLoc x, BlockLoc y, BlockLoc z, int lod) {
-    x = SNAP(x,curlod);
-    y = SNAP(y,curlod);
-    z = SNAP(z,curlod);
-    return subdivisions XYZINDEX->featwrt(x,y,z,curlod);
-}
-//BlockId OctreePortionAwareBranch::getserwrt(BlockLoc x, BlockLoc y, BlockLoc z) {
+//#define SNAP(x,y) (x&(BLOCKLOCFULLMASK^((1<<y)-1)))
+//glm::vec3 OctreePortionAwareBranch::featwrt(BlockLoc x, BlockLoc y, BlockLoc z, int lod) {
 //    x = SNAP(x,curlod);
 //    y = SNAP(y,curlod);
 //    z = SNAP(z,curlod);
-//    return subdivisions XYZINDEX->getserwrt(x,y,z);
+//    return subdivisions XYZINDEX->featwrt(x,y,z,curlod);
 //}
-#undef SNAP
+////BlockId OctreePortionAwareBranch::getserwrt(BlockLoc x, BlockLoc y, BlockLoc z) {
+////    x = SNAP(x,curlod);
+////    y = SNAP(y,curlod);
+////    z = SNAP(z,curlod);
+////    return subdivisions XYZINDEX->getserwrt(x,y,z);
+////}
+//#undef SNAP
 
 OctreeSegment* OctreePortionAwareBranch::pullaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment*& self) {
     changed = true;
@@ -393,12 +392,11 @@ glm::vec3 OctreeBranch::feat(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {
         return subdivisions XYZINDEX->feat(x,y,z,lod);
     }
 }
-glm::vec3 OctreeBranch::featwrt(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {
-    //    return point;
-    if (depth<lod) {
-        return glm::vec3(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)))+point.get(lod);
+glm::vec3 OctreeBranch::featwrt(BlockLoc x,BlockLoc y,BlockLoc z) {
+    if (lodflags1&1) {
+        return glm::vec3(x-(ASBLOCKLOC(0)),y-(ASBLOCKLOC(0)),z-(ASBLOCKLOC(0)))+point.get(depth+1);
     } else {
-        return subdivisions XYZINDEX->featwrt(x,y,z,lod);
+        return subdivisions XYZINDEX->featwrt(x,y,z);
     }
 }
 void OctreeBranch::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,int thisdep,OctreeSegment* toinsert,OctreeSegment*& self) {
@@ -411,6 +409,14 @@ void OctreeBranch::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,int thi
     }
 }
 
+int OctreeSegment::getlod(BlockLoc x,BlockLoc y,BlockLoc z) {return 0;}
+int OctreeBranch::getlod(BlockLoc x,BlockLoc y,BlockLoc z) {
+    if (lodflags1&1) {
+        return depth+1;
+    } else {
+        return subdivisions XYZINDEX->getlod(x,y,z);
+    }
+}
 
 OctreeSegment* OctreeBranch::pullaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment*& self) {
     if (depth<recur) {
@@ -557,71 +563,72 @@ bool Octree::existsat(BlockLoc x,BlockLoc y,BlockLoc z) {
     }
 }
 
-void Octree::h_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
-    if (existsat(x  ,y  ,z  ) and existsat(x+1,y  ,z  ) and
-        existsat(x  ,y+1,z  ) and existsat(x+1,y+1,z  ) and
-        existsat(x  ,y  ,z+1) and existsat(x+1,y  ,z+1) and
-        existsat(x  ,y+1,z+1) and existsat(x+1,y+1,z+1)) {
-        
-        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-        if (portion != NULL) {
-            portion->hermitify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),data);
-        }
-    }
-}
-void Octree::v_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
-    if (existsat(x  ,y  ,z  ) and existsat(x+1,y  ,z  ) and
-        existsat(x  ,y+1,z  ) and existsat(x+1,y+1,z  ) and
-        existsat(x  ,y  ,z+1) and existsat(x+1,y  ,z+1) and
-        existsat(x  ,y+1,z+1) and existsat(x+1,y+1,z+1)) {
-        
-        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-        if (portion != NULL) {
-            portion->vertify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),portion->curlod);
-        }
-    }
-}
-void Octree::g_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
-    
-    if (data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y-1),ASCHUNKLOC(z-1)) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y-1),ASCHUNKLOC(z-1)) and
-        data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y  ),ASCHUNKLOC(z-1)) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y  ),ASCHUNKLOC(z-1)) and
-        data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y-1),ASCHUNKLOC(z  )) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y-1),ASCHUNKLOC(z  )) and
-        data->isvbaked(ASCHUNKLOC(x-1),ASCHUNKLOC(y  ),ASCHUNKLOC(z  )) and data->isvbaked(ASCHUNKLOC(x  ),ASCHUNKLOC(y  ),ASCHUNKLOC(z  )) ){
-        
-        
-        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-        
-        if (portion!=NULL) {
-            
-//            std::cout<<"fixed "<<std::max(std::max(abs(x),abs(y)),abs(z))<<", location :"<<Location(x,y,z).tostring()<<"\n";
-            const int lodlookup[7][3] = {{0,0,0},{-1,0,0},{0,-1,0},{-1,-1,0},{0,0,-1},{-1,0,-1},{0,-1,-1}};
-            bool needchange = false;
-            for (int i=0;i<7;i++) {
-                OctreePortionAwareBranch* ext = data->getvoxunit(ASCHUNKLOC(x+lodlookup[i][0]),ASCHUNKLOC(y+lodlookup[i][1]),ASCHUNKLOC(z+lodlookup[i][2]));
-                int lod = ext!=NULL?ext->curlod:-2;
-                if (portion->lodserial[i]!=lod) {
-                    portion->lodserial[i]=lod;
-                    needchange=true;
-                }
-            }
-            if (needchange) {
-                int lod = portion->curlod;
-        
-                extern BranchRegistry* SWO;
-                SWO = &currenttests;
-                std::map<uint8_t,GeomTerrain>* newgeometry = new std::map<uint8_t,GeomTerrain>();
-                portion->geomify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),newgeometry,data,lod);
-                
-                portion->nextpasscleanup = portion->geometry;
-                portion->geometry = newgeometry;
-        
-                portion->matrixmap(&matrixRef);
-                
-            }
-        }
-    }
-}
-
+//void Octree::h_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    if (existsat(x  ,y  ,z  ) and existsat(x+1,y  ,z  ) and
+//        existsat(x  ,y+1,z  ) and existsat(x+1,y+1,z  ) and
+//        existsat(x  ,y  ,z+1) and existsat(x+1,y  ,z+1) and
+//        existsat(x  ,y+1,z+1) and existsat(x+1,y+1,z+1)) {
+//        
+//        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+//        if (portion != NULL) {
+//            portion->hermitify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),data);
+//        }
+//        portion->vertifysmall();
+//    }
+//}
+//void Octree::v_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    if (existsat(x  ,y  ,z  ) and existsat(x+1,y  ,z  ) and
+//        existsat(x  ,y+1,z  ) and existsat(x+1,y+1,z  ) and
+//        existsat(x  ,y  ,z+1) and existsat(x+1,y  ,z+1) and
+//        existsat(x  ,y+1,z+1) and existsat(x+1,y+1,z+1)) {
+//        
+//        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+//        if (portion != NULL) {
+//            portion->vertify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),portion->curlod);
+//        }
+//    }
+//}
+//void Octree::g_manifest(BlockLoc x,BlockLoc y,BlockLoc z) {
+//    
+//    if (existsat(ASCHUNKLOC(x-1),ASCHUNKLOC(y-1),ASCHUNKLOC(z-1)) and existsat(ASCHUNKLOC(x  ),ASCHUNKLOC(y-1),ASCHUNKLOC(z-1)) and
+//        existsat(ASCHUNKLOC(x-1),ASCHUNKLOC(y  ),ASCHUNKLOC(z-1)) and existsat(ASCHUNKLOC(x  ),ASCHUNKLOC(y  ),ASCHUNKLOC(z-1)) and
+//        existsat(ASCHUNKLOC(x-1),ASCHUNKLOC(y-1),ASCHUNKLOC(z  )) and existsat(ASCHUNKLOC(x  ),ASCHUNKLOC(y-1),ASCHUNKLOC(z  )) and
+//        existsat(ASCHUNKLOC(x-1),ASCHUNKLOC(y  ),ASCHUNKLOC(z  )) and existsat(ASCHUNKLOC(x  ),ASCHUNKLOC(y  ),ASCHUNKLOC(z  )) ){
+//        
+//        
+//        OctreePortionAwareBranch* portion = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+//        
+//        if (portion!=NULL) {
+//            
+////            std::cout<<"fixed "<<std::max(std::max(abs(x),abs(y)),abs(z))<<", location :"<<Location(x,y,z).tostring()<<"\n";
+//            const int lodlookup[7][3] = {{0,0,0},{-1,0,0},{0,-1,0},{-1,-1,0},{0,0,-1},{-1,0,-1},{0,-1,-1}};
+//            bool needchange = false;
+//            for (int i=0;i<7;i++) {
+//                OctreePortionAwareBranch* ext = data->getvoxunit(ASCHUNKLOC(x+lodlookup[i][0]),ASCHUNKLOC(y+lodlookup[i][1]),ASCHUNKLOC(z+lodlookup[i][2]));
+//                int lod = ext!=NULL?ext->curlod:-2;
+//                if (portion->lodserial[i]!=lod) {
+//                    portion->lodserial[i]=lod;
+//                    needchange=true;
+//                }
+//            }
+//            if (needchange) {
+//                int lod = portion->curlod;
+//        
+//                extern BranchRegistry* SWO;
+//                SWO = &currenttests;
+//                std::map<uint8_t,GeomTerrain>* newgeometry = new std::map<uint8_t,GeomTerrain>();
+//                portion->geomify(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),newgeometry,data,lod);
+//                
+//                portion->nextpasscleanup = portion->geometry;
+//                portion->geometry = newgeometry;
+//        
+//                portion->matrixmap(&matrixRef);
+//                
+//            }
+//        }
+//    }
+//}
+//
 
 
 
