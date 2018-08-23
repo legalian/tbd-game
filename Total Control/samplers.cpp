@@ -7,7 +7,6 @@
 //
 
 #include "samplers.h"
-#include "constants.h"
 
 
 NoiseVolume sample1;
@@ -48,10 +47,10 @@ float NoiseVolume::sample(double x, double y, double z) {
     (data[xmin][ymin][zmax]*zi+data[xmin][ymin][zmin]*(1-zi))*(1-yi))*(1-xi);
 }
 
-void Sampler::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& world){throw;}
-void EmptySampler::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& world) {}
+void Sampler::populate(BlockLoc x,BlockLoc y, BlockLoc z,Structure& world){throw;}
+void EmptySampler::populate(BlockLoc x,BlockLoc y, BlockLoc z,Structure& world) {}
 
-void BoxSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& world) {
+void BoxSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Structure& world) {
     
     BlockId (*test)[CHSIZE+1][CHSIZE+1] = new BlockId[CHSIZE+1][CHSIZE+1][CHSIZE+1]();
     //    long alt = (((LONG_MAX/3)<<1)|1);
@@ -87,7 +86,7 @@ void BoxSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& world) {
     }
     delete [] test;
 }
-void SimpleTerrainSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Octree& world) {
+void SimpleTerrainSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Structure& world) {
     
     float (*samplebuffer)[CHSIZE+1][CHSIZE+1] = new float[CHSIZE+1][CHSIZE+1][CHSIZE+1];
     BlockId (*ids)[CHSIZE+1][CHSIZE+1] = new BlockId[CHSIZE+1][CHSIZE+1][CHSIZE+1];

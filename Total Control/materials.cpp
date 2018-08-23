@@ -20,6 +20,10 @@ ShaderTerrain* materials[] = {
     new ShaderTerrain()
 };//ShaderTerrain* debugshader = new DebugShader();
 
+glm::vec3 clipplanes[6];
+float clipdistances[6];
+
+
 
 uint8_t materialprops[] = {
     //precidence; don't draw polygons between values of equal precidence, otherwise use to determine polygon winding order
@@ -36,14 +40,16 @@ uint8_t materialattribs[] = {
 };
 
 glm::mat4 camera;
+glm::mat4 clipcamera;
+glm::mat4* defaultmatrix=NULL;
 
-std::vector<GeomTerrain*> thisframerender[] = {
-    std::vector<GeomTerrain*>(),
-    std::vector<GeomTerrain*>(),
-    std::vector<GeomTerrain*>()
+std::vector<GeomLense> thisframerender[] = {
+    std::vector<GeomLense>(),
+    std::vector<GeomLense>(),
+    std::vector<GeomLense>()
 };
 
-void registergeom(uint8_t mat,GeomTerrain* newgeom) {
+void registergeom(uint8_t mat,GeomLense newgeom) {
     thisframerender[mat].push_back(newgeom);
 }
 void renderall() {
@@ -51,10 +57,13 @@ void renderall() {
         if (thisframerender[imaterial].size()>0) {
             materials[imaterial]->open();
             for (int igeom=0;igeom<thisframerender[imaterial].size();igeom++){
-                thisframerender[imaterial][igeom]->bake();
-                if (thisframerender[imaterial][igeom]->baked) {
-                    materials[imaterial]->draw(thisframerender[imaterial][igeom]);
+                if (thisframerender[imaterial][igeom].target->matrix==NULL) {
+                    thisframerender[imaterial][igeom].target->matrix=defaultmatrix;
                 }
+                thisframerender[imaterial][igeom].target->bake();
+//                if (thisframerender[imaterial][igeom]->baked) {
+                    materials[imaterial]->draw(thisframerender[imaterial][igeom]);
+//                }
             }
             materials[imaterial]->close();
             thisframerender[imaterial].clear();
@@ -69,3 +78,24 @@ void cleanup() {
         }
     }
 }
+void setdefaultmatrix(glm::mat4* def) {
+    defaultmatrix=def;
+}
+bool frustrumcul(glm::vec4 point,float radius) {
+    glm::vec4 ar = (point*(*defaultmatrix));//*clipcamera;
+    glm::vec3 p = glm::vec3(ar.x,ar.y,ar.z);
+    return  glm::dot(p, clipplanes[0])+clipdistances[0]+radius>0 and
+            glm::dot(p, clipplanes[1])+clipdistances[1]+radius>0 and
+            glm::dot(p, clipplanes[2])+clipdistances[2]+radius>0 and
+            glm::dot(p, clipplanes[3])+clipdistances[3]+radius>0 and
+            glm::dot(p, clipplanes[4])+clipdistances[4]+radius>0 and
+            glm::dot(p, clipplanes[5])+clipdistances[5]+radius>0;
+}
+
+
+
+
+
+
+
+

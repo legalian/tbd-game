@@ -16,9 +16,10 @@
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
+#include <map>
 
 
-#include </usr/include/GL/glew.h>
+#include </usr/local/include/GL/glew.h>
 
 #include <glfw3.h>
 
@@ -29,38 +30,43 @@
 #include "texture.h"
 #include "constants.h"
 
+struct OctreePortionAwareBranch;
+
 class GeomTerrain {
 public:
-    int size = 0;
-    bool baked = false;
-    std::vector<glm::vec3> indexed_vertices;
-    std::vector<glm::vec3> indexed_normals;
-    GLuint vertexbuffer;
-    GLuint normalbuffer;
-#ifdef WIREFRAMEDEBUG
-    int wiresize = 0;
-    std::vector<glm::vec3> wire_debug_vertices;
-    std::vector<glm::vec3> wire_debug_colors;
-    GLuint wire_vertexbuffer;
-    GLuint wire_colorbuffer;
-    void addWireVert(double,double,double);
-    void addWireColor(double,double,double);
-    void addWireVert(glm::vec3);
-    void addWireColor(glm::vec3);
-#endif
-    void addVert(double,double,double);
-    void addNormal(double,double,double);
-    void addVert(glm::vec3);
-    void addNormal(glm::vec3);
+    std::vector<int> indexed;
+    std::vector<int> extreme;
+    int** lodlayers;
+    GLuint* primbuffer;
+    int* coresize;
+    int* totalsize;
+    std::vector<glm::vec3> exlay;
+    std::vector<glm::vec3> exlaynormal;
+    GLuint exlaybuffer;
+    GLuint exlaynormalbuffer;
     
-    void erase(int,int);
+    void addVert(int);
+    void addVertExt(int);
+    void addVertExlay(glm::vec3);
+    void addVertExlayNormal(glm::vec3);
+    
+    void factor(int);
+    void emptyExlay();
+    
+    GeomTerrain();
     
     void bake();
-    glm::mat4* matrix;
+    glm::mat4* matrix=NULL;
 };
-
+struct GeomLense {
+    OctreePortionAwareBranch* reference;
+    GeomTerrain* target;
+    int lod;
+    GeomLense(OctreePortionAwareBranch*,GeomTerrain*,int);
+};
 class ShaderTerrain {
 protected:
+//    std::map<GeomTerrain*,std::pair<int,int>> endpoints;
     GLuint programID;
     GLuint matrixID;
     GLuint vertexPosition_modelspaceID;
@@ -70,7 +76,7 @@ public:
     virtual void mountshaders();
     
     void cleanup();
-    virtual void draw(GeomTerrain*);
+    virtual void draw(GeomLense);
     void open();
     void close();
 };
@@ -78,7 +84,7 @@ public:
 class DebugShader : public ShaderTerrain {
 public:
     void mountshaders() override;
-    void draw(GeomTerrain*) override;
+    void draw(GeomLense) override;
 };
 #endif
 

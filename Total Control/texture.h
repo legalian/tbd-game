@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include </usr/include/GL/glew.h>
+#include </usr/local/include/GL/glew.h>
 
 #include "shader.h"
 

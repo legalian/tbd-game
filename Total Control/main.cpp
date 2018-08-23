@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include </usr/include/GL/glew.h>
+#include </usr/local/include/GL/glew.h>
 
 #include <glfw3.h>
 GLFWwindow* window;
@@ -26,15 +26,21 @@ GLFWwindow* window;
 #include <pthread.h>
 //#include "qef.h"
 
+//#include <btBulletDynamicsCommon.h>
 
 
-//change
-void UNITTEST() {
-//    int flag;
-//    MaterialPolyCount polycount;
-//    
+//template<int& T>
+//int grab() {
+//    return T;
+//}
+//int locloc = 453;
+//
+//
+////change
+//void UNITTEST() {
+//    std::cout<<grab<locloc>()<<"\n";
+//}
 
-}
 
 
 void initialize(){
@@ -91,6 +97,52 @@ void initialize(){
 //    debugshader->mountshaders();
     
 }
+void getclippy(glm::mat4 m) {
+    extern glm::vec3 clipplanes[];
+    extern float clipdistances[];
+    const int FrustumPlane_Right  = 0;
+    const int FrustumPlane_Left   = 1;
+    const int FrustumPlane_Top    = 2;
+    const int FrustumPlane_Bottom = 3;
+    const int FrustumPlane_Near   = 4;
+    const int FrustumPlane_Far    = 5;
+    
+    clipplanes[FrustumPlane_Right].x  = m[0][3] + m[0][0];
+    clipplanes[FrustumPlane_Right].y  = m[1][3] + m[1][0];
+    clipplanes[FrustumPlane_Right].z  = m[2][3] + m[2][0];
+    clipdistances[FrustumPlane_Right] = m[3][3] + m[3][0];
+
+    clipplanes[FrustumPlane_Left].x  = m[0][3] - m[0][0];
+    clipplanes[FrustumPlane_Left].y  = m[1][3] - m[1][0];
+    clipplanes[FrustumPlane_Left].z  = m[2][3] - m[2][0];
+    clipdistances[FrustumPlane_Left] = m[3][3] - m[3][0];
+
+    clipplanes[FrustumPlane_Top].x  = m[0][3] - m[0][1];
+    clipplanes[FrustumPlane_Top].y  = m[1][3] - m[1][1];
+    clipplanes[FrustumPlane_Top].z  = m[2][3] - m[2][1];
+    clipdistances[FrustumPlane_Top] = m[3][3] - m[3][1];
+
+    clipplanes[FrustumPlane_Bottom].x  = m[0][3] + m[0][1];
+    clipplanes[FrustumPlane_Bottom].y  = m[1][3] + m[1][1];
+    clipplanes[FrustumPlane_Bottom].z  = m[2][3] + m[2][1];
+    clipdistances[FrustumPlane_Bottom] = m[3][3] + m[3][1];
+
+    clipplanes[FrustumPlane_Far].x  = m[0][2];
+    clipplanes[FrustumPlane_Far].y  = m[1][2];
+    clipplanes[FrustumPlane_Far].z  = m[2][2];
+    clipdistances[FrustumPlane_Far] = m[3][2];
+
+    clipplanes[FrustumPlane_Near].x  = m[0][3] - m[0][2];
+    clipplanes[FrustumPlane_Near].y  = m[1][3] - m[1][2];
+    clipplanes[FrustumPlane_Near].z  = m[2][3] - m[2][2];
+    clipdistances[FrustumPlane_Near] = m[3][3] - m[3][2];
+    
+    for (int k=0;k<6;k++) {
+        double dist = glm::length(clipplanes[k]);
+        clipdistances[k] = clipdistances[k]/dist;
+        clipplanes[k] = glm::normalize(clipplanes[k]);
+    }
+}
 
 int main()
 {
@@ -102,7 +154,7 @@ int main()
 //    ShaderVNC shader;
 //    shader.mountshaders();
     
-
+    
     glm::mat4 Projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 1000.0f);
 
 //    glm::mat4 ViewRot       = glm::lookAt(
@@ -118,6 +170,7 @@ int main()
                                           glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
                                           );
     
+//    getclippy(Projection);
     
 //    testgeom.bake();
     
@@ -143,11 +196,13 @@ int main()
     
     
     Environment world;
-    Structure* temppoint = new Structure("aaaa",world,true);
+    Structure* temppoint = new Structure("freshtest",world,true);
     temppoint->source = new SimpleTerrainSample();
     world.addstructure(temppoint);
     world.opensavedirectory();
     world.beginthread();
+    
+//    btBroadphaseInterface* broadphase = new btDbvtBroadphase();
     
     
 //    Structure test = Structure("test");
@@ -167,6 +222,9 @@ int main()
 //    test_qef();
     
     extern glm::mat4 camera;
+    extern glm::mat4 clipcamera;
+    
+    bool sharp = false;
     
     int multip = 1;
     do{
@@ -182,13 +240,19 @@ int main()
         }
         
         View       = glm::lookAt(
-                                           glm::vec3(x,y,z), // Camera is at (4,3,3), in World Space
-                                           glm::vec3(x+cos(theta)*3,y-1,z+sin(theta)*3), // and looks at the origin
-                                           glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
-                                           );
+                                   glm::vec3(x,y,z), // Camera is at (4,3,3), in World Space
+                                   glm::vec3(x+cos(theta)*3,y-1,z+sin(theta)*3), // and looks at the origin
+                                   glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
+                                   );
+        
         camera = Projection*View;
+        getclippy(camera);
+//        clipcamera = View;
+        
+        
         
         world.checkup(x,y,z);
+        
         world.draw();
         
         
@@ -199,14 +263,27 @@ int main()
         
         glfwSwapBuffers(window);
         glfwPollEvents();
+        
+        
         if (glfwGetKey(window,GLFW_KEY_P) == GLFW_PRESS) {
             //            temppoint->world.realworld.data->debugprinttrace(0);
-            
-            glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+//            overover = !overover;
+//            extern bool quaqua;
+//            quaqua=false;
+            if (!sharp) {
+                glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+            }
+            sharp = true;
         } else {
-            
-            glPolygonMode( GL_FRONT, GL_FILL );
+            if (sharp) {
+                glPolygonMode( GL_FRONT, GL_FILL );
+            }
+            sharp = false;
+//            quaqua=true;
+//            glPolygonMode( GL_FRONT, GL_FILL );
         }
+        
+        
         if (glfwGetKey(window,GLFW_KEY_SPACE) == GLFW_PRESS) {
             //            temppoint->world.realworld.data->debugprinttrace(0);
             multip = 3;

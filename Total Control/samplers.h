@@ -11,8 +11,10 @@
 
 #include <stdio.h>
 #include <octree.h>
+#include <vox.h>
+#include "constants.h"
 
-
+class Structure;
 
 class NoiseVolume {
 private:
@@ -26,19 +28,19 @@ public:
 
 class Sampler {
 public:
-    virtual void populate(BlockLoc,BlockLoc,BlockLoc,Octree&);
+    virtual void populate(BlockLoc,BlockLoc,BlockLoc,Structure&);
 };
 class EmptySampler : public Sampler {
 public:
-    void populate(BlockLoc,BlockLoc,BlockLoc,Octree&) override;
+    void populate(BlockLoc,BlockLoc,BlockLoc,Structure&) override;
 };
 class BoxSample : public Sampler {
 public:
-    void populate(BlockLoc,BlockLoc,BlockLoc,Octree&) override;
+    void populate(BlockLoc,BlockLoc,BlockLoc,Structure&) override;
 };
 class SimpleTerrainSample : public Sampler {
 public:
-    void populate(BlockLoc,BlockLoc,BlockLoc,Octree&) override;
+    void populate(BlockLoc,BlockLoc,BlockLoc,Structure&) override;
     inline float fGetOffset(float,float);
     inline float sample(float,float,float);
 };

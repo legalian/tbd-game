@@ -13,7 +13,7 @@
 #include "vox.h"
 //#include "render.h"
 #include "glm/gtx/string_cast.hpp"
-#include <boost/filesystem.hpp>
+//#include <boost/filesystem.hpp>
 
 class Environment {
 private:

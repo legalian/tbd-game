@@ -7,12 +7,89 @@
 //
 
 #include "vox.h"
-//#include "environment.h"
-//EmptySampler Structure::emptysampler = EmptySampler();
 
-Structure::Structure(std::string name,Environment& backref,bool load) : structureid(name),loadin(load), world(name,transform,backref,(int)!load) {
-    world.expand(CHPOWER);
-    
+Structure::Structure(std::string name,Environment& backref,bool load) : structureid(name),loadin(load),currenttests(backref),popular((int)!load),depth(CHPOWER) {
+    int pop=(int)!load;
+    std::ifstream file = std::ifstream(SAVEDIR "/"+name+"/massfile",std::ios::in|std::ios::binary);
+    if (file) {
+        file.read((char*)&depth,sizeof(int));
+        data = loadWorldFile(file,ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(0),depth);
+        file.close();
+    } else {
+        data = new OctreeBud(pop);
+    }
+    expand(CHPOWER);
+}
+
+int Structure::underpressure(BlockLoc x,BlockLoc y,BlockLoc z) {
+    x ^= ASBLOCKLOC(0);
+    y ^= ASBLOCKLOC(0);
+    z ^= ASBLOCKLOC(0);
+    int r;
+    for (r=0;(1<<r)<=x or (1<<r)<=y or (1<<r)<=z;r++) {}
+    return r;
+}
+void Structure::expand(BlockLoc x,BlockLoc y,BlockLoc z) {throw;expand(underpressure(x,y,z));}
+void Structure::expandchunk(BlockLoc x,BlockLoc y,BlockLoc z) {
+    expand(std::max(underpressure(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z)),
+                    underpressure(ASCHUNKLOC(x+1)-1,ASCHUNKLOC(y+1)-1,ASCHUNKLOC(z+1)-1)));
+}
+void Structure::expandarbit(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
+    expand(std::max(underpressure(x,y,z),
+                    underpressure(x+(1<<recur)-1,y+(1<<recur)-1,z+(1<<recur)-1)));
+}
+void Structure::expand(int desireddepth) {
+    while (desireddepth>=depth+1) {
+        depth++;
+        if (depth!=7) {
+            if (depth&1) {
+                data = new OctreeBranch(new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),data,depth-1);
+            } else {
+                data = new OctreeBranch(data,new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),
+                                        new OctreeBud(popular),new OctreeBud(popular),depth-1);
+            }
+        } else {
+            if (depth&1) {
+                data = new OctreePortionAwareBranch(new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),data,false);
+            } else {
+                data = new OctreePortionAwareBranch(data,new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),
+                                                    new OctreeBud(popular),new OctreeBud(popular),true);
+            }
+        }
+    }
+}
+
+void Structure::render() {
+    setdefaultmatrix(&transform);
+//    std::set<Location> updates;
+    g_world = data;
+//    OctreeSegment::m_nup = 0;
+//    OctreeSegment::suppliment=NULL;
+
+//    OctreeSegment::m_updates = &updates;
+    data->geomify(ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(0));
+//    if (OctreeSegment::m_nup==0 and OctreeSegment::suppliment!=NULL) {
+//        OctreeSegment::suppliment->geometry.clear();
+//        OctreeSegment::m_geometry = &OctreeSegment::suppliment->geometry;
+//        OctreeSegment::suppliment->updatevisual(OctreeSegment::m_x1,OctreeSegment::m_y1,OctreeSegment::m_z1);
+//    }
+}
+void Structure::updatelod(double x, double y, double z) {
+    glm::vec4 epicenter = glm::inverse(transform)*glm::vec4(x,y,z,1);
+    Location newloc = Location((int)(epicenter.x),
+                               (int)(epicenter.y),
+                               (int)(epicenter.z));
+    data->determinelod(ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(newloc.x),ASBLOCKLOC(newloc.y),ASBLOCKLOC(newloc.z),false,data);
 }
 void Structure::updatequeue(double x, double y, double z) {
     glm::vec4 epicenter = glm::inverse(transform)*glm::vec4(x,y,z,1);
@@ -25,27 +102,28 @@ void Structure::updatequeue(double x, double y, double z) {
     }
     for (int i=loadstage*2;i<(loadstage+1)*2;i++) {
         if (i==0) {
-            if (attain(newloc)){return;}
+            if (attain(newloc,newloc)){return;}
         }
         else {
             for (int i1=-1*i;i1<=i;i1++) {
                 for (int i2=-1*i;i2<=i;i2++) {
-                    if (attain(Location(newloc.x+i1,newloc.y+i2,newloc.z+i))) {return;}
-                    if (attain(Location(newloc.x+i1,newloc.y+i2,newloc.z-i))) {return;}
+                    if (attain(Location(newloc.x+i1,newloc.y+i2,newloc.z+i),newloc)) {return;}
+                    if (attain(Location(newloc.x+i1,newloc.y+i2,newloc.z-i),newloc)) {return;}
                 }
                 for (int i2=-1*i+1;i2<=i-1;i2++) {
-                    if (attain(Location(newloc.x+i1,newloc.z+i,newloc.y+i2))) {return;}
-                    if (attain(Location(newloc.x+i1,newloc.z-i,newloc.y+i2))) {return;}
+                    if (attain(Location(newloc.x+i1,newloc.z+i,newloc.y+i2),newloc)) {return;}
+                    if (attain(Location(newloc.x+i1,newloc.z-i,newloc.y+i2),newloc)) {return;}
                 }
             }
             for (int i1=-1*i+1;i1<=i-1;i1++) {
                 for (int i2=-1*i+1;i2<=i-1;i2++) {
-                    if (attain(Location(newloc.z+i,newloc.x+i1,newloc.y+i2))) {return;}
-                    if (attain(Location(newloc.z-i,newloc.x+i1,newloc.y+i2))) {return;}
+                    if (attain(Location(newloc.z+i,newloc.x+i1,newloc.y+i2),newloc)) {return;}
+                    if (attain(Location(newloc.z-i,newloc.x+i1,newloc.y+i2),newloc)) {return;}
                 }
             }
         }
     }
+//    
 //    PathTesterBucket** c = &geomloaded.buckets[loadstage];
 //    while (*c!=NULL) {
 //        int lod =geomloaded.hash(newloc,(*c)->node)/2;
@@ -62,84 +140,86 @@ void Structure::updatequeue(double x, double y, double z) {
 //    }
     loadstage++;
 }
-
-
-
-bool Structure::attain(Location pos) {
+void Structure::loadportion(BlockLoc x,BlockLoc y,BlockLoc z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
+    expandchunk(x,y,z);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(dat,0,0,0,CHPOWER),data);
+}
+void Structure::filepushportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+    std::ofstream file = std::ofstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::out|std::ios::binary|std::ios::trunc);
+    OctreePortionAwareBranch* look = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
+    s_file = &file;
+    if (look!=NULL) {
+        look->filesave();
+    } else {
+        OctreeBud(data->getser(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))).filesave();
+    }
+    file.close();
+}
+void Structure::filepullportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+    //    file =
+    std::ifstream file = std::ifstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::in|std::ios::binary);
+//    std::cout<<filebase<<" was opened. \n";
+    expandchunk(x,y,z);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(file,CHPOWER),data);
+    file.close();
+}
+bool Structure::attain(Location pos,Location ppos) {
     bool load = false;
     bool generate = false;
     
-//    int distance = std::max(std::max(abs(cameraloc.x-pos.x),abs(cameraloc.z-pos.z)),abs(cameraloc.y-pos.y));
-//    int lod = (int)((distance)/2);
+    extern const int levelsofdetail;
+    extern const int lodlimits[];
+    BlockLoc mask = CHSIZE/2;
+    float distance = sqrtf(((pos.x-ppos.x)*CHSIZE+mask)*((pos.x-ppos.x)*CHSIZE+mask) + ((pos.y-ppos.y)*CHSIZE+mask)*((pos.y-ppos.y)*CHSIZE+mask) + ((pos.z-ppos.z)*CHSIZE+mask)*((pos.z-ppos.z)*CHSIZE+mask));
+    int lod;
+    for(lod=0;lodlimits[lod]<distance&&lod<levelsofdetail;lod++) {}
     
-    if (world.underpressure(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z))>world.depth) {
-        generate = !world.popular;//bud, this is id
+    
+    if (underpressure(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z))>depth) {
+        generate = !popular;//bud, this is id
     } else {
-        OctreePortionAwareBranch* grably = world.data->getvoxunit(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));
+        OctreePortionAwareBranch* grably = data->getvoxunit(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));
         if (grably==NULL) {
-            generate = !world.data->getser(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));//bud, this is id
+            generate = !data->getser(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));//bud, this is id
         } else {
-            load = !(grably->hardLoaded);// or (lod>=MIN_WORLDFILE_GEOMSAVE and lod<=MAX_WORLDFILE_GEOMSAVE));
+            load = !(grably->hardload or (lod>=MIN_WORLDFILE_GEOMSAVE and lod<=MAX_WORLDFILE_GEOMSAVE));
         }
     }
     if (load){
-        world.filepullportion(SAVEDIR "/"+structureid,pos.x,pos.y,pos.z);
+        filepullportion(SAVEDIR "/"+structureid,pos.x,pos.y,pos.z);
     }
     if (generate) {
-        source->populate(pos.x,pos.y,pos.z,world);
+        source->populate(pos.x,pos.y,pos.z,*this);
     }
-    OctreePortionAwareBranch* unit = world.data->getvoxunit(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));
+    OctreePortionAwareBranch* unit = data->getvoxunit(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));
     
     if (unit!=NULL) {
         if (generate) {
-//            unit->vertifyall();
-            world.filepushportion(SAVEDIR "/"+structureid,pos.x,pos.y,pos.z);
+            filepushportion(SAVEDIR "/"+structureid,pos.x,pos.y,pos.z);
         }
         if (load or generate) {
-            unit->testconnected(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),world.data,&world.currenttests);
-            world.currenttests.prune(world.data);
+            unit->testconnected(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),data,&currenttests);
+            currenttests.prune(data);
         }
     }
-//    if (load or generate) {
-////        geomloaded.add(pos,lod);
-//        world.h_manifest(pos.x-1,pos.y-1,pos.z-1); world.h_manifest(pos.x  ,pos.y-1,pos.z-1);
-//        world.h_manifest(pos.x-1,pos.y  ,pos.z-1); world.h_manifest(pos.x  ,pos.y  ,pos.z-1);
-//        world.h_manifest(pos.x-1,pos.y-1,pos.z  ); world.h_manifest(pos.x  ,pos.y-1,pos.z  );
-//        world.h_manifest(pos.x-1,pos.y  ,pos.z  ); world.h_manifest(pos.x  ,pos.y  ,pos.z  );
-//    }
-//    if (unit!=NULL) {
-////        unit->curlod = lod;
-////        world.v_manifest(pos.x-1,pos.y-1,pos.z-1); world.v_manifest(pos.x  ,pos.y-1,pos.z-1);
-////        world.v_manifest(pos.x-1,pos.y  ,pos.z-1); world.v_manifest(pos.x  ,pos.y  ,pos.z-1);
-////        world.v_manifest(pos.x-1,pos.y-1,pos.z  ); world.v_manifest(pos.x  ,pos.y-1,pos.z  );
-////        world.v_manifest(pos.x-1,pos.y  ,pos.z  ); world.v_manifest(pos.x  ,pos.y  ,pos.z  );
-//        world.g_manifest(pos.x-1,pos.y-1,pos.z-1); world.g_manifest(pos.x  ,pos.y-1,pos.z-1); world.g_manifest(pos.x+1,pos.y-1,pos.z-1);
-//        world.g_manifest(pos.x-1,pos.y  ,pos.z-1); world.g_manifest(pos.x  ,pos.y  ,pos.z-1); world.g_manifest(pos.x+1,pos.y  ,pos.z-1);
-//        world.g_manifest(pos.x-1,pos.y+1,pos.z-1); world.g_manifest(pos.x  ,pos.y+1,pos.z-1); world.g_manifest(pos.x+1,pos.y+1,pos.z-1);
-//        world.g_manifest(pos.x-1,pos.y-1,pos.z  ); world.g_manifest(pos.x  ,pos.y-1,pos.z  ); world.g_manifest(pos.x+1,pos.y-1,pos.z  );
-//        world.g_manifest(pos.x-1,pos.y  ,pos.z  ); world.g_manifest(pos.x  ,pos.y  ,pos.z  ); world.g_manifest(pos.x+1,pos.y  ,pos.z  );
-//        world.g_manifest(pos.x-1,pos.y+1,pos.z  ); world.g_manifest(pos.x  ,pos.y+1,pos.z  ); world.g_manifest(pos.x+1,pos.y+1,pos.z  );
-//        world.g_manifest(pos.x-1,pos.y-1,pos.z+1); world.g_manifest(pos.x  ,pos.y-1,pos.z+1); world.g_manifest(pos.x+1,pos.y-1,pos.z+1);
-//        world.g_manifest(pos.x-1,pos.y  ,pos.z+1); world.g_manifest(pos.x  ,pos.y  ,pos.z+1); world.g_manifest(pos.x+1,pos.y  ,pos.z+1);
-//        world.g_manifest(pos.x-1,pos.y+1,pos.z+1); world.g_manifest(pos.x  ,pos.y+1,pos.z+1); world.g_manifest(pos.x+1,pos.y+1,pos.z+1);
-//    }
+    g_world=data;
+    if (depth>CHPOWER+1) {
+        data->prepare(ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(0));
+    }
     if (load or generate) {
-        
         std::ofstream file = std::ofstream(SAVEDIR "/"+structureid+"/massfile",std::ios::out|std::ios::binary|std::ios::trunc);
-        file.write((char*)&(world.depth),sizeof(int));
-        world.data->worldfilesave(file,world.depth);
+        file.write((char*)&(depth),sizeof(int));
+        s_file = &file;
+        data->worldfilesave(ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(0));
         file.close();
     }
-    
-
     return load or generate;
-        
 }
-void Structure::render() {
-//    if (structureid!="test") {return;}
-    
-    world.render();
-}
+//void Structure::render() {
+////    if (structureid!="test") {return;}
+//    
+//    world.render();
+//}
 //#include "lookuptables.cpp"
 //
 //inline int MOD(int n,int m) {

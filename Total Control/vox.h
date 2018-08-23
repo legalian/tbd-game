@@ -27,7 +27,7 @@
 //
 //class Generator;
 //
-
+class Sampler;
 //
 typedef struct Bounds {
     int lx;
@@ -46,7 +46,6 @@ public:
     Sampler* source = NULL;
     std::string structureid;
     glm::mat4 transform = glm::mat4(1.0f);
-    Octree world;
     ChunkDistancePool geomloaded = ChunkDistancePool();
     Location cameraloc;
     int loadstage = 0;
@@ -54,9 +53,28 @@ public:
     bool loadin = false;
     
     Structure(std::string,Environment&,bool);
+    void update();
+    void updatelod(double,double,double);
     void updatequeue(double,double,double);
-    bool attain(Location);
+    bool attain(Location,Location);
     void render();
+    
+    void expand(BlockLoc,BlockLoc,BlockLoc);
+    void expandchunk(BlockLoc,BlockLoc,BlockLoc);
+    void expandarbit(BlockLoc,BlockLoc,BlockLoc,int);
+    void expand(int);
+    int underpressure(BlockLoc,BlockLoc,BlockLoc);
+    int depth = CHPOWER;
+    int popular;
+    
+    BranchRegistry currenttests;
+    OctreeSegment* data=NULL;// = new OctreeBud(0);
+//    std::map<uint8_t,GeomTerrain> hardloadgroups[MAX_WORLDFILE_GEOMSAVE+1-MIN_WORLDFILE_GEOMSAVE];
+    
+    void loadportion(BlockLoc,BlockLoc,BlockLoc,BlockId (*)[CHSIZE+1][CHSIZE+1]);
+
+    void filepullportion(std::string,BlockLoc,BlockLoc,BlockLoc);
+    void filepushportion(std::string,BlockLoc,BlockLoc,BlockLoc);
     
 };
 //

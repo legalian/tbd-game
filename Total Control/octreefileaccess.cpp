@@ -9,106 +9,99 @@
 #include "octree.h"
 
 
-void OctreeSegment::filesave(std::ostream& file) {throw;}
-void OctreeSegment::worldfilesave(std::ostream& file,int) {throw;}
+void OctreeSegment::filesave() {throw;}
+void OctreeSegment::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
 
 
 
-void OctreeFeature::filesave(std::ostream& file) {
+void OctreeFeature::filesave() {
     char towrite = 'f';
-    file.write(&towrite,1);
-    file.write((char*)&fillvalue, sizeof(BlockId));
-    file.write((char*)&conflag, sizeof(uint8_t));
+    s_file->write(&towrite,1);
+    s_file->write((char*)&fillvalue, sizeof(BlockId));
+    s_file->write((char*)&conflag, sizeof(uint8_t));
 }
 
-void OctreeLeaf::filesave(std::ostream& file) {
+void OctreeLeaf::filesave() {
     char towrite = 'l';
-    file.write(&towrite,1);
-    file.write((char*)&fillvalue,sizeof(uint8_t));
-    file.write((char*)&conflag, sizeof(uint8_t));
-    file.write((char*)&xcondat.t,sizeof(uint8_t));
-    file.write((char*)&xcondat.x,sizeof(int8_t));
-    file.write((char*)&xcondat.y,sizeof(int8_t));
-    file.write((char*)&xcondat.z,sizeof(int8_t));
-    file.write((char*)&ycondat.t,sizeof(uint8_t));
-    file.write((char*)&ycondat.x,sizeof(int8_t));
-    file.write((char*)&ycondat.y,sizeof(int8_t));
-    file.write((char*)&ycondat.z,sizeof(int8_t));
-    file.write((char*)&zcondat.t,sizeof(uint8_t));
-    file.write((char*)&zcondat.x,sizeof(int8_t));
-    file.write((char*)&zcondat.y,sizeof(int8_t));
-    file.write((char*)&zcondat.z,sizeof(int8_t));
+    s_file->write(&towrite,1);
+    s_file->write((char*)&fillvalue,sizeof(uint8_t));
+    s_file->write((char*)&conflag, sizeof(uint8_t));
+    s_file->write((char*)&xcondat.t,sizeof(uint8_t));
+    s_file->write((char*)&xcondat.x,sizeof(int8_t));
+    s_file->write((char*)&xcondat.y,sizeof(int8_t));
+    s_file->write((char*)&xcondat.z,sizeof(int8_t));
+    s_file->write((char*)&ycondat.t,sizeof(uint8_t));
+    s_file->write((char*)&ycondat.x,sizeof(int8_t));
+    s_file->write((char*)&ycondat.y,sizeof(int8_t));
+    s_file->write((char*)&ycondat.z,sizeof(int8_t));
+    s_file->write((char*)&zcondat.t,sizeof(uint8_t));
+    s_file->write((char*)&zcondat.x,sizeof(int8_t));
+    s_file->write((char*)&zcondat.y,sizeof(int8_t));
+    s_file->write((char*)&zcondat.z,sizeof(int8_t));
 }
-
-void OctreeBud::filesave(std::ostream& file) {
+void OctreeBud::filesave() {
     char towrite = 's';
-    file.write(&towrite,1);
-    file.write((char*)&fillvalue, sizeof(BlockId));
+    s_file->write(&towrite,1);
+    s_file->write((char*)&fillvalue, sizeof(BlockId));
 }
-void OctreeBud::worldfilesave(std::ostream& file,int scale) {
+void OctreeBud::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
     char towrite = 's';
-    file.write(&towrite,1);
-    file.write((char*)&fillvalue, sizeof(BlockId));
+    s_file->write(&towrite,1);
+    s_file->write((char*)&fillvalue, sizeof(BlockId));
 }
-
-void OctreeBranch::filesave(std::ostream& file) {
+void OctreeBranch::filesave() {
     char towrite = 'c';
-    file.write(&towrite,1);
-    subdivisions[0][0][0]->filesave(file);
-    subdivisions[1][0][0]->filesave(file);
-    subdivisions[0][1][0]->filesave(file);
-    subdivisions[1][1][0]->filesave(file);
-    subdivisions[0][0][1]->filesave(file);
-    subdivisions[1][0][1]->filesave(file);
-    subdivisions[0][1][1]->filesave(file);
-    subdivisions[1][1][1]->filesave(file);
+    s_file->write(&towrite,1);
+    subdivisions[0][0][0]->filesave();
+    subdivisions[1][0][0]->filesave();
+    subdivisions[0][1][0]->filesave();
+    subdivisions[1][1][0]->filesave();
+    subdivisions[0][0][1]->filesave();
+    subdivisions[1][0][1]->filesave();
+    subdivisions[0][1][1]->filesave();
+    subdivisions[1][1][1]->filesave();
 }
-void OctreeBranch::worldfilesave(std::ostream& file,int scale) {
+void OctreePortionAwareBranch::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
+    g_vertecies = vertecies;
+    std::cout<<vertecies<<"\n";
+    OctreeBranch::worldfilesave(x,y,z);
+}
+void OctreeBranch::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
+    BlockLoc mask = 1<<depth;
+    x&=~mask;
+    y&=~mask;
+    z&=~mask;
     char towrite = 'c';
-    file.write(&towrite,1);
-    if (scale<=MAX_WORLDFILE_GEOMSAVE) {
-        file.write((char*)&point.x, sizeof(uint8_t));
-        file.write((char*)&point.y, sizeof(uint8_t));
-        file.write((char*)&point.z, sizeof(uint8_t));
-        if (scale==MIN_WORLDFILE_GEOMSAVE) {
+    s_file->write(&towrite,1);
+    if (depth<MAX_WORLDFILE_GEOMSAVE) {
+        uint8_t xpos = savevoxvert(x,g_vertecies[depth+1][point].x,depth+1);
+        uint8_t ypos = savevoxvert(y,g_vertecies[depth+1][point].y,depth+1);
+        uint8_t zpos = savevoxvert(z,g_vertecies[depth+1][point].z,depth+1);
+        s_file->write((char*)&xpos, sizeof(uint8_t));
+        s_file->write((char*)&ypos, sizeof(uint8_t));
+        s_file->write((char*)&zpos, sizeof(uint8_t));
+        if (depth+1==MIN_WORLDFILE_GEOMSAVE) {
             uint8_t getmeh = getser(0,0,0);
-            file.write((char*)&connections, sizeof(uint8_t));
-            file.write((char*)&getmeh, sizeof(uint8_t));
+            s_file->write((char*)&connections, sizeof(uint8_t));
+            s_file->write((char*)&getmeh, sizeof(uint8_t));
         }
     }
-    if (scale>MIN_WORLDFILE_GEOMSAVE) {
-        subdivisions[0][0][0]->worldfilesave(file,scale-1);
-        subdivisions[1][0][0]->worldfilesave(file,scale-1);
-        subdivisions[0][1][0]->worldfilesave(file,scale-1);
-        subdivisions[1][1][0]->worldfilesave(file,scale-1);
-        subdivisions[0][0][1]->worldfilesave(file,scale-1);
-        subdivisions[1][0][1]->worldfilesave(file,scale-1);
-        subdivisions[0][1][1]->worldfilesave(file,scale-1);
-        subdivisions[1][1][1]->worldfilesave(file,scale-1);
+    if (depth>=MIN_WORLDFILE_GEOMSAVE) {
+        subdivisions[0][0][0]->worldfilesave(x     ,y     ,z     );
+        subdivisions[1][0][0]->worldfilesave(x|mask,y     ,z     );
+        subdivisions[0][1][0]->worldfilesave(x     ,y|mask,z     );
+        subdivisions[1][1][0]->worldfilesave(x|mask,y|mask,z     );
+        subdivisions[0][0][1]->worldfilesave(x     ,y     ,z|mask);
+        subdivisions[1][0][1]->worldfilesave(x|mask,y     ,z|mask);
+        subdivisions[0][1][1]->worldfilesave(x     ,y|mask,z|mask);
+        subdivisions[1][1][1]->worldfilesave(x|mask,y|mask,z|mask);
     }
 }
 
-void Octree::filepushportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
-    std::ofstream file = std::ofstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::out|std::ios::binary|std::ios::trunc);
-    OctreePortionAwareBranch* look = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
-    if (look!=NULL) {
-        look->filesave(file);
-    } else {
-        OctreeBud(data->getser(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z))).filesave(file);
-    }
-    file.close();
-}
-void Octree::filepullportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
-    //    file =
-    std::ifstream file = std::ifstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::in|std::ios::binary);
-    std::cout<<filebase<<" was opened. \n";
-    expandchunk(x,y,z);
-    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(file,CHPOWER),data);
-    file.close();
-}
-bool Octree::dataexists(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
-    return boost::filesystem::exists(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)));
-}
+
+//bool Octree::dataexists(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+//    return boost::filesystem::exists(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)));
+//}
 
 OctreeSegment* makeOctree(std::ifstream& file,int recur) {
     char tester;
@@ -133,7 +126,7 @@ OctreeSegment* makeOctree(std::ifstream& file,int recur) {
         return new OctreeFeature(id,conflag);
     } else if (tester == 'c') {
         recur--;
-        if (recur == 6) {
+        if (recur == CHPOWER-1) {
             return new OctreePortionAwareBranch(makeOctree(file,recur),
                                                 makeOctree(file,recur),
                                                 makeOctree(file,recur),
@@ -141,7 +134,7 @@ OctreeSegment* makeOctree(std::ifstream& file,int recur) {
                                                 makeOctree(file,recur),
                                                 makeOctree(file,recur),
                                                 makeOctree(file,recur),
-                                                makeOctree(file,recur),recur,true);
+                                                makeOctree(file,recur),true);
         } else {
             return new OctreeBranch(makeOctree(file,recur),
                                     makeOctree(file,recur),
@@ -157,7 +150,11 @@ OctreeSegment* makeOctree(std::ifstream& file,int recur) {
     }
 }
 
-OctreeSegment* loadWorldFile(std::ifstream& file,int recur) {
+OctreeSegment* loadWorldFile(std::ifstream& file,BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
+    BlockLoc mask = 1<<recur;
+    x&=~mask;
+    y&=~mask;
+    z&=~mask;
     char tester;
     file.read(&tester,1);
     if (tester == 's') {
@@ -166,63 +163,71 @@ OctreeSegment* loadWorldFile(std::ifstream& file,int recur) {
         return new OctreeBud(id);
     } else if (tester == 'c') {
         recur--;
-        if (recur<=MAX_WORLDFILE_GEOMSAVE-1) {
-            uint8_t x;
-            uint8_t y;
-            uint8_t z;
-            file.read((char*) &x,sizeof(uint8_t));
-            file.read((char*) &y,sizeof(uint8_t));
-            file.read((char*) &z,sizeof(uint8_t));
+        if (recur<MAX_WORLDFILE_GEOMSAVE) {
+            uint8_t xu;
+            uint8_t yu;
+            uint8_t zu;
+            file.read((char*) &xu,sizeof(uint8_t));
+            file.read((char*) &yu,sizeof(uint8_t));
+            file.read((char*) &zu,sizeof(uint8_t));
             if (recur > MIN_WORLDFILE_GEOMSAVE-1) {
                 if (recur == CHPOWER-1) {
-                    return new OctreePortionAwareBranch(loadWorldFile(file,recur),
-                                                        loadWorldFile(file,recur),
-                                                        loadWorldFile(file,recur),
-                                                        loadWorldFile(file,recur),
-                                                        loadWorldFile(file,recur),
-                                                        loadWorldFile(file,recur),
-                                                        loadWorldFile(file,recur),
-                                                        loadWorldFile(file,recur),recur,x,y,x);
+                    g_vertecies = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
+                    OctreePortionAwareBranch* opab =
+                        new OctreePortionAwareBranch(loadWorldFile(file,x     ,y     ,z     ,recur),
+                                                     loadWorldFile(file,x|mask,y     ,z     ,recur),
+                                                     loadWorldFile(file,x     ,y|mask,z     ,recur),
+                                                     loadWorldFile(file,x|mask,y|mask,z     ,recur),
+                                                     loadWorldFile(file,x     ,y     ,z|mask,recur),
+                                                     loadWorldFile(file,x|mask,y     ,z|mask,recur),
+                                                     loadWorldFile(file,x     ,y|mask,z|mask,recur),
+                                                     loadWorldFile(file,x|mask,y|mask,z|mask,recur),false,readvoxvert(x,y,z,xu,yu,zu,CHPOWER));
+                    opab->vertecies = g_vertecies;
+                    return opab;
                 } else {
-                    return new OctreeBranch(loadWorldFile(file,recur),
-                                            loadWorldFile(file,recur),
-                                            loadWorldFile(file,recur),
-                                            loadWorldFile(file,recur),
-                                            loadWorldFile(file,recur),
-                                            loadWorldFile(file,recur),
-                                            loadWorldFile(file,recur),
-                                            loadWorldFile(file,recur),recur,x,y,x);
+                    return new OctreeBranch(loadWorldFile(file,x     ,y     ,z     ,recur),
+                                            loadWorldFile(file,x|mask,y     ,z     ,recur),
+                                            loadWorldFile(file,x     ,y|mask,z     ,recur),
+                                            loadWorldFile(file,x|mask,y|mask,z     ,recur),
+                                            loadWorldFile(file,x     ,y     ,z|mask,recur),
+                                            loadWorldFile(file,x|mask,y     ,z|mask,recur),
+                                            loadWorldFile(file,x     ,y|mask,z|mask,recur),
+                                            loadWorldFile(file,x|mask,y|mask,z|mask,recur),recur,readvoxvert(x,y,z,xu,yu,zu,recur+1));
                 }
             } else {
                 uint8_t conn;
                 uint8_t id;
-                file.read((char*) &id,sizeof(uint8_t));
                 file.read((char*) &conn,sizeof(uint8_t));
+                file.read((char*) &id,sizeof(uint8_t));
                 if (recur == CHPOWER-1) {
-                    return new OctreePortionAwareBranch(new OctreeBud(id),recur,x,y,x,conn);
+                    return new OctreePortionAwareBranch(id,readvoxvert(x,y,z,xu,yu,zu,CHPOWER),conn);
                 } else {
-                    return new OctreeBranch(new OctreeBud(id),recur,x,y,x,conn);
+                    return new OctreeBranch(id,recur,readvoxvert(x,y,z,xu,yu,zu,recur+1),conn);
                 }
             }
         } else {
             if (recur == CHPOWER-1) {
-                return new OctreePortionAwareBranch(loadWorldFile(file,recur),
-                                                    loadWorldFile(file,recur),
-                                                    loadWorldFile(file,recur),
-                                                    loadWorldFile(file,recur),
-                                                    loadWorldFile(file,recur),
-                                                    loadWorldFile(file,recur),
-                                                    loadWorldFile(file,recur),
-                                                    loadWorldFile(file,recur),recur,false);
+                g_vertecies = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
+                OctreePortionAwareBranch* opab =
+                    new OctreePortionAwareBranch(loadWorldFile(file,x     ,y     ,z     ,recur),
+                                                 loadWorldFile(file,x|mask,y     ,z     ,recur),
+                                                 loadWorldFile(file,x     ,y|mask,z     ,recur),
+                                                 loadWorldFile(file,x|mask,y|mask,z     ,recur),
+                                                 loadWorldFile(file,x     ,y     ,z|mask,recur),
+                                                 loadWorldFile(file,x|mask,y     ,z|mask,recur),
+                                                 loadWorldFile(file,x     ,y|mask,z|mask,recur),
+                                                 loadWorldFile(file,x|mask,y|mask,z|mask,recur),false);
+                opab->vertecies = g_vertecies;
+                return opab;
             } else {
-                return new OctreeBranch(loadWorldFile(file,recur),
-                                        loadWorldFile(file,recur),
-                                        loadWorldFile(file,recur),
-                                        loadWorldFile(file,recur),
-                                        loadWorldFile(file,recur),
-                                        loadWorldFile(file,recur),
-                                        loadWorldFile(file,recur),
-                                        loadWorldFile(file,recur),recur);
+                return new OctreeBranch(loadWorldFile(file,x     ,y     ,z     ,recur),
+                                        loadWorldFile(file,x|mask,y     ,z     ,recur),
+                                        loadWorldFile(file,x     ,y|mask,z     ,recur),
+                                        loadWorldFile(file,x|mask,y|mask,z     ,recur),
+                                        loadWorldFile(file,x     ,y     ,z|mask,recur),
+                                        loadWorldFile(file,x|mask,y     ,z|mask,recur),
+                                        loadWorldFile(file,x     ,y|mask,z|mask,recur),
+                                        loadWorldFile(file,x|mask,y|mask,z|mask,recur),recur);
             }
         }
     } else {

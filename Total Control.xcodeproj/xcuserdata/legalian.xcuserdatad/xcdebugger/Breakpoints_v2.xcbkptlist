@@ -9,14 +9,14 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Total Control/octree.cpp"
-            timestampString = "504839636.627088"
+            filePath = "Total Control/octreeseparator.cpp"
+            timestampString = "554757633.018921"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "406"
-            endingLineNumber = "406"
-            landmarkName = "OctreeBranch::insertinto(BlockLoc x,BlockLoc y,BlockLoc z,int recur,int thisdep,OctreeSegment* toinsert,OctreeSegment*&amp; self)"
-            landmarkType = "5">
+            startingLineNumber = "286"
+            endingLineNumber = "286"
+            landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -26,13 +26,45 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octreeseparator.cpp"
-            timestampString = "503960985.641555"
+            timestampString = "554757633.019037"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "308"
+            endingLineNumber = "308"
+            landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/octreeseparator.cpp"
+            timestampString = "554757633.01911"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "302"
+            endingLineNumber = "302"
+            landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/octreeseparator.cpp"
+            timestampString = "554757633.01917"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "317"
             endingLineNumber = "317"
             landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
-            landmarkType = "7">
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -42,77 +74,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octreeseparator.cpp"
-            timestampString = "503960985.641555"
+            timestampString = "554757633.019233"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "339"
-            endingLineNumber = "339"
+            startingLineNumber = "285"
+            endingLineNumber = "285"
             landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octreeseparator.cpp"
-            timestampString = "503960985.641555"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "333"
-            endingLineNumber = "333"
-            landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octreeseparator.cpp"
-            timestampString = "503960985.641555"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "348"
-            endingLineNumber = "348"
-            landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octreeseparator.cpp"
-            timestampString = "503960985.641555"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "316"
-            endingLineNumber = "316"
-            landmarkName = "testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octree.cpp"
-            timestampString = "503960985.641555"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "265"
-            endingLineNumber = "265"
-            landmarkName = "OctreePortionAwareBranch::isvbaked(BlockLoc x,BlockLoc y,BlockLoc z)"
-            landmarkType = "5">
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -122,13 +90,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/environment.cpp"
-            timestampString = "498760136.027561"
+            timestampString = "556473646.019448"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "192"
-            endingLineNumber = "192"
+            startingLineNumber = "94"
+            endingLineNumber = "94"
             landmarkName = "tearaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world,Environment* overflowbucket)"
-            landmarkType = "7">
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -138,75 +106,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/environment.cpp"
-            timestampString = "498760136.027561"
+            timestampString = "556473646.0195251"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "239"
-            endingLineNumber = "239"
+            startingLineNumber = "142"
+            endingLineNumber = "142"
             landmarkName = "tearaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world,Environment* overflowbucket)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/vox.cpp"
-            timestampString = "498863807.676825"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "140"
-            endingLineNumber = "140"
-            landmarkName = "Structure::render()"
-            landmarkType = "5">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octree.cpp"
-            timestampString = "504839636.627088"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "443"
-            endingLineNumber = "443"
-            landmarkName = "Octree::expand(int desireddepth)"
-            landmarkType = "5">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octree.cpp"
-            timestampString = "504839636.627088"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "294"
-            endingLineNumber = "294"
-            landmarkName = "OctreePortionAwareBranch::getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z)"
-            landmarkType = "5">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octree.cpp"
-            timestampString = "503960985.641555"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "181"
-            endingLineNumber = "181">
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -216,12 +122,104 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/materials.cpp"
-            timestampString = "496700083.036028"
+            timestampString = "556475054.635142"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "56"
-            endingLineNumber = "56"
+            startingLineNumber = "65"
+            endingLineNumber = "65"
             landmarkName = "renderall()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/environment.cpp"
+            timestampString = "556473646.019649"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "62"
+            endingLineNumber = "62"
+            landmarkName = "Environment::draw()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/materials.cpp"
+            timestampString = "556475054.635241"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "63"
+            endingLineNumber = "63"
+            landmarkName = "renderall()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/octreemeshgenerator.cpp"
+            timestampString = "556475054.635306"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "293"
+            endingLineNumber = "293">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/octreemeshgenerator.cpp"
+            timestampString = "556475054.635363"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "293"
+            endingLineNumber = "293">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/main.cpp"
+            timestampString = "556465329.355054"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "148"
+            endingLineNumber = "148"
+            landmarkName = "main()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Total Control/octree.cpp"
+            timestampString = "556475054.6354409"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "326"
+            endingLineNumber = "326"
+            landmarkName = "OctreeSegment::dataloadedat(BlockLoc x,BlockLoc y,BlockLoc z)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -232,11 +230,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octree.cpp"
-            timestampString = "503960985.641555"
+            timestampString = "556475054.6355129"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "174"
-            endingLineNumber = "174">
+            startingLineNumber = "323"
+            endingLineNumber = "323"
+            landmarkName = "OctreeSegment::dataloadedat(BlockLoc x,BlockLoc y,BlockLoc z)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -246,11 +246,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octree.cpp"
-            timestampString = "504028777.769663"
+            timestampString = "556475054.635592"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "177"
-            endingLineNumber = "177">
+            startingLineNumber = "322"
+            endingLineNumber = "322"
+            landmarkName = "OctreeSegment::dataloadedat(BlockLoc x,BlockLoc y,BlockLoc z)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -259,26 +261,14 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Total Control/octree.cpp"
-            timestampString = "504028778.255626"
+            filePath = "Total Control/renderterrain.cpp"
+            timestampString = "556475054.6356651"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "179"
-            endingLineNumber = "179">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octree.cpp"
-            timestampString = "504028778.864688"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "178"
-            endingLineNumber = "178">
+            startingLineNumber = "23"
+            endingLineNumber = "23"
+            landmarkName = "GeomTerrain::addVertExlayNormal(glm::vec3 normal)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

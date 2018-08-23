@@ -18,9 +18,10 @@
 //ShaderTerrain* materials[];
 
 
-void registergeom(uint8_t,GeomTerrain*);
+void registergeom(uint8_t,GeomLense);
 void renderall();
 void cleanup();
-
+void setdefaultmatrix(glm::mat4*);
+bool frustrumcul(glm::vec4,float);
 
 #endif /* materials_hpp */
