@@ -63,7 +63,7 @@ void OctreeBranch::filesave() {
 }
 void OctreePortionAwareBranch::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
     g_vertecies = vertecies;
-    std::cout<<vertecies<<"\n";
+    g_normals = normals;
     OctreeBranch::worldfilesave(x,y,z);
 }
 void OctreeBranch::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
@@ -74,12 +74,22 @@ void OctreeBranch::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
     char towrite = 'c';
     s_file->write(&towrite,1);
     if (depth<MAX_WORLDFILE_GEOMSAVE) {
-        uint8_t xpos = savevoxvert(x,g_vertecies[depth+1][point].x,depth+1);
-        uint8_t ypos = savevoxvert(y,g_vertecies[depth+1][point].y,depth+1);
-        uint8_t zpos = savevoxvert(z,g_vertecies[depth+1][point].z,depth+1);
+        uint8_t xpos,ypos,zpos;
+        int8_t xnor,ynor,znor;
+        if (point!=-1) {
+            xpos = savevoxvert(x,g_vertecies[depth+1][point].x,depth+1);
+            ypos = savevoxvert(y,g_vertecies[depth+1][point].y,depth+1);
+            zpos = savevoxvert(z,g_vertecies[depth+1][point].z,depth+1);
+            xnor = savevoxnorm(g_normals[depth+1][point].x);
+            ynor = savevoxnorm(g_normals[depth+1][point].y);
+            znor = savevoxnorm(g_normals[depth+1][point].z);
+        }
         s_file->write((char*)&xpos, sizeof(uint8_t));
         s_file->write((char*)&ypos, sizeof(uint8_t));
         s_file->write((char*)&zpos, sizeof(uint8_t));
+        s_file->write((char*)&xnor, sizeof(int8_t));
+        s_file->write((char*)&ynor, sizeof(int8_t));
+        s_file->write((char*)&znor, sizeof(int8_t));
         if (depth+1==MIN_WORLDFILE_GEOMSAVE) {
             uint8_t getmeh = getser(0,0,0);
             s_file->write((char*)&connections, sizeof(uint8_t));
@@ -127,14 +137,28 @@ OctreeSegment* makeOctree(std::ifstream& file,int recur) {
     } else if (tester == 'c') {
         recur--;
         if (recur == CHPOWER-1) {
-            return new OctreePortionAwareBranch(makeOctree(file,recur),
-                                                makeOctree(file,recur),
-                                                makeOctree(file,recur),
-                                                makeOctree(file,recur),
-                                                makeOctree(file,recur),
-                                                makeOctree(file,recur),
-                                                makeOctree(file,recur),
-                                                makeOctree(file,recur),true);
+            g_vertecies = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
+            g_normals = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
+            OctreePortionAwareBranch* opab =
+                new OctreePortionAwareBranch(makeOctree(file,recur),//IT"S THE THREAD
+                                             makeOctree(file,recur),
+                                             makeOctree(file,recur),
+                                             makeOctree(file,recur),
+                                             makeOctree(file,recur),
+                                             makeOctree(file,recur),
+                                             makeOctree(file,recur),
+                                             makeOctree(file,recur),true);
+            opab->vertecies = g_vertecies;
+            opab->normals = g_normals;
+            return opab;
+//            return new OctreePortionAwareBranch(makeOctree(file,recur),
+//                                             makeOctree(file,recur),
+//                                             makeOctree(file,recur),
+//                                             makeOctree(file,recur),
+//                                             makeOctree(file,recur),
+//                                             makeOctree(file,recur),
+//                                             makeOctree(file,recur),
+//                                             makeOctree(file,recur),true);
         } else {
             return new OctreeBranch(makeOctree(file,recur),
                                     makeOctree(file,recur),
@@ -164,15 +188,18 @@ OctreeSegment* loadWorldFile(std::ifstream& file,BlockLoc x,BlockLoc y,BlockLoc 
     } else if (tester == 'c') {
         recur--;
         if (recur<MAX_WORLDFILE_GEOMSAVE) {
-            uint8_t xu;
-            uint8_t yu;
-            uint8_t zu;
+            uint8_t xu,yu,zu;
+            int8_t xv,yv,zv;
             file.read((char*) &xu,sizeof(uint8_t));
             file.read((char*) &yu,sizeof(uint8_t));
             file.read((char*) &zu,sizeof(uint8_t));
+            file.read((char*) &xv,sizeof(int8_t));
+            file.read((char*) &yv,sizeof(int8_t));
+            file.read((char*) &zv,sizeof(int8_t));
             if (recur > MIN_WORLDFILE_GEOMSAVE-1) {
                 if (recur == CHPOWER-1) {
                     g_vertecies = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
+                    g_normals = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
                     OctreePortionAwareBranch* opab =
                         new OctreePortionAwareBranch(loadWorldFile(file,x     ,y     ,z     ,recur),
                                                      loadWorldFile(file,x|mask,y     ,z     ,recur),
@@ -181,8 +208,9 @@ OctreeSegment* loadWorldFile(std::ifstream& file,BlockLoc x,BlockLoc y,BlockLoc 
                                                      loadWorldFile(file,x     ,y     ,z|mask,recur),
                                                      loadWorldFile(file,x|mask,y     ,z|mask,recur),
                                                      loadWorldFile(file,x     ,y|mask,z|mask,recur),
-                                                     loadWorldFile(file,x|mask,y|mask,z|mask,recur),false,readvoxvert(x,y,z,xu,yu,zu,CHPOWER));
+                                                     loadWorldFile(file,x|mask,y|mask,z|mask,recur),false,readvoxvert(x,y,z,xu,yu,zu,CHPOWER),readvoxnorm(xv,yv,zv));
                     opab->vertecies = g_vertecies;
+                    opab->normals = g_normals;
                     return opab;
                 } else {
                     return new OctreeBranch(loadWorldFile(file,x     ,y     ,z     ,recur),
@@ -192,7 +220,7 @@ OctreeSegment* loadWorldFile(std::ifstream& file,BlockLoc x,BlockLoc y,BlockLoc 
                                             loadWorldFile(file,x     ,y     ,z|mask,recur),
                                             loadWorldFile(file,x|mask,y     ,z|mask,recur),
                                             loadWorldFile(file,x     ,y|mask,z|mask,recur),
-                                            loadWorldFile(file,x|mask,y|mask,z|mask,recur),recur,readvoxvert(x,y,z,xu,yu,zu,recur+1));
+                                            loadWorldFile(file,x|mask,y|mask,z|mask,recur),recur,readvoxvert(x,y,z,xu,yu,zu,recur+1),readvoxnorm(xv,yv,zv));
                 }
             } else {
                 uint8_t conn;
@@ -200,14 +228,15 @@ OctreeSegment* loadWorldFile(std::ifstream& file,BlockLoc x,BlockLoc y,BlockLoc 
                 file.read((char*) &conn,sizeof(uint8_t));
                 file.read((char*) &id,sizeof(uint8_t));
                 if (recur == CHPOWER-1) {
-                    return new OctreePortionAwareBranch(id,readvoxvert(x,y,z,xu,yu,zu,CHPOWER),conn);
+                    return new OctreePortionAwareBranch(id,readvoxvert(x,y,z,xu,yu,zu,CHPOWER),readvoxnorm(xv,yv,zv),conn);
                 } else {
-                    return new OctreeBranch(id,recur,readvoxvert(x,y,z,xu,yu,zu,recur+1),conn);
+                    return new OctreeBranch(id,recur,readvoxvert(x,y,z,xu,yu,zu,recur+1),readvoxnorm(xv,yv,zv),conn);
                 }
             }
         } else {
             if (recur == CHPOWER-1) {
                 g_vertecies = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
+                g_normals = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
                 OctreePortionAwareBranch* opab =
                     new OctreePortionAwareBranch(loadWorldFile(file,x     ,y     ,z     ,recur),
                                                  loadWorldFile(file,x|mask,y     ,z     ,recur),
@@ -218,6 +247,7 @@ OctreeSegment* loadWorldFile(std::ifstream& file,BlockLoc x,BlockLoc y,BlockLoc 
                                                  loadWorldFile(file,x     ,y|mask,z|mask,recur),
                                                  loadWorldFile(file,x|mask,y|mask,z|mask,recur),false);
                 opab->vertecies = g_vertecies;
+                opab->normals = g_normals;
                 return opab;
             } else {
                 return new OctreeBranch(loadWorldFile(file,x     ,y     ,z     ,recur),

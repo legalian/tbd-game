@@ -21,7 +21,6 @@ GLFWwindow* window;
 #include "environment.h"
 #include "renderterrain.h"
 #include "octree.h"
-#include "materials.h"
 
 #include <pthread.h>
 //#include "qef.h"
@@ -59,7 +58,7 @@ void initialize(){
     
     // Open a window and create its OpenGL context
     window = glfwCreateWindow( 1024, 768, "Playground", NULL, NULL);
-    if( window == NULL ){
+    if( window == NULL ) {
         fprintf( stderr, "Failed to open GLFW window.\n" );
         glfwTerminate();
         throw;
@@ -196,7 +195,7 @@ int main()
     
     
     Environment world;
-    Structure* temppoint = new Structure("freshtest",world,true);
+    Structure* temppoint = new Structure("newformat",world,true);
     temppoint->source = new SimpleTerrainSample();
     world.addstructure(temppoint);
     world.opensavedirectory();

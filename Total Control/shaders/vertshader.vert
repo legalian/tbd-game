@@ -18,6 +18,7 @@ void main(){
     gl_Position = MVP * vec4(vertexPosition_modelspace, 1.0);
     
 //    fragmentColor = vertexColor;
+//    vec3 vertexNormal_modelspace = vec3(1.0,1.0,1.0);
     normalColor = (vertexNormal_modelspace+1)/2.0;
     //UV = vertexUV;
     

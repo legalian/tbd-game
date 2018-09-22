@@ -30,23 +30,24 @@
 #include "texture.h"
 #include "constants.h"
 
+
 struct OctreePortionAwareBranch;
 
 class GeomTerrain {
 public:
-    std::vector<int> indexed;
-    std::vector<int> extreme;
-    int** lodlayers;
+    std::vector<unsigned int> indexed;
+//    std::vector<unsigned int> extreme;
+    unsigned int** lodlayers;
     GLuint* primbuffer;
-    int* coresize;
-    int* totalsize;
+//    unsigned int* coresize;
+    unsigned int* totalsize;
     std::vector<glm::vec3> exlay;
     std::vector<glm::vec3> exlaynormal;
     GLuint exlaybuffer;
     GLuint exlaynormalbuffer;
     
     void addVert(int);
-    void addVertExt(int);
+//    void addVertExt(int);
     void addVertExlay(glm::vec3);
     void addVertExlayNormal(glm::vec3);
     
@@ -55,6 +56,9 @@ public:
     
     GeomTerrain();
     
+    bool baked=false;
+    bool exbaked=false;
+    bool mthreadinitialized=false;
     void bake();
     glm::mat4* matrix=NULL;
 };
@@ -88,6 +92,12 @@ public:
 };
 #endif
 
+
+void registergeom(uint8_t,GeomLense);
+void renderall();
+void cleanup();
+void setdefaultmatrix(glm::mat4*);
+bool frustrumcul(glm::vec4,float);
 
 
 #endif /* defined(__Total_Control__Organizational__) */

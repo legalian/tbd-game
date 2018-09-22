@@ -13,8 +13,8 @@
 
 #include <map>
 #include "constants.h"
-#include "materials.h"
-#include "qef.h"
+//#include "materials.h"
+#include "renderterrain.h"
 #include <fstream>
 #include <set>
 
@@ -32,10 +32,13 @@ extern thread_local int* g_olods;
 extern thread_local OctreeSegment* g_world;
 extern thread_local std::map<uint8_t,GeomTerrain>* g_geometry;
 extern thread_local std::vector<glm::vec3>* g_vertecies;
+extern thread_local std::vector<glm::vec3>* g_normals;
 extern thread_local std::ostream* s_file;
 
 glm::vec3 readvoxvert(int,int,int,uint8_t,uint8_t,uint8_t,int);
 uint8_t savevoxvert(int,float,int);
+glm::vec3 readvoxnorm(int8_t,int8_t,int8_t);
+int8_t savevoxnorm(float);
 
 struct Location {
     int x;
@@ -82,6 +85,9 @@ struct BranchRegistry {
     bool contains(OctreeBranch*);
 };
 struct MatrixCarriage {
+    QefPerc Vx;
+    QefPerc Vy;
+    QefPerc Vz;
     QefPerc Mx;
     QefPerc My;
     QefPerc Mz;
@@ -97,9 +103,10 @@ struct MatrixCarriage {
     QefPerc AAyz;
     friend MatrixCarriage operator+(const MatrixCarriage&, const MatrixCarriage&);
     MatrixCarriage();
-    MatrixCarriage(QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,int);
+    MatrixCarriage(QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,int);
     MatrixCarriage translate(QefPerc,QefPerc,QefPerc);
     glm::vec3 evaluate(int);
+    glm::vec3 evaluatenormal();
 };
 struct __attribute__((packed)) Edgedat {
     uint8_t t;
@@ -124,11 +131,13 @@ struct OctreeSegment {
     bool dataexistsat(BlockLoc,BlockLoc,BlockLoc);
     bool datapsuedoat(BlockLoc,BlockLoc,BlockLoc);
 
+    virtual void testcoherence();
 //    virtual MatrixCarriage getqef();
     virtual MatrixCarriage vertify(BlockLoc,BlockLoc,BlockLoc);
     virtual void geomify(BlockLoc,BlockLoc,BlockLoc);
 //    virtual void hermitify(BlockLoc,BlockLoc,BlockLoc);
     virtual OctreePortionAwareBranch* getvoxunit(BlockLoc,BlockLoc,BlockLoc);
+    virtual OctreeSegment* indivref(BlockLoc,BlockLoc,BlockLoc);
     virtual BlockId getser(BlockLoc,BlockLoc,BlockLoc);
     virtual void manifestgeom(BlockLoc,BlockLoc,BlockLoc);
     virtual void manifestgeomsnippets(BlockLoc,BlockLoc,BlockLoc,int);
@@ -143,6 +152,7 @@ struct OctreeSegment {
     
     virtual int feat(BlockLoc,BlockLoc,BlockLoc);
     virtual glm::vec3& getfeature(BlockLoc,BlockLoc,BlockLoc);
+    virtual glm::vec3& getnormal(BlockLoc,BlockLoc,BlockLoc);
     
     
     virtual void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&);
@@ -165,7 +175,7 @@ struct OctreeFeature : OctreeSegment {
     OctreeFeature(BlockId,uint8_t);
 //    MatrixCarriage getqef() override;
     virtual int feat(BlockLoc,BlockLoc,BlockLoc) override;
-    
+    OctreeSegment* indivref(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
     MatrixCarriage vertify(BlockLoc,BlockLoc,BlockLoc) override;
     void filesave() override;
@@ -191,13 +201,14 @@ struct OctreeBud : OctreeSegment {
     void filesave() override;
     void worldfilesave(BlockLoc,BlockLoc,BlockLoc) override;
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&) override;
+    OctreeSegment* indivref(BlockLoc,BlockLoc,BlockLoc) override;
     uint8_t giveimconflag() override;
 };
 struct OctreeBranch : OctreeSegment {
     int depth;
     uint8_t connections = 0;
     
-    int point=0;//TODO
+    int point=-1;//TODO
     OctreeSegment* subdivisions[2][2][2];
     
     OctreeBranch(OctreeSegment*,OctreeSegment*,
@@ -207,8 +218,8 @@ struct OctreeBranch : OctreeSegment {
     OctreeBranch(OctreeSegment*,OctreeSegment*,
                  OctreeSegment*,OctreeSegment*,
                  OctreeSegment*,OctreeSegment*,
-                 OctreeSegment*,OctreeSegment*,int,glm::vec3);
-    OctreeBranch(BlockId,int,glm::vec3,uint8_t);
+                 OctreeSegment*,OctreeSegment*,int,glm::vec3,glm::vec3);
+    OctreeBranch(BlockId,int,glm::vec3,glm::vec3,uint8_t);
     
     void determinelod(BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,BlockLoc,bool,OctreeSegment*) override;
 
@@ -220,11 +231,13 @@ struct OctreeBranch : OctreeSegment {
     void manifestgeom(BlockLoc,BlockLoc,BlockLoc) override;
     void manifestgeomsnippets(BlockLoc,BlockLoc,BlockLoc,int) override;
     
+    void testcoherence() override;
 
     void prepare(BlockLoc,BlockLoc,BlockLoc) override;
 
 //    void hermitify(BlockLoc,BlockLoc,BlockLoc) override;
     OctreePortionAwareBranch* getvoxunit(BlockLoc x,BlockLoc y,BlockLoc z) override;
+    OctreeSegment* indivref(BlockLoc,BlockLoc,BlockLoc) override;
     BlockId getser(BlockLoc,BlockLoc,BlockLoc) override;
 
     void filesave() override;
@@ -234,6 +247,7 @@ struct OctreeBranch : OctreeSegment {
 
     virtual int feat(BlockLoc,BlockLoc,BlockLoc) override;
     virtual glm::vec3& getfeature(BlockLoc,BlockLoc,BlockLoc) override;
+    virtual glm::vec3& getnormal(BlockLoc,BlockLoc,BlockLoc) override;
 
     void insertinto(BlockLoc,BlockLoc,BlockLoc,int,int,OctreeSegment*,OctreeSegment*&) override;
     void testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*,BranchRegistry*) override;
@@ -248,17 +262,19 @@ struct OctreePortionAwareBranch : OctreeBranch {
 //    bool changed    = false;
 
 
-    int otherlods[6] = {-1,-1,-1,-1,-1,-1};
+    int otherlods[7] = {-1,-1,-1,-1,-1,-1,-1};
     int lod = -1;
     bool hardload = false;
     bool prepared = false;
     bool voxed = false;
     bool psuedovoxed = false;
-    std::vector<glm::vec3>* vertecies;
-    std::vector<glm::vec3>* normals;
+    std::vector<glm::vec3>* vertecies=0;
+    std::vector<glm::vec3>* normals=0;
     
-    GLuint vertbuffer;
-    GLuint normbuffer;
+    GLuint* vertbuffer = new GLuint[MAX_WORLDFILE_GEOMSAVE+1];
+    GLuint* normbuffer = new GLuint[MAX_WORLDFILE_GEOMSAVE+1];
+    bool baked = false;
+    bool mthreadinitialized = false;
     
     std::map<uint8_t,GeomTerrain> geometry;
     
@@ -269,9 +285,9 @@ struct OctreePortionAwareBranch : OctreeBranch {
     OctreePortionAwareBranch(OctreeSegment*,OctreeSegment*,
                              OctreeSegment*,OctreeSegment*,
                              OctreeSegment*,OctreeSegment*,
-                             OctreeSegment*,OctreeSegment*,bool,glm::vec3);
+                             OctreeSegment*,OctreeSegment*,bool,glm::vec3,glm::vec3);
 //    OctreePortionAwareBranch(OctreeSegment*,int,uint8_t,uint8_t,uint8_t,uint8_t);
-    OctreePortionAwareBranch(BlockId,glm::vec3,uint8_t);
+    OctreePortionAwareBranch(BlockId,glm::vec3,glm::vec3,uint8_t);
     
     void worldfilesave(BlockLoc,BlockLoc,BlockLoc) override;
     
@@ -284,9 +300,12 @@ struct OctreePortionAwareBranch : OctreeBranch {
     OctreeSegment* pullaway(BlockLoc,BlockLoc,BlockLoc,int,OctreeSegment*&) override;
     
     glm::vec3& getfeature(BlockLoc,BlockLoc,BlockLoc) override;
+    glm::vec3& getnormal(BlockLoc,BlockLoc,BlockLoc) override;
     
 //    void updatevisual(BlockLoc x,BlockLoc y,BlockLoc z);
     bool surroundinglod(BlockLoc x,BlockLoc y,BlockLoc z);
+    
+    void bake();
 };
 
 

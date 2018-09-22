@@ -58,7 +58,7 @@ void Structure::expand(int desireddepth) {
                 data = new OctreePortionAwareBranch(new OctreeBud(popular),new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),
-                                                    new OctreeBud(popular),data,false);
+                                                    new OctreeBud(popular),data,true);
             } else {
                 data = new OctreePortionAwareBranch(data,new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),
@@ -167,12 +167,12 @@ bool Structure::attain(Location pos,Location ppos) {
     bool load = false;
     bool generate = false;
     
-    extern const int levelsofdetail;
+//    extern const int levelsofdetail;
     extern const int lodlimits[];
     BlockLoc mask = CHSIZE/2;
     float distance = sqrtf(((pos.x-ppos.x)*CHSIZE+mask)*((pos.x-ppos.x)*CHSIZE+mask) + ((pos.y-ppos.y)*CHSIZE+mask)*((pos.y-ppos.y)*CHSIZE+mask) + ((pos.z-ppos.z)*CHSIZE+mask)*((pos.z-ppos.z)*CHSIZE+mask));
     int lod;
-    for(lod=0;lodlimits[lod]<distance&&lod<levelsofdetail;lod++) {}
+    for(lod=0;lodlimits[lod]<distance&&lod<=MAX_WORLDFILE_GEOMSAVE;lod++) {}
     
     
     if (underpressure(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z))>depth) {
@@ -206,6 +206,9 @@ bool Structure::attain(Location pos,Location ppos) {
     if (depth>CHPOWER+1) {
         data->prepare(ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(0));
     }
+//    if (load) std::cout<<"load";
+//    if (generate) std::cout<<"generate";
+//    std::cout<<"\n";
     if (load or generate) {
         std::ofstream file = std::ofstream(SAVEDIR "/"+structureid+"/massfile",std::ios::out|std::ios::binary|std::ios::trunc);
         file.write((char*)&(depth),sizeof(int));

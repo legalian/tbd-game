@@ -121,22 +121,6 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Total Control/materials.cpp"
-            timestampString = "556475054.635142"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "65"
-            endingLineNumber = "65"
-            landmarkName = "renderall()"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
             filePath = "Total Control/environment.cpp"
             timestampString = "556473646.019649"
             startingColumnNumber = "9223372036854775807"
@@ -153,14 +137,12 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Total Control/materials.cpp"
-            timestampString = "556475054.635241"
+            filePath = "Total Control/octreemeshgenerator.cpp"
+            timestampString = "558982316.329826"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "63"
-            endingLineNumber = "63"
-            landmarkName = "renderall()"
-            landmarkType = "9">
+            startingLineNumber = "265"
+            endingLineNumber = "265">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -170,25 +152,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octreemeshgenerator.cpp"
-            timestampString = "556475054.635306"
+            timestampString = "558982316.3299249"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "293"
-            endingLineNumber = "293">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Total Control/octreemeshgenerator.cpp"
-            timestampString = "556475054.635363"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "293"
-            endingLineNumber = "293">
+            startingLineNumber = "265"
+            endingLineNumber = "265">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -198,11 +166,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/main.cpp"
-            timestampString = "556465329.355054"
+            timestampString = "559250533.533947"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "148"
-            endingLineNumber = "148"
+            startingLineNumber = "147"
+            endingLineNumber = "147"
             landmarkName = "main()"
             landmarkType = "9">
          </BreakpointContent>
@@ -214,11 +182,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octree.cpp"
-            timestampString = "556475054.6354409"
+            timestampString = "558982316.3300461"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "326"
-            endingLineNumber = "326"
+            startingLineNumber = "363"
+            endingLineNumber = "363"
             landmarkName = "OctreeSegment::dataloadedat(BlockLoc x,BlockLoc y,BlockLoc z)"
             landmarkType = "7">
          </BreakpointContent>
@@ -230,11 +198,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octree.cpp"
-            timestampString = "556475054.6355129"
+            timestampString = "558982316.330122"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "323"
-            endingLineNumber = "323"
+            startingLineNumber = "357"
+            endingLineNumber = "357"
             landmarkName = "OctreeSegment::dataloadedat(BlockLoc x,BlockLoc y,BlockLoc z)"
             landmarkType = "7">
          </BreakpointContent>
@@ -246,11 +214,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/octree.cpp"
-            timestampString = "556475054.635592"
+            timestampString = "558982316.330195"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "322"
-            endingLineNumber = "322"
+            startingLineNumber = "356"
+            endingLineNumber = "356"
             landmarkName = "OctreeSegment::dataloadedat(BlockLoc x,BlockLoc y,BlockLoc z)"
             landmarkType = "7">
          </BreakpointContent>
@@ -262,13 +230,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Total Control/renderterrain.cpp"
-            timestampString = "556475054.6356651"
+            timestampString = "558982316.330269"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "23"
-            endingLineNumber = "23"
-            landmarkName = "GeomTerrain::addVertExlayNormal(glm::vec3 normal)"
-            landmarkType = "7">
+            startingLineNumber = "48"
+            endingLineNumber = "48"
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

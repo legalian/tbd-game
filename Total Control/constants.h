@@ -71,7 +71,7 @@ const int lodlimits[] = {
 1200,
 1400
 };
-const int levelsofdetail = 4;
+//const int levelsofdetail = 4;
 
 
 #endif /* constants_h */

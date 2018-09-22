@@ -14,6 +14,45 @@ NoiseVolume sample2;
 NoiseVolume sample3;
 
 
+
+
+//GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path){
+//    
+//    GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+//    GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+//    
+//    GLint Result = GL_FALSE;
+//    int InfoLogLength = 0;
+//    
+//    LoadSingleShader(VertexShaderID, vertex_file_path, Result, InfoLogLength);
+//    LoadSingleShader(FragmentShaderID, fragment_file_path, Result, InfoLogLength);
+//    
+//    printf("Linking program\n");
+//    GLuint ProgramID = glCreateProgram();
+//    glAttachShader(ProgramID, VertexShaderID);
+//    glAttachShader(ProgramID, FragmentShaderID);
+//    glLinkProgram(ProgramID);
+//    
+//    glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
+//    glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+//    if ( InfoLogLength > 0 ){
+//        std::vector<char> ProgramErrorMessage(InfoLogLength+1);
+//        glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
+//        printf("%s\n", &ProgramErrorMessage[0]);
+//    }
+//    
+//    glDeleteShader(VertexShaderID);
+//    glDeleteShader(FragmentShaderID);
+//    
+//    return ProgramID;
+//}
+
+
+
+
+
+
+
 NoiseVolume::NoiseVolume() {
     for (int xi=0;xi<RANDSIZE;xi++) {
         for (int yi=0;yi<RANDSIZE;yi++) {
