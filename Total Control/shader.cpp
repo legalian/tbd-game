@@ -9,18 +9,22 @@
 #include "shader.h"
 #include "texture.h"
 
-
+void glassert();
 
 using namespace std;
 
 GLuint LoadComputeShader(const char * compute_file_path){
+    std::cout<<"_+_+_+_+_+_+_+_+_\n";
     
+    glassert();
     GLuint ComputerShaderID = glCreateShader(GL_COMPUTE_SHADER);
     
+    glassert();
     GLint Result = GL_FALSE;
     int InfoLogLength = 0;
     
     LoadSingleShader(ComputerShaderID, compute_file_path, Result, InfoLogLength);
+    
     
     printf("Linking program\n");
     GLuint ProgramID = glCreateProgram();

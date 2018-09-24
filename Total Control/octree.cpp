@@ -378,5 +378,21 @@ bool OctreeSegment::serloadedat(int x,int y,int z) {//used to determine if surro
 }
 
 
+void glassert() {
+    auto r = glGetError();
+    if (r!=0) {
+        switch (r) {
+            case 0x0500:      std::cout<<"Invalid enum\n";throw;
+            case 0x0501:     std::cout<<"Invalid value\n";throw;
+            case 0x0502: std::cout<<"Invalid operation\n";throw;
+            case 0x0503:    std::cout<<"Stack overflow\n";throw;
+            case 0x0504:   std::cout<<"Stack underflow\n";throw;
+            case 0x0505:     std::cout<<"Out of memory\n";throw;
+            default:         std::cout<<"Unknown error\n";throw;
+        }
+    }
+}
+
+
 
 

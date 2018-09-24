@@ -317,6 +317,10 @@ struct OctreePortionAwareBranch : OctreeBranch {
     void bake();
 };
 
+void glassert();
+
+
+
 
 OctreeSegment* loadWorldFile(std::ifstream& file,int x,int y,int z,int recur);
 void tearaway(int,int,int,int,OctreeSegment*,Environment*);
