@@ -10,7 +10,7 @@
 
 
 void OctreeSegment::filesave() {throw;}
-void OctreeSegment::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {throw;}
+void OctreeSegment::worldfilesave(int x,int y,int z) {throw;}
 
 
 
@@ -44,7 +44,7 @@ void OctreeBud::filesave() {
     s_file->write(&towrite,1);
     s_file->write((char*)&fillvalue, sizeof(BlockId));
 }
-void OctreeBud::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
+void OctreeBud::worldfilesave(int x,int y,int z) {
     char towrite = 's';
     s_file->write(&towrite,1);
     s_file->write((char*)&fillvalue, sizeof(BlockId));
@@ -61,13 +61,13 @@ void OctreeBranch::filesave() {
     subdivisions[0][1][1]->filesave();
     subdivisions[1][1][1]->filesave();
 }
-void OctreePortionAwareBranch::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
+void OctreePortionAwareBranch::worldfilesave(int x,int y,int z) {
     g_vertecies = vertecies;
     g_normals = normals;
     OctreeBranch::worldfilesave(x,y,z);
 }
-void OctreeBranch::worldfilesave(BlockLoc x,BlockLoc y,BlockLoc z) {
-    BlockLoc mask = 1<<depth;
+void OctreeBranch::worldfilesave(int x,int y,int z) {
+    int mask = 1<<depth;
     x&=~mask;
     y&=~mask;
     z&=~mask;
@@ -174,8 +174,8 @@ OctreeSegment* makeOctree(std::ifstream& file,int recur) {
     }
 }
 
-OctreeSegment* loadWorldFile(std::ifstream& file,BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
-    BlockLoc mask = 1<<recur;
+OctreeSegment* loadWorldFile(std::ifstream& file,int x,int y,int z,int recur) {
+    int mask = 1<<recur;
     x&=~mask;
     y&=~mask;
     z&=~mask;

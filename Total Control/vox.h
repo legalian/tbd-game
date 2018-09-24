@@ -59,11 +59,11 @@ public:
     bool attain(Location,Location);
     void render();
     
-    void expand(BlockLoc,BlockLoc,BlockLoc);
-    void expandchunk(BlockLoc,BlockLoc,BlockLoc);
-    void expandarbit(BlockLoc,BlockLoc,BlockLoc,int);
+    void expand(int,int,int);
+    void expandchunk(int,int,int);
+    void expandarbit(int,int,int,int);
     void expand(int);
-    int underpressure(BlockLoc,BlockLoc,BlockLoc);
+    int underpressure(int,int,int);
     int depth = CHPOWER;
     int popular;
     
@@ -71,10 +71,10 @@ public:
     OctreeSegment* data=NULL;// = new OctreeBud(0);
 //    std::map<uint8_t,GeomTerrain> hardloadgroups[MAX_WORLDFILE_GEOMSAVE+1-MIN_WORLDFILE_GEOMSAVE];
     
-    void loadportion(BlockLoc,BlockLoc,BlockLoc,BlockId (*)[CHSIZE+1][CHSIZE+1]);
+//    void loadportion(int,int,int,BlockId (*)[CHSIZE+1][CHSIZE+1]);
 
-    void filepullportion(std::string,BlockLoc,BlockLoc,BlockLoc);
-    void filepushportion(std::string,BlockLoc,BlockLoc,BlockLoc);
+    void filepullportion(std::string,int,int,int);
+    void filepushportion(std::string,int,int,int);
     
 };
 //

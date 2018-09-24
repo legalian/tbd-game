@@ -196,7 +196,7 @@ int main()
     
     Environment world;
     Structure* temppoint = new Structure("newformat",world,true);
-    temppoint->source = new SimpleTerrainSample();
+    temppoint->source = new Sampler();
     world.addstructure(temppoint);
     world.opensavedirectory();
     world.beginthread();

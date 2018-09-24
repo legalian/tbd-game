@@ -16,45 +16,20 @@
 
 class Structure;
 
-class NoiseVolume {
-private:
-    float data[RANDSIZE][RANDSIZE][RANDSIZE];
-//    inline double interp(float&, float&, float&);
 
-public:
-    NoiseVolume();
-    float sample(double, double, double);
-};
 
 class Sampler {
+    GLuint test;
+    GLuint ssbo;
 public:
-    virtual void populate(BlockLoc,BlockLoc,BlockLoc,Structure&);
+    Sampler();
+    void populate(int,int,int,Structure&);
+    Edgedat xedge(int,int,int);
+    Edgedat yedge(int,int,int);
+    Edgedat zedge(int,int,int);
+    glm::vec3 normsamp(float,float,float);
 };
-class EmptySampler : public Sampler {
-public:
-    void populate(BlockLoc,BlockLoc,BlockLoc,Structure&) override;
-};
-class BoxSample : public Sampler {
-public:
-    void populate(BlockLoc,BlockLoc,BlockLoc,Structure&) override;
-};
-class SimpleTerrainSample : public Sampler {
-public:
-    void populate(BlockLoc,BlockLoc,BlockLoc,Structure&) override;
-    inline float fGetOffset(float,float);
-    inline float sample(float,float,float);
-};
-//class SimpleSample : public Sampler {
-//public:
-//    class Samplelayer {
-//    public:
-//        uint8_t material;
-//        float void sampleAt(double,double,double);
-//    };
-//    std::vector<Samplelayer*> layers;
-//    void populate(long,long,long,Octree&) override;
-//    void addlayer(Samplelayer*);
-//};
+
 
 
 

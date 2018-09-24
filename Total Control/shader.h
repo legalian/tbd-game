@@ -24,6 +24,7 @@
 
 void LoadSingleShader(GLint,const char *,GLint &,int &);
 
+GLuint LoadComputeShader(const char *);
 GLuint LoadShaders(const char *,const char *);
 GLuint LoadShaders(const char *,const char *,const char *);
 

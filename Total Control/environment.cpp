@@ -90,7 +90,7 @@ void* loaderthread(void* me) {
 
 
 
-void tearaway(BlockLoc x,BlockLoc y,BlockLoc z,int recur,OctreeSegment* world,Environment* overflowbucket) {
+void tearaway(int x,int y,int z,int recur,OctreeSegment* world,Environment* overflowbucket) {
 //    return;
     Structure* newguy = new Structure(overflowbucket->nextshardname(),*overflowbucket,false);
 //    std::cout<<"working\n";

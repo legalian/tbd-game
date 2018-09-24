@@ -17,18 +17,18 @@
 //};
 //const int levelsofdetail = 4;
 
-void OctreeSegment::determinelod(BlockLoc x,BlockLoc y,BlockLoc z,BlockLoc px,BlockLoc py,BlockLoc pz,bool force_redo,OctreeSegment *world) {}
-void OctreePortionAwareBranch::determinelod(BlockLoc x,BlockLoc y,BlockLoc z,BlockLoc px,BlockLoc py,BlockLoc pz,bool force_redo,OctreeSegment *world) {
+void OctreeSegment::determinelod(int x,int y,int z,int px,int py,int pz,bool force_redo,OctreeSegment *world) {}
+void OctreePortionAwareBranch::determinelod(int x,int y,int z,int px,int py,int pz,bool force_redo,OctreeSegment *world) {
 //    extern const int levelsofdetail;
     extern const int lodlimits[];
-    BlockLoc mask = 1<<depth;
+    int mask = 1<<depth;
 //    lod = (((x/CHSIZE)-(z/CHSIZE)+2*(y/CHSIZE))+9)%4;
 //    lod = (((x/CHSIZE)+(z/CHSIZE))+9)%4;
     float distance = sqrtf((x+mask-px)*(x+mask-px) + (y+mask-py)*(y+mask-py) + (z+mask-pz)*(z+mask-pz));
     for(lod=0;lodlimits[lod]<distance&&lod<=MAX_WORLDFILE_GEOMSAVE;lod++) {}
 }
-void OctreeBranch::determinelod(BlockLoc x,BlockLoc y,BlockLoc z,BlockLoc px,BlockLoc py,BlockLoc pz,bool force_redo,OctreeSegment *world) {
-    BlockLoc mask = 1<<depth;
+void OctreeBranch::determinelod(int x,int y,int z,int px,int py,int pz,bool force_redo,OctreeSegment *world) {
+    int mask = 1<<depth;
     x&=~mask;
     y&=~mask;
     z&=~mask;
@@ -41,9 +41,9 @@ void OctreeBranch::determinelod(BlockLoc x,BlockLoc y,BlockLoc z,BlockLoc px,Blo
     subdivisions[0][1][1]->determinelod(x     ,y|mask,z|mask,px,py,pz,force_redo,world);
     subdivisions[1][1][1]->determinelod(x|mask,y|mask,z|mask,px,py,pz,force_redo,world);
 }
-void OctreeSegment::geomify(BlockLoc x,BlockLoc y,BlockLoc z) {}
-void OctreeBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z) {
-    BlockLoc mask = 1<<depth;
+void OctreeSegment::geomify(int x,int y,int z) {}
+void OctreeBranch::geomify(int x,int y,int z) {
+    int mask = 1<<depth;
     x&=~mask;
     y&=~mask;
     z&=~mask;
@@ -56,7 +56,7 @@ void OctreeBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z) {
     subdivisions[0][1][1]->geomify(x     ,y|mask,z|mask);
     subdivisions[1][1][1]->geomify(x|mask,y|mask,z|mask);
 }
-bool OctreePortionAwareBranch::surroundinglod(BlockLoc x,BlockLoc y,BlockLoc z) {
+bool OctreePortionAwareBranch::surroundinglod(int x,int y,int z) {
     const int wahoo[7][3] = {
         {-1,0,0},
         {0,-1,0},
@@ -76,19 +76,19 @@ bool OctreePortionAwareBranch::surroundinglod(BlockLoc x,BlockLoc y,BlockLoc z) 
     }
     return needupdate;
 }
-void OctreePortionAwareBranch::geomify(BlockLoc x,BlockLoc y,BlockLoc z) {
+void OctreePortionAwareBranch::geomify(int x,int y,int z) {
     if (!(
     (lod<MIN_WORLDFILE_GEOMSAVE and voxed) or
     (lod>=MIN_WORLDFILE_GEOMSAVE and (psuedovoxed or voxed))
     )) return;
     if (!prepared) return;
     if (frustrumcul(glm::vec4(x+(1<<depth)-ASBLOCKLOC(0),y+(1<<depth)-ASBLOCKLOC(0),z+(1<<depth)-ASBLOCKLOC(0),1),2<<depth)) {
-        if (g_world->dataloadedat(x-CHSIZE,y,z) and
-            g_world->dataloadedat(x,y-CHSIZE,z) and
-            g_world->dataloadedat(x,y,z-CHSIZE) and
-            g_world->dataloadedat(x,y-CHSIZE,z-CHSIZE) and
-            g_world->dataloadedat(x-CHSIZE,y,z-CHSIZE) and
-            g_world->dataloadedat(x-CHSIZE,y-CHSIZE,z)) {
+        if (g_world->vertsloadedat(x-CHSIZE,y,z) and
+            g_world->vertsloadedat(x,y-CHSIZE,z) and
+            g_world->vertsloadedat(x,y,z-CHSIZE) and
+            g_world->vertsloadedat(x,y-CHSIZE,z-CHSIZE) and
+            g_world->vertsloadedat(x-CHSIZE,y,z-CHSIZE) and
+            g_world->vertsloadedat(x-CHSIZE,y-CHSIZE,z)) {
             if (surroundinglod(x,y,z)) {
 //                std::cout<<Location((x-ASBLOCKLOC(0))/CHSIZE,(y-ASBLOCKLOC(0))/CHSIZE,(z-ASBLOCKLOC(0))/CHSIZE).tostring()<<"<g\n";
                 for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
@@ -167,8 +167,8 @@ if (materialprops[f]!=materialprops[x]) { \
 
 
 
-void OctreeSegment::manifestgeomsnippets(BlockLoc x,BlockLoc y,BlockLoc z,int f) {}
-void OctreeBranch::manifestgeomsnippets(BlockLoc x,BlockLoc y,BlockLoc z,int f) {
+void OctreeSegment::manifestgeomsnippets(int x,int y,int z,int f) {}
+void OctreeBranch::manifestgeomsnippets(int x,int y,int z,int f) {
     if (f) {
         if (g_lod>depth) {
             extern uint8_t materialprops[];
@@ -195,7 +195,7 @@ void OctreeBranch::manifestgeomsnippets(BlockLoc x,BlockLoc y,BlockLoc z,int f) 
             }
             g_lod = lod;
         } else {
-            BlockLoc mask = 1<<depth;
+            int mask = 1<<depth;
             subdivisions[0][0][0]->manifestgeomsnippets(x     ,y     ,z     ,f);
             subdivisions[1][0][0]->manifestgeomsnippets(x|mask,y     ,z     ,f&6);
             subdivisions[0][1][0]->manifestgeomsnippets(x     ,y|mask,z     ,f&5);
@@ -206,7 +206,7 @@ void OctreeBranch::manifestgeomsnippets(BlockLoc x,BlockLoc y,BlockLoc z,int f) 
         }
     }
 }
-void OctreeLeaf::manifestgeomsnippets(BlockLoc x,BlockLoc y,BlockLoc z,int f) {
+void OctreeLeaf::manifestgeomsnippets(int x,int y,int z,int f) {
     if (f) {
         extern uint8_t materialprops[];
         int lod=g_lod;
@@ -225,8 +225,8 @@ void OctreeLeaf::manifestgeomsnippets(BlockLoc x,BlockLoc y,BlockLoc z,int f) {
 
 
 
-void OctreeSegment::manifestgeom(BlockLoc x,BlockLoc y,BlockLoc z) {}
-void OctreeBranch::manifestgeom(BlockLoc x,BlockLoc y,BlockLoc z) {
+void OctreeSegment::manifestgeom(int x,int y,int z) {}
+void OctreeBranch::manifestgeom(int x,int y,int z) {
     if (g_lod>depth) {
         extern uint8_t materialprops[];
         if ((x&CHMASK) and (y&CHMASK) and (z&CHMASK)) {
@@ -236,7 +236,7 @@ void OctreeBranch::manifestgeom(BlockLoc x,BlockLoc y,BlockLoc z) {
             LSTITCH4((x-1,y,z),(x,y-1,z),(x-1,y-1,z),an,g_world->getser(x,y,z+(1<<g_lod)));
         }
     } else {
-        BlockLoc mask = 1<<depth;
+        int mask = 1<<depth;
         subdivisions[0][0][0]->manifestgeom(x     ,y     ,z     );
         subdivisions[1][0][0]->manifestgeom(x|mask,y     ,z     );
         subdivisions[0][1][0]->manifestgeom(x     ,y|mask,z     );
@@ -247,7 +247,7 @@ void OctreeBranch::manifestgeom(BlockLoc x,BlockLoc y,BlockLoc z) {
         subdivisions[1][1][1]->manifestgeom(x|mask,y|mask,z|mask);
     }
 }
-void OctreeLeaf::manifestgeom(BlockLoc x,BlockLoc y,BlockLoc z) {
+void OctreeLeaf::manifestgeom(int x,int y,int z) {
     extern uint8_t materialprops[];
     if ((x&CHMASK) and (y&CHMASK) and (z&CHMASK)) {
         LSTITCH4((x,y-1,z),(x,y,z-1),(x,y-1,z-1),fillvalue,g_world->getser(x+1,y,z));

@@ -10,7 +10,12 @@
 varying vec3 normalColor;
 
 
-void main() {
+layout(std430, binding=9) buffer OutputBuffer {
+  rmTriangle triangles[];
+}trBuffer;
+
+void main()
+{
 //    gl_FragColor = vec4(1,1,1,1);
     gl_FragColor = vec4(normalColor.r,normalColor.g,normalColor.b,1);//vec4(fragmentColor*texture2D( myTextureSampler, UV ).rgb, 1);
 //    gl_FragColor = vec4(fragmentColor.r,fragmentColor.g,fragmentColor.b,1);//vec4(fragmentColor, 1);

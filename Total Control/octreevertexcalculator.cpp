@@ -10,6 +10,12 @@
 
 Edgedat::Edgedat() {}
 Edgedat::Edgedat(uint8_t tc,int8_t xc,int8_t yc,int8_t zc) : x(xc),y(yc),z(zc),t(tc) {}
+Edgedat::Edgedat(glm::vec3 i,float ti) {
+    x = (int8_t)128*i.x;
+    y = (int8_t)128*i.y;
+    z = (int8_t)128*i.z;
+    t = (uint8_t)255*ti;
+}
 Edgedat::Edgedat(float xi,float yi,float zi,float ti) {
     x = (int8_t)128*xi;
     y = (int8_t)128*yi;
@@ -81,9 +87,9 @@ glm::vec3 MatrixCarriage::evaluatenormal() {
     return glm::vec3(Vx/js,Vy/js,Vz/js);
 }
 
-void OctreeSegment::prepare(BlockLoc x,BlockLoc y,BlockLoc z) {}
-void OctreeBranch::prepare(BlockLoc x,BlockLoc y,BlockLoc z) {
-    BlockLoc mask = 1<<depth;
+void OctreeSegment::prepare(int x,int y,int z) {}
+void OctreeBranch::prepare(int x,int y,int z) {
+    int mask = 1<<depth;
     x&=~mask;
     y&=~mask;
     z&=~mask;
@@ -96,15 +102,16 @@ void OctreeBranch::prepare(BlockLoc x,BlockLoc y,BlockLoc z) {
     subdivisions[0][1][1]->prepare(x     ,y|mask,z|mask);
     subdivisions[1][1][1]->prepare(x|mask,y|mask,z|mask);
 }
-void OctreePortionAwareBranch::prepare(BlockLoc x,BlockLoc y,BlockLoc z) {
+void OctreePortionAwareBranch::prepare(int x,int y,int z) {
     if (!prepared and hardload) {
-        if (g_world->dataexistsat(x+CHSIZE,y,z) and
-            g_world->dataexistsat(x,y+CHSIZE,z) and
-            g_world->dataexistsat(x,y,z+CHSIZE) and
-            g_world->dataexistsat(x,y+CHSIZE,z+CHSIZE) and
-            g_world->dataexistsat(x+CHSIZE,y,z+CHSIZE) and
-            g_world->dataexistsat(x+CHSIZE,y+CHSIZE,z)) {
+        if (g_world->serloadedat(x+CHSIZE,y,z) and
+            g_world->serloadedat(x,y+CHSIZE,z) and
+            g_world->serloadedat(x,y,z+CHSIZE) and
+            g_world->serloadedat(x,y+CHSIZE,z+CHSIZE) and
+            g_world->serloadedat(x+CHSIZE,y,z+CHSIZE) and
+            g_world->serloadedat(x+CHSIZE,y+CHSIZE,z)) {
 //            hermitify(x,y,z);
+            std::cout<<"AJAJAJAJAJ\n";
             for (int g=0;g<=MAX_WORLDFILE_GEOMSAVE;g++) {
                 vertecies[g].clear();
                 normals[g].clear();
@@ -154,8 +161,8 @@ void OctreeBranch::testcoherence() {
     subdivisions[0][1][1]->testcoherence();
     subdivisions[1][1][1]->testcoherence();
 }
-MatrixCarriage OctreeSegment::vertify(BlockLoc x,BlockLoc y,BlockLoc z) {return MatrixCarriage();}
-MatrixCarriage OctreeFeature::vertify(BlockLoc x,BlockLoc y,BlockLoc z) {
+MatrixCarriage OctreeSegment::vertify(int x,int y,int z) {return MatrixCarriage();}
+MatrixCarriage OctreeFeature::vertify(int x,int y,int z) {
     MatrixCarriage qef;
     OctreeSegment* buf[2][2][2];
 //    buf[0][0][0] = g_world->indivref(x+xl,y+yl,z+zl);
@@ -186,8 +193,8 @@ MatrixCarriage OctreeFeature::vertify(BlockLoc x,BlockLoc y,BlockLoc z) {
 //    point = ;
     return qef;
 }
-MatrixCarriage OctreeBranch::vertify(BlockLoc x,BlockLoc y,BlockLoc z) {
-    BlockLoc mask = 1<<depth;
+MatrixCarriage OctreeBranch::vertify(int x,int y,int z) {
+    int mask = 1<<depth;
     if (depth<MAX_WORLDFILE_GEOMSAVE) {
         MatrixCarriage q =
            subdivisions[0][0][0]->vertify(x     ,y     ,z     )+

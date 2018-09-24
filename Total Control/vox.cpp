@@ -21,7 +21,7 @@ Structure::Structure(std::string name,Environment& backref,bool load) : structur
     expand(CHPOWER);
 }
 
-int Structure::underpressure(BlockLoc x,BlockLoc y,BlockLoc z) {
+int Structure::underpressure(int x,int y,int z) {
     x ^= ASBLOCKLOC(0);
     y ^= ASBLOCKLOC(0);
     z ^= ASBLOCKLOC(0);
@@ -29,26 +29,26 @@ int Structure::underpressure(BlockLoc x,BlockLoc y,BlockLoc z) {
     for (r=0;(1<<r)<=x or (1<<r)<=y or (1<<r)<=z;r++) {}
     return r;
 }
-void Structure::expand(BlockLoc x,BlockLoc y,BlockLoc z) {throw;expand(underpressure(x,y,z));}
-void Structure::expandchunk(BlockLoc x,BlockLoc y,BlockLoc z) {
+void Structure::expand(int x,int y,int z) {throw;expand(underpressure(x,y,z));}
+void Structure::expandchunk(int x,int y,int z) {
     expand(std::max(underpressure(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z)),
                     underpressure(ASCHUNKLOC(x+1)-1,ASCHUNKLOC(y+1)-1,ASCHUNKLOC(z+1)-1)));
 }
-void Structure::expandarbit(BlockLoc x,BlockLoc y,BlockLoc z,int recur) {
+void Structure::expandarbit(int x,int y,int z,int recur) {
     expand(std::max(underpressure(x,y,z),
                     underpressure(x+(1<<recur)-1,y+(1<<recur)-1,z+(1<<recur)-1)));
 }
 void Structure::expand(int desireddepth) {
     while (desireddepth>=depth+1) {
         depth++;
-        if (depth!=7) {
+        if (depth!=CHPOWER) {
             if (depth&1) {
                 data = new OctreeBranch(new OctreeBud(popular),new OctreeBud(popular),
                                         new OctreeBud(popular),new OctreeBud(popular),
                                         new OctreeBud(popular),new OctreeBud(popular),
-                                        new OctreeBud(popular),data,depth-1);
+                                        new OctreeBud(popular),data                  ,depth-1);
             } else {
-                data = new OctreeBranch(data,new OctreeBud(popular),
+                data = new OctreeBranch(data                  ,new OctreeBud(popular),
                                         new OctreeBud(popular),new OctreeBud(popular),
                                         new OctreeBud(popular),new OctreeBud(popular),
                                         new OctreeBud(popular),new OctreeBud(popular),depth-1);
@@ -58,9 +58,9 @@ void Structure::expand(int desireddepth) {
                 data = new OctreePortionAwareBranch(new OctreeBud(popular),new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),
-                                                    new OctreeBud(popular),data,true);
+                                                    new OctreeBud(popular),data                  ,true);
             } else {
-                data = new OctreePortionAwareBranch(data,new OctreeBud(popular),
+                data = new OctreePortionAwareBranch(data                  ,new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),
                                                     new OctreeBud(popular),new OctreeBud(popular),true);
@@ -140,11 +140,11 @@ void Structure::updatequeue(double x, double y, double z) {
 //    }
     loadstage++;
 }
-void Structure::loadportion(BlockLoc x,BlockLoc y,BlockLoc z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
-    expandchunk(x,y,z);
-    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(dat,0,0,0,CHPOWER),data);
-}
-void Structure::filepushportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+//void Structure::loadportion(int x,int y,int z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
+//    expandchunk(x,y,z);
+//    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(dat,0,0,0,CHPOWER),data);
+//}
+void Structure::filepushportion(std::string filebase,int x,int y,int z) {
     std::ofstream file = std::ofstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::out|std::ios::binary|std::ios::trunc);
     OctreePortionAwareBranch* look = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
     s_file = &file;
@@ -155,7 +155,7 @@ void Structure::filepushportion(std::string filebase,BlockLoc x,BlockLoc y,Block
     }
     file.close();
 }
-void Structure::filepullportion(std::string filebase,BlockLoc x,BlockLoc y,BlockLoc z) {
+void Structure::filepullportion(std::string filebase,int x,int y,int z) {
     //    file =
     std::ifstream file = std::ifstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::in|std::ios::binary);
 //    std::cout<<filebase<<" was opened. \n";
@@ -169,7 +169,7 @@ bool Structure::attain(Location pos,Location ppos) {
     
 //    extern const int levelsofdetail;
     extern const int lodlimits[];
-    BlockLoc mask = CHSIZE/2;
+    int mask = CHSIZE/2;
     float distance = sqrtf(((pos.x-ppos.x)*CHSIZE+mask)*((pos.x-ppos.x)*CHSIZE+mask) + ((pos.y-ppos.y)*CHSIZE+mask)*((pos.y-ppos.y)*CHSIZE+mask) + ((pos.z-ppos.z)*CHSIZE+mask)*((pos.z-ppos.z)*CHSIZE+mask));
     int lod;
     for(lod=0;lodlimits[lod]<distance&&lod<=MAX_WORLDFILE_GEOMSAVE;lod++) {}
@@ -199,7 +199,7 @@ bool Structure::attain(Location pos,Location ppos) {
         }
         if (load or generate) {
             unit->testconnected(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),data,&currenttests);
-            currenttests.prune(data);
+//            currenttests.prune(data);
         }
     }
     g_world=data;

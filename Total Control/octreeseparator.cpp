@@ -138,15 +138,15 @@ uint8_t OctreeBud::giveimconflag() {
     return (materialattribs[fillvalue]&1)*(128+64+32+16);
 }
 
-uint8_t OctreeSegment::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z) {return giveimconflag();}
-uint8_t OctreeBranch::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z) {
+uint8_t OctreeSegment::giveconflag(int x,int y,int z) {return giveimconflag();}
+uint8_t OctreeBranch::giveconflag(int x,int y,int z) {
     if (g_lod<=depth) {
         return subdivisions XYZINDEX->giveconflag(x,y,z);
     } else {
         return connections;
     }
 }
-uint8_t OctreePortionAwareBranch::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z) {
+uint8_t OctreePortionAwareBranch::giveconflag(int x,int y,int z) {
     if (g_lod<MIN_WORLDFILE_GEOMSAVE && !hardload) {
         return 255;
     } else if (g_lod<=depth) {
@@ -157,8 +157,8 @@ uint8_t OctreePortionAwareBranch::giveconflag(BlockLoc x,BlockLoc y,BlockLoc z) 
 }
 
 
-void OctreeSegment::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world,BranchRegistry*) {}
-void OctreeBranch::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world,BranchRegistry* registry) {
+void OctreeSegment::testconnected(int x,int y,int z,OctreeSegment* world,BranchRegistry*) {}
+void OctreeBranch::testconnected(int x,int y,int z,OctreeSegment* world,BranchRegistry* registry) {
     int mask = 1<<depth;
     subdivisions[0][0][0]->testconnected(x     ,y     ,z     ,world,registry);
     subdivisions[1][0][0]->testconnected(x|mask,y     ,z     ,world,registry);
@@ -218,7 +218,7 @@ void OctreeBranch::testconnected(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment*
         registry->add(Location(x,y,z),this);
     }
 }
-bool OctreeBranch::phase2check(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* world,Environment* obuck) {
+bool OctreeBranch::phase2check(int x,int y,int z,OctreeSegment* world,Environment* obuck) {
     int mask = 1<<depth;
     int meshtarget =  ((subdivisions[0][0][0]->giveimconflag()&8)?  1:0)|
                       ((subdivisions[1][0][0]->giveimconflag()&8)?  2:0)|
@@ -247,9 +247,9 @@ bool OctreeBranch::phase2check(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* w
             else {commonend = 1;}
         }
     }
-    BlockLoc sx = x + (commonend&(2+8+32+128)?mask:0);
-    BlockLoc sy = y + (commonend&(4+8+64+128)?mask:0);
-    BlockLoc sz = z + (commonend&(16+32+64+128)?mask:0);
+    int sx = x + (commonend&(2+8+32+128)?mask:0);
+    int sy = y + (commonend&(4+8+64+128)?mask:0);
+    int sz = z + (commonend&(16+32+64+128)?mask:0);
 //    DEBUGDEBUG = meshtarget;
     meshtarget^=commonend;
     if ((meshtarget&1  ) && (subdivisions[0][0][0]->giveimconflag()&8) && !testConnection(x     ,y     ,z     ,sx,sy,sz,depth,world,obuck)) {return false;}
@@ -263,7 +263,7 @@ bool OctreeBranch::phase2check(BlockLoc x,BlockLoc y,BlockLoc z,OctreeSegment* w
     return true;
 }
 
-bool testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,BlockLoc z2,int recur,OctreeSegment* world,Environment* overflowbucket) {
+bool testConnection(int x1,int y1,int z1,int x2,int y2,int z2,int recur,OctreeSegment* world,Environment* overflowbucket) {
     Location endpoint = Location(x2,y2,z2);
     Location startpoint = Location(x1,y1,z1);
     
@@ -281,7 +281,7 @@ bool testConnection(BlockLoc x1,BlockLoc y1,BlockLoc z1,BlockLoc x2,BlockLoc y2,
     Location xyz;
     bool lockforward = false;
     bool lockbackward = false;
-    BlockLoc mask = 1<<recur;
+    int mask = 1<<recur;
 
     g_lod = recur;
     while (true) {
