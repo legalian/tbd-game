@@ -9,11 +9,15 @@
 #ifndef constants_h
 #define constants_h
 
-#define CHPOWER  6 //size of portions loaded into voxel memory
+
+#define RANDPOWER 6 //size of sampling arrays used by generator
+#define RANDSIZE (1<<RANDPOWER)
+
+#define CHPOWER  7 //size of portions loaded into voxel memory
 #define CHSIZE (1<<CHPOWER)
 #define CHMASK CHSIZE-1
 
-#define SCALE 2 //distance between voxels
+#define SCALE 1 //distance between voxels
 
 
 #include <stdint.h>

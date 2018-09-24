@@ -140,10 +140,10 @@ void Structure::updatequeue(double x, double y, double z) {
 //    }
     loadstage++;
 }
-//void Structure::loadportion(int x,int y,int z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
-//    expandchunk(x,y,z);
-//    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(dat,0,0,0,CHPOWER),data);
-//}
+void Structure::loadportion(int x,int y,int z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
+    expandchunk(x,y,z);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(dat,0,0,0,CHPOWER),data);
+}
 void Structure::filepushportion(std::string filebase,int x,int y,int z) {
     std::ofstream file = std::ofstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::out|std::ios::binary|std::ios::trunc);
     OctreePortionAwareBranch* look = data->getvoxunit(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z));
@@ -199,7 +199,7 @@ bool Structure::attain(Location pos,Location ppos) {
         }
         if (load or generate) {
             unit->testconnected(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),data,&currenttests);
-//            currenttests.prune(data);
+            currenttests.prune(data);
         }
     }
     g_world=data;

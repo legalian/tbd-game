@@ -20,9 +20,9 @@ thread_local std::vector<glm::vec3>* g_vertecies;
 thread_local std::vector<glm::vec3>* g_normals;
 thread_local std::ostream* s_file;
 
-thread_local Sampler* g_sampler;
-thread_local float* g_samplefield;
-thread_local BlockId* g_idfield;
+//thread_local Sampler* g_sampler;
+//thread_local float* g_samplefield;
+//thread_local BlockId* g_idfield;
 
 
 glm::vec3 readvoxvert(int x,int y,int z,uint8_t a,uint8_t b,uint8_t c,int dep) {
@@ -277,55 +277,55 @@ OctreeSegment* OctreeBranch::pullaway(int x,int y,int z,int recur,OctreeSegment*
         return subdivisions XYZINDEX->pullaway(x,y,z,recur,subdivisions XYZINDEX);
     }
 }
-#define ACCD(x,y,z) g_idfield[x+y*(CHSIZE+1)+z*(CHSIZE+1)*(CHSIZE+1)]
-OctreeSegment* makeOctree(int x,int y,int z,int recur) {
+
+OctreeSegment* makeOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,int recur) {
     extern uint8_t materialattribs[];
     if (recur == 0) {
-        uint8_t equi = ACCD(x,y,z);
-        uint8_t meshcomp = (materialattribs[ACCD(x+1,y+1,z+1)]&1);
+        uint8_t equi = data[x][y][z];
+        uint8_t meshcomp = (materialattribs[data[x+1][y+1][z+1]]&1);
         uint8_t volumecomp = (materialattribs[equi]&1);
         
         uint8_t connectionflag =
-        ((meshcomp^(materialattribs[ACCD(x  ,y  ,z  )]&1))*(8) ) |
-        ((meshcomp^(materialattribs[ACCD(x+1,y  ,z  )]&1))*(1+8+16) ) |
-        ((meshcomp^(materialattribs[ACCD(x  ,y+1,z  )]&1))*(2+8+32) ) |
-        ((meshcomp^(materialattribs[ACCD(x  ,y  ,z+1)]&1))*(4+8+64) ) |
-        ((meshcomp^(materialattribs[ACCD(x  ,y+1,z+1)]&1))*(2+4+8+32+64) ) |
-        ((meshcomp^(materialattribs[ACCD(x+1,y  ,z+1)]&1))*(1+4+8+16+64) ) |
-        ((meshcomp^(materialattribs[ACCD(x+1,y+1,z  )]&1))*(1+2+8+16+32) );
+        ((meshcomp^(materialattribs[data[x  ][y  ][z  ]]&1))*(8) ) |
+        ((meshcomp^(materialattribs[data[x+1][y  ][z  ]]&1))*(1+8+16) ) |
+        ((meshcomp^(materialattribs[data[x  ][y+1][z  ]]&1))*(2+8+32) ) |
+        ((meshcomp^(materialattribs[data[x  ][y  ][z+1]]&1))*(4+8+64) ) |
+        ((meshcomp^(materialattribs[data[x  ][y+1][z+1]]&1))*(2+4+8+32+64) ) |
+        ((meshcomp^(materialattribs[data[x+1][y  ][z+1]]&1))*(1+4+8+16+64) ) |
+        ((meshcomp^(materialattribs[data[x+1][y+1][z  ]]&1))*(1+2+8+16+32) );
         if ((connectionflag&8)|volumecomp) {
             connectionflag |=
-            ((materialattribs[ACCD(x+1,y,z)]&1)*16) |
-            ((materialattribs[ACCD(x,y+1,z)]&1)*32) |
-            ((materialattribs[ACCD(x,y,z+1)]&1)*64) |
+            ((materialattribs[data[x+1][y][z]]&1)*16) |
+            ((materialattribs[data[x][y+1][z]]&1)*32) |
+            ((materialattribs[data[x][y][z+1]]&1)*64) |
             128;
         }
         
-        if (equi==ACCD(x+1,y,z) and equi==ACCD(x,y+1,z) and equi==ACCD(x,y,z+1)) {
-            if (equi==ACCD(x+1,y+1,z) and equi==ACCD(x+1,y,z+1) and equi==ACCD(x,y+1,z+1) and equi==ACCD(x+1,y+1,z+1)) {
-                return new OctreeBud(ACCD(x,y,z));
+        if (equi==data[x+1][y][z] and equi==data[x][y+1][z] and equi==data[x][y][z+1]) {
+            if (equi==data[x+1][y+1][z] and equi==data[x+1][y][z+1] and equi==data[x][y+1][z+1] and equi==data[x+1][y+1][z+1]) {
+                return new OctreeBud(data[x][y][z]);
             } else {
-                return new OctreeFeature(ACCD(x,y,z),connectionflag);
+                return new OctreeFeature(data[x][y][z],connectionflag);
             }
         } else {
-            return new OctreeLeaf(ACCD(x,y,z),connectionflag);
+            return new OctreeLeaf(data[x][y][z],connectionflag);
         }
     }
     int add = (1<<recur)+1;
-    BlockId equi = ACCD(x,y,z);
+    BlockId equi = data[x][y][z];
     for (int xi=x;xi<x+add;xi++) {
         for (int yi=y;yi<y+add;yi++) {
             for (int zi=z;zi<z+add;zi++) {
-                if (ACCD(xi,yi,zi) != equi) {
+                if (data[xi][yi][zi] != equi) {
                     int k = (1<<(recur-1));
-                    OctreeSegment* a = makeOctree(x  ,y  ,z  ,recur-1);
-                    OctreeSegment* b = makeOctree(x+k,y  ,z  ,recur-1);
-                    OctreeSegment* c = makeOctree(x  ,y+k,z  ,recur-1);
-                    OctreeSegment* d = makeOctree(x+k,y+k,z  ,recur-1);
-                    OctreeSegment* e = makeOctree(x  ,y  ,z+k,recur-1);
-                    OctreeSegment* f = makeOctree(x+k,y  ,z+k,recur-1);
-                    OctreeSegment* g = makeOctree(x  ,y+k,z+k,recur-1);
-                    OctreeSegment* h = makeOctree(x+k,y+k,z+k,recur-1);
+                    OctreeSegment* a = makeOctree(data,x  ,y  ,z  ,recur-1);
+                    OctreeSegment* b = makeOctree(data,x+k,y  ,z  ,recur-1);
+                    OctreeSegment* c = makeOctree(data,x  ,y+k,z  ,recur-1);
+                    OctreeSegment* d = makeOctree(data,x+k,y+k,z  ,recur-1);
+                    OctreeSegment* e = makeOctree(data,x  ,y  ,z+k,recur-1);
+                    OctreeSegment* f = makeOctree(data,x+k,y  ,z+k,recur-1);
+                    OctreeSegment* g = makeOctree(data,x  ,y+k,z+k,recur-1);
+                    OctreeSegment* h = makeOctree(data,x+k,y+k,z+k,recur-1);
                     if (recur == CHPOWER) {
                         OctreePortionAwareBranch* opab = new OctreePortionAwareBranch(a,b,c,d,e,f,g,h,true);
                         opab->vertecies = new std::vector<glm::vec3>[MAX_WORLDFILE_GEOMSAVE+1];
@@ -339,7 +339,6 @@ OctreeSegment* makeOctree(int x,int y,int z,int recur) {
     }
     return new OctreeBud(equi);
 }
-#undef ACCD
 //Octree::Octree(std::string name,glm::mat4& trans,Environment& backref,int pop) : matrixRef(trans), currenttests(backref), popular(pop), depth(CHPOWER) {
 //    std::ifstream file = std::ifstream(SAVEDIR "/"+name+"/massfile",std::ios::in|std::ios::binary);
 //    if (file) {
@@ -367,7 +366,7 @@ bool OctreeSegment::vertsloadedat(int x,int y,int z) {//used to determine if sur
     if (vox==NULL) return this->getser(x,y,z)!=0;
     else {
         if (vox->lod<MIN_WORLDFILE_GEOMSAVE) {return vox->prepared;}
-        else return vox->prepared or (vox->softload and !vox->hardload);
+        else return vox->prepared or !vox->hardload;
     }
 }
 bool OctreeSegment::serloadedat(int x,int y,int z) {//used to determine if surroung data is available for prepare.

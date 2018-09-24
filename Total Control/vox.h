@@ -71,7 +71,7 @@ public:
     OctreeSegment* data=NULL;// = new OctreeBud(0);
 //    std::map<uint8_t,GeomTerrain> hardloadgroups[MAX_WORLDFILE_GEOMSAVE+1-MIN_WORLDFILE_GEOMSAVE];
     
-//    void loadportion(int,int,int,BlockId (*)[CHSIZE+1][CHSIZE+1]);
+    void loadportion(int,int,int,BlockId (*)[CHSIZE+1][CHSIZE+1]);
 
     void filepullportion(std::string,int,int,int);
     void filepushportion(std::string,int,int,int);

@@ -34,9 +34,9 @@ extern thread_local std::map<uint8_t,GeomTerrain>* g_geometry;
 extern thread_local std::vector<glm::vec3>* g_vertecies;
 extern thread_local std::vector<glm::vec3>* g_normals;
 
-extern thread_local Sampler* g_sampler;
-extern thread_local float* g_samplefield;
-extern thread_local BlockId* g_idfield;
+//extern thread_local Sampler* g_sampler;
+//extern thread_local float* g_samplefield;
+//extern thread_local BlockId* g_idfield;
 
 extern thread_local std::ostream* s_file;
 
@@ -271,7 +271,7 @@ struct OctreePortionAwareBranch : OctreeBranch {
 
     int otherlods[7] = {-1,-1,-1,-1,-1,-1,-1};
     int lod = -1;
-    bool softload = true;
+//    bool softload = true;
     bool hardload = false;
     bool prepared = false;
     bool voxed = false;
@@ -321,7 +321,7 @@ struct OctreePortionAwareBranch : OctreeBranch {
 OctreeSegment* loadWorldFile(std::ifstream& file,int x,int y,int z,int recur);
 void tearaway(int,int,int,int,OctreeSegment*,Environment*);
 bool testConnection(int,int,int,int,int,int,int,OctreeSegment*,Environment*);
-OctreeSegment* makeOctree(int,int,int,int);
+OctreeSegment* makeOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
 
 OctreeSegment* makeOctree(std::ifstream&,int);
 
