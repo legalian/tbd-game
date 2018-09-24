@@ -31,17 +31,7 @@ GLFWwindow* window;
 
 void UNITTEST() {
 
-    const char *KernelSource = "\n" \
-    "__kernel void square(                                                  \n"
-    "   __global float* input,                                              \n" \
-    "   __global float* output,                                             \n" \
-    "   const unsigned int count)                                           \n" \
-    "{                                                                      \n" \
-    "   int i = get_global_id(0);                                           \n" \
-    "   if(i < count)                                                       \n" \
-    "       output[i] = input[i] * input[i];                                \n" \
-    "}                                                                      \n" \
-    "\n";
+
     
     // Connect to a compute device
     int gpu = 1;
@@ -55,10 +45,14 @@ void UNITTEST() {
     cl_command_queue commands = clCreateCommandQueue(context, device_id, 0, &err);
     if (!commands) throw;//Error: Failed to create a command commands!
     // Create the compute program from the source buffer
-    cl_program program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
+    
+    
+    
+    std::ifstream file = std::ifstream("/Users/legalian/dev/wasteland_kings/Total Control/samplers/standard.comp");
+    std::string KernelSource((std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
+    const char* ajja = (const char*)KernelSource.c_str();
+    cl_program program = clCreateProgramWithSource(context, 1,&ajja, NULL, &err);
     if(!program) throw;//Error: Failed to create compute program!
-
-
     // Build the program executable
     err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
     if (err != CL_SUCCESS) {
@@ -68,8 +62,11 @@ void UNITTEST() {
         printf("Error: Failed to build program executable!\n");
         clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
         printf("%s\n", buffer);
-        exit(1);
+        throw;
     }
+    
+    
+    
 
     
     float data[1024];              // original data set given to device
@@ -126,6 +123,11 @@ void UNITTEST() {
     }
     // Print a brief summary detailing the results
     printf("Computed '%d/%d' correct values!\n", correct,1024);
+    
+    
+    
+    
+    
     
     
     
