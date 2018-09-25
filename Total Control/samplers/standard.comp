@@ -3,6 +3,8 @@ __kernel void square(
    __global float* output,
    const unsigned int count)
 {
-   int i = get_global_id(0);
-   if(i < count) output[i] = input[i] * input[i];
+   int x = get_global_id(0);
+   int y = get_global_id(1);
+   int z = get_global_id(2);
+   output[x+CHSIZE*y+CHSIZE*CHSIZE*z] = input[x+CHSIZE*y+CHSIZE*CHSIZE*z] * input[x+CHSIZE*y+CHSIZE*CHSIZE*z];
 }

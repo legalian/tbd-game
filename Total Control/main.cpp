@@ -30,9 +30,6 @@ GLFWwindow* window;
 
 
 void UNITTEST() {
-
-
-    
     // Connect to a compute device
     int gpu = 1;
     cl_device_id device_id;             // compute device id
@@ -46,10 +43,15 @@ void UNITTEST() {
     if (!commands) throw;//Error: Failed to create a command commands!
     // Create the compute program from the source buffer
     
-    
+    unsigned int charn = CHSIZE*CHSIZE*CHSIZE;
     
     std::ifstream file = std::ifstream("/Users/legalian/dev/wasteland_kings/Total Control/samplers/standard.comp");
     std::string KernelSource((std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
+    size_t start_pos = 0;
+    while((start_pos = KernelSource.find("CHSIZE", start_pos)) != std::string::npos) {
+        KernelSource.replace(start_pos,6,std::to_string(CHSIZE));
+        start_pos += sizeof("CHSIZE")-std::to_string(CHSIZE).size();
+    }
     const char* ajja = (const char*)KernelSource.c_str();
     cl_program program = clCreateProgramWithSource(context, 1,&ajja, NULL, &err);
     if(!program) throw;//Error: Failed to create compute program!
@@ -64,26 +66,34 @@ void UNITTEST() {
         printf("%s\n", buffer);
         throw;
     }
-    
-    
-    
-
-    
-    float data[1024];              // original data set given to device
-    float results[1024];           // results returned from device
-    for(int i = 0; i < 1024; i++) data[i] = rand() / (float)RAND_MAX;
     // Create the compute kernel in the program we wish to run
     cl_kernel kernel = clCreateKernel(program, "square", &err);
     if (!kernel || err != CL_SUCCESS) throw;//Error: Failed to create compute kernel!
+    // Get the maximum work group size for executing the kernel on the device
+    size_t maxWorkGroupSize;
+    err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(maxWorkGroupSize), &maxWorkGroupSize, NULL);
+    if (err != CL_SUCCESS){
+        printf("Error: Failed to retrieve kernel work group info! %d\n", err);
+        throw;
+    }
+    
+//    maxWorkGroupSize = 64;
+    
     // Create the input and output arrays in device memory for our calculation
-    cl_mem input  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * 1024, NULL, NULL);
-    cl_mem output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * 1024, NULL, NULL);
+    cl_mem input  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * charn, NULL, NULL);
+    cl_mem output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * charn, NULL, NULL);
     if (!input || !output) throw;//Error: Failed to allocate device memory!
+    
+    
+    std::cout<<"checkpoint one\n";
+    float* data = new float[charn];
+    float* results = new float[charn];
+    for(int i = 0; i < charn; i++) data[i] = rand() / (float)RAND_MAX;
     // Write our data set into the input array in device memory
-    err = clEnqueueWriteBuffer(commands, input, CL_TRUE, 0, sizeof(float) * 1024, data, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(commands, input, CL_TRUE, 0, sizeof(float) * charn, data, 0, NULL, NULL);
     if (err != CL_SUCCESS) throw;//Error: Failed to write to source array!
     // Set the arguments to our compute kernel
-    unsigned int temp = 1024;
+    unsigned int temp = charn;
     err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input)
          | clSetKernelArg(kernel, 1, sizeof(cl_mem), &output)
          | clSetKernelArg(kernel, 2, sizeof(unsigned int), &temp);
@@ -91,47 +101,35 @@ void UNITTEST() {
         printf("Error: Failed to set kernel arguments! %d\n", err);
         throw;
     }
-
-    // Get the maximum work group size for executing the kernel on the device
-    size_t local;
-    err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
-    if (err != CL_SUCCESS){
-        printf("Error: Failed to retrieve kernel work group info! %d\n", err);
-        throw;
-    }
-
     // Execute the kernel over the entire range of our 1d input data set
     // using the maximum number of work group items for this device
-    size_t global = 1024;
-    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+//    size_t global = 1024;
+    size_t glo[3]{128,128,256};
+    size_t loc[3]{8,8,8};
+    
+    clock_t begin = clock();
+    err = clEnqueueNDRangeKernel(commands, kernel, 3, NULL, glo,loc, 0, NULL, NULL);
     if (err) throw;//Error: Failed to execute kernel!
-
-
     // Wait for the command commands to get serviced before reading back results
     clFinish(commands);
-
+    clock_t end = clock();
+    std::cout<<end-begin<<"\n";
     // Read back the results from the device to verify the output
-    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float) * 1024, results, 0, NULL, NULL );
+    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float) * charn, results, 0, NULL, NULL );
     if (err != CL_SUCCESS) {
         printf("Error: Failed to read output array! %d\n", err);
         throw;
     }
     // Validate our results
     unsigned int correct = 0;
-    for(int i = 0; i < 1024; i++) {
+    for(int i = 0; i < charn; i++) {
         if(results[i] == data[i] * data[i]) correct++;
     }
     // Print a brief summary detailing the results
-    printf("Computed '%d/%d' correct values!\n", correct,1024);
+    printf("Computed '%d/%d' correct values!\n", correct,charn);
     
-    
-    
-    
-    
-    
-    
-    
-    
+    delete[] data;
+    delete[] results;
     
     // Shutdown and cleanup
     clReleaseMemObject(input);
@@ -250,16 +248,11 @@ void getclippy(glm::mat4 m) {
     }
 }
 
-int main()
-{
-//    return 0;
-    initialize();
+int main() {
     UNITTEST();
     return 0;
-//    test_qef();
+    initialize();
     
-//    ShaderVNC shader;
-//    shader.mountshaders();
     
     
     glm::mat4 Projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 1000.0f);
