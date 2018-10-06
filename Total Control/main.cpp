@@ -22,130 +22,147 @@ GLFWwindow* window;
 #include "renderterrain.h"
 #include "octree.h"
 
+
 #include <pthread.h>
 
 
 
-#include <OpenCL/opencl.h>
 
 
-void UNITTEST() {
-    // Connect to a compute device
-    int gpu = 1;
-    cl_device_id device_id;             // compute device id
-    int err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &device_id, NULL);
-    if (err != CL_SUCCESS) throw;//Error: Failed to create a device group!
-    // Create a compute context
-    cl_context context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
-    if (!context) throw;//Error: Failed to create a compute context!
-    // Create a command commands
-    cl_command_queue commands = clCreateCommandQueue(context, device_id, 0, &err);
-    if (!commands) throw;//Error: Failed to create a command commands!
-    // Create the compute program from the source buffer
-    
-    unsigned int charn = CHSIZE*CHSIZE*CHSIZE;
-    
+#define ASSERT(b) {int err=b;if (err) {std::cout<<"FATAL ERROR: "<<err<<"\n";throw;}}
+#define ASSERT_ASSIGN(decl,exp) {int err=0;decl=exp;if (err or !decl) throw;}
+
+cl_context gcl_context;
+cl_command_queue gcl_commands;
+cl_device_id gcl_device_id;
+
+#define PLOTTER_MODE
+
+Sampler::Sampler() {
+#ifndef PLOTTER_MODE
     std::ifstream file = std::ifstream("/Users/legalian/dev/wasteland_kings/Total Control/samplers/standard.comp");
     std::string KernelSource((std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
+#endif
+#ifdef PLOTTER_MODE
+//    gp.mount(magnitude(gp.get3("xyz"))-70);
+    Gen x = gp.get("x");
+    Gen y = gp.get("y");
+    Gen z = gp.get("z");
+    Gen3 xyz = gp.get3("xyz");
+//    gp.mount(y-x);
+    gp.set("cube",50-max(max(abs(x),abs(y)),abs(z)));
+    gp.set("sphere",60-magnitude(xyz));
+    gp.mount(min(gp.get("cube"),0-gp.get("sphere")));
+//    gp.mount(abs(y)-10);
+    std::string KernelSource = gp.mounted.mountable;
+#endif
     size_t start_pos = 0;
     while((start_pos = KernelSource.find("CHSIZE", start_pos)) != std::string::npos) {
         KernelSource.replace(start_pos,6,std::to_string(CHSIZE));
         start_pos += sizeof("CHSIZE")-std::to_string(CHSIZE).size();
     }
     const char* ajja = (const char*)KernelSource.c_str();
-    cl_program program = clCreateProgramWithSource(context, 1,&ajja, NULL, &err);
-    if(!program) throw;//Error: Failed to create compute program!
-    // Build the program executable
-    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-    if (err != CL_SUCCESS) {
+    ASSERT_ASSIGN(program,clCreateProgramWithSource(gcl_context,1,&ajja,NULL,&err));
+    int gare = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    if (gare != CL_SUCCESS) {
         size_t len;
-        char buffer[2048];
-
-        printf("Error: Failed to build program executable!\n");
-        clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+        char *buffer;
+        clGetProgramBuildInfo(program,gcl_device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+        buffer = new char[len];
+        clGetProgramBuildInfo(program,gcl_device_id, CL_PROGRAM_BUILD_LOG, len, buffer, NULL);
         printf("%s\n", buffer);
         throw;
     }
-    // Create the compute kernel in the program we wish to run
-    cl_kernel kernel = clCreateKernel(program, "square", &err);
-    if (!kernel || err != CL_SUCCESS) throw;//Error: Failed to create compute kernel!
-    // Get the maximum work group size for executing the kernel on the device
+    ASSERT_ASSIGN(kernel,clCreateKernel(program, "square", &err));
     size_t maxWorkGroupSize;
-    err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(maxWorkGroupSize), &maxWorkGroupSize, NULL);
-    if (err != CL_SUCCESS){
-        printf("Error: Failed to retrieve kernel work group info! %d\n", err);
-        throw;
-    }
-    
-//    maxWorkGroupSize = 64;
-    
-    // Create the input and output arrays in device memory for our calculation
-    cl_mem input  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * charn, NULL, NULL);
-    cl_mem output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * charn, NULL, NULL);
-    if (!input || !output) throw;//Error: Failed to allocate device memory!
-    
-    
-    std::cout<<"checkpoint one\n";
-    float* data = new float[charn];
-    float* results = new float[charn];
-    for(int i = 0; i < charn; i++) data[i] = rand() / (float)RAND_MAX;
+    ASSERT(clGetKernelWorkGroupInfo(kernel,gcl_device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(maxWorkGroupSize), &maxWorkGroupSize, NULL));
+//    cl_mem input  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * charn, NULL, NULL);
+    ASSERT_ASSIGN(output,clCreateBuffer(gcl_context, CL_MEM_WRITE_ONLY, sizeof(float)*(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1), NULL, NULL));
+}
+void Sampler::populate(int xc,int yc,int zc,Structure& world) {
+    float* results = new float[(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1)];
     // Write our data set into the input array in device memory
-    err = clEnqueueWriteBuffer(commands, input, CL_TRUE, 0, sizeof(float) * charn, data, 0, NULL, NULL);
-    if (err != CL_SUCCESS) throw;//Error: Failed to write to source array!
+//    err = clEnqueueWriteBuffer(commands, input, CL_TRUE, 0, sizeof(float) * charn, data, 0, NULL, NULL);
+//    if (err != CL_SUCCESS) throw;//Error: Failed to write to source array!
     // Set the arguments to our compute kernel
-    unsigned int temp = charn;
-    err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input)
-         | clSetKernelArg(kernel, 1, sizeof(cl_mem), &output)
-         | clSetKernelArg(kernel, 2, sizeof(unsigned int), &temp);
-    if (err != CL_SUCCESS) {
-        printf("Error: Failed to set kernel arguments! %d\n", err);
-        throw;
-    }
-    // Execute the kernel over the entire range of our 1d input data set
-    // using the maximum number of work group items for this device
-//    size_t global = 1024;
+    
+//    unsigned int temp = charn;
+//    err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input)
+//         | clSetKernelArg(kernel, 1, sizeof(cl_mem), &output);
+//         | clSetKernelArg(kernel, 2, sizeof(unsigned int), &temp);
+    int xcc=xc*CHSIZE,ycc=yc*CHSIZE,zcc=zc*CHSIZE;
+    ASSERT(clSetKernelArg(kernel, 0, sizeof(cl_mem), &output));
+    ASSERT(clSetKernelArg(kernel, 1, sizeof(cl_mem), &xcc));
+    ASSERT(clSetKernelArg(kernel, 2, sizeof(cl_mem), &ycc));
+    ASSERT(clSetKernelArg(kernel, 3, sizeof(cl_mem), &zcc));
     size_t glo[3]{128,128,256};
     size_t loc[3]{8,8,8};
-    
     clock_t begin = clock();
-    err = clEnqueueNDRangeKernel(commands, kernel, 3, NULL, glo,loc, 0, NULL, NULL);
-    if (err) throw;//Error: Failed to execute kernel!
-    // Wait for the command commands to get serviced before reading back results
-    clFinish(commands);
+    ASSERT(clEnqueueNDRangeKernel(gcl_commands,kernel, 3, NULL, glo,loc, 0, NULL, NULL));
+    uint8_t* realindecies = new uint8_t[(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1)];
+    
+    clFinish(gcl_commands);
     clock_t end = clock();
     std::cout<<end-begin<<"\n";
-    // Read back the results from the device to verify the output
-    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float) * charn, results, 0, NULL, NULL );
-    if (err != CL_SUCCESS) {
-        printf("Error: Failed to read output array! %d\n", err);
-        throw;
-    }
-    // Validate our results
-    unsigned int correct = 0;
-    for(int i = 0; i < charn; i++) {
-        if(results[i] == data[i] * data[i]) correct++;
-    }
-    // Print a brief summary detailing the results
-    printf("Computed '%d/%d' correct values!\n", correct,charn);
+    ASSERT(clEnqueueReadBuffer(gcl_commands,output,CL_TRUE,0,sizeof(float)*(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1),results,0,NULL,NULL));
     
-    delete[] data;
+//    void SimpleSample::populate(long x,long y, long z,Octree& world) {
+//    uint8_t layerindecies[CHSIZE+1][CHSIZE+1][CHSIZE+1];
+//    uint8_t realindecies[CHSIZE+1][CHSIZE+1][CHSIZE+1];
+    //    long alt = (((LONG_MAX/3)<<1)|1);
+    for (int i=0;i<(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1);i++) realindecies[i] = results[i]>0?2:1;
+    OctreeSegment* fi = world.loadportion(xc,yc,zc,realindecies);
+    
+//    for (int xi=0;xi<CHSIZE;xi++) {
+//        for (int yi=0;yi<CHSIZE;yi++) {
+//            for (int zi=0;zi<CHSIZE;zi++) {
+//                if (fi->getser(xi,yi,zi)!=realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) throw;
+//            }
+//        }
+//    }
+    for (int xi=0;xi<CHSIZE;xi++) {
+        for (int yi=0;yi<CHSIZE;yi++) {
+            for (int zi=0;zi<CHSIZE;zi++) {
+                if (realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)] != realindecies[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
+                    float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                    float b = results[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                    fi->xcon(xi,yi,zi) = Edgedat(gp.samplenormal(xc*CHSIZE+xi+a/(a-b),yc*CHSIZE+yi,zc*CHSIZE+zi),a/(a-b));
+                }
+                if (realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)] != realindecies[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
+                    float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                    float b = results[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                    fi->ycon(xi,yi,zi) = Edgedat(gp.samplenormal(xc*CHSIZE+xi,yc*CHSIZE+yi+a/(a-b),zc*CHSIZE+zi),a/(a-b));
+                }
+                if (realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)] != realindecies[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)]) {
+                    float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                    float b = results[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)];
+                    fi->zcon(xi,yi,zi) = Edgedat(gp.samplenormal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi+a/(a-b)),a/(a-b));
+                }
+            }
+        }
+    }
+    
     delete[] results;
-    
-    // Shutdown and cleanup
-    clReleaseMemObject(input);
-    clReleaseMemObject(output);
-    clReleaseProgram(program);
-    clReleaseKernel(kernel);
-    clReleaseCommandQueue(commands);
-    clReleaseContext(context);
+    delete[] realindecies;
+}
+
+
+
+
+void UNITTEST() {
+    // Global OpenCL init
+    int gpu = 1;
+    ASSERT(clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &gcl_device_id, NULL));
+    ASSERT_ASSIGN(gcl_context,clCreateContext(0, 1, &gcl_device_id, NULL, NULL, &err));
+    ASSERT_ASSIGN(gcl_commands,clCreateCommandQueue(gcl_context,gcl_device_id, 0, &err));
+
 }
 
 
 
 void initialize(){
     // Initialise GLFW
-    if( !glfwInit() )
-    {
+    if(!glfwInit()) {
         fprintf( stderr, "Failed to initialize GLFW\n" );
         throw;
     }
@@ -250,7 +267,7 @@ void getclippy(glm::mat4 m) {
 
 int main() {
     UNITTEST();
-    return 0;
+//    return 0;
     initialize();
     
     
@@ -277,7 +294,6 @@ int main() {
 //    for (int toload = 0;toload<200;toload++) {
 //        structure.load(structure.queue[structure.queue.size()-toload]);
 //    }
-//    std::cout<<structure.geoms.size();
     
 //    Environment envi;
     
@@ -297,29 +313,13 @@ int main() {
     
     Environment world;
     Structure* temppoint = new Structure("newformat",world,true);
-    temppoint->source = new SimpleTerrainSample();
+    temppoint->source = new Sampler();//new SimpleTerrainSample();
     world.addstructure(temppoint);
     world.opensavedirectory();
     world.beginthread();
     
-//    btBroadphaseInterface* broadphase = new btDbvtBroadphase();
     
-    
-//    Structure test = Structure("test");
-//    test.source = new SimpleTerrainSample();
-//    test.source = new SimpleTerrainSample();
-//    test.attain(Location(0,-1,0));
-//    test.attain(Location(0,0,0));
-//    for (int f=0;f<2;f++) {
-//        test.updatequeue(3,3,3);
-//        std::cout<<test.queue.size()<<" is len\n";
-//        for (int index=0;index<test.queue.size();index++) {
-//            test.attain(test.queue[index]);
-//        }
-//        test.queue.clear();
-//        
-//    }
-//    test_qef();
+
     
     extern glm::mat4 camera;
     extern glm::mat4 clipcamera;
@@ -431,6 +431,8 @@ int main() {
     
     
     glfwTerminate();
+    clReleaseCommandQueue(gcl_commands);
+    clReleaseContext(gcl_context);
     return 0;
 }
 

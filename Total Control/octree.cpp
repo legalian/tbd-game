@@ -57,9 +57,9 @@ glm::vec3 errorpoint = glm::vec3(0,0,0);
 OctreePortionAwareBranch* OctreeSegment::getvoxunit(int x,int y,int z) {return NULL;}
 OctreeSegment* OctreeSegment::indivref(int x,int y,int z) {throw;}
 BlockId OctreeSegment::getser(int x,int y,int z) {throw;}
-Edgedat& OctreeSegment::xcon(int x,int y,int z) {return silence;}
-Edgedat& OctreeSegment::ycon(int x,int y,int z) {return silence;}
-Edgedat& OctreeSegment::zcon(int x,int y,int z) {return silence;}
+Edgedat& OctreeSegment::xcon(int x,int y,int z) {std::cout<<"panic\n";return silence;}
+Edgedat& OctreeSegment::ycon(int x,int y,int z) {std::cout<<"panic\n";return silence;}
+Edgedat& OctreeSegment::zcon(int x,int y,int z) {std::cout<<"panic\n";return silence;}
 //glm::vec3& OctreeSegment::feat(BlockLoc x,BlockLoc y,BlockLoc z,int lod) {throw;}
 int OctreeSegment::feat(int x,int y,int z) {return 0;}
 glm::vec3& OctreeSegment::getfeature(int x,int y,int z) {return errorpoint;}
@@ -278,45 +278,45 @@ OctreeSegment* OctreeBranch::pullaway(int x,int y,int z,int recur,OctreeSegment*
     }
 }
 
-OctreeSegment* makeOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,int recur) {
+#define ACCD(x,y,z) data[(x)+(y)*(CHSIZE+1)+(z)*(CHSIZE+1)*(CHSIZE+1)]
+OctreeSegment* makeOctree(BlockId *data,int x,int y,int z,int recur) {
     extern uint8_t materialattribs[];
+    uint8_t equi = ACCD(x,y,z);
     if (recur == 0) {
-        uint8_t equi = data[x][y][z];
-        uint8_t meshcomp = (materialattribs[data[x+1][y+1][z+1]]&1);
+        uint8_t meshcomp = (materialattribs[ACCD(x+1,y+1,z+1)]&1);
         uint8_t volumecomp = (materialattribs[equi]&1);
         
         uint8_t connectionflag =
-        ((meshcomp^(materialattribs[data[x  ][y  ][z  ]]&1))*(8) ) |
-        ((meshcomp^(materialattribs[data[x+1][y  ][z  ]]&1))*(1+8+16) ) |
-        ((meshcomp^(materialattribs[data[x  ][y+1][z  ]]&1))*(2+8+32) ) |
-        ((meshcomp^(materialattribs[data[x  ][y  ][z+1]]&1))*(4+8+64) ) |
-        ((meshcomp^(materialattribs[data[x  ][y+1][z+1]]&1))*(2+4+8+32+64) ) |
-        ((meshcomp^(materialattribs[data[x+1][y  ][z+1]]&1))*(1+4+8+16+64) ) |
-        ((meshcomp^(materialattribs[data[x+1][y+1][z  ]]&1))*(1+2+8+16+32) );
+        ((meshcomp^volumecomp)*(8) ) |
+        ((meshcomp^(materialattribs[ACCD(x+1,y  ,z  )]&1))*(1+8+16) ) |
+        ((meshcomp^(materialattribs[ACCD(x  ,y+1,z  )]&1))*(2+8+32) ) |
+        ((meshcomp^(materialattribs[ACCD(x  ,y  ,z+1)]&1))*(4+8+64) ) |
+        ((meshcomp^(materialattribs[ACCD(x  ,y+1,z+1)]&1))*(2+4+8+32+64) ) |
+        ((meshcomp^(materialattribs[ACCD(x+1,y  ,z+1)]&1))*(1+4+8+16+64) ) |
+        ((meshcomp^(materialattribs[ACCD(x+1,y+1,z  )]&1))*(1+2+8+16+32) );
         if ((connectionflag&8)|volumecomp) {
             connectionflag |=
-            ((materialattribs[data[x+1][y][z]]&1)*16) |
-            ((materialattribs[data[x][y+1][z]]&1)*32) |
-            ((materialattribs[data[x][y][z+1]]&1)*64) |
+            ((materialattribs[ACCD(x+1,y,z)]&1)*16) |
+            ((materialattribs[ACCD(x,y+1,z)]&1)*32) |
+            ((materialattribs[ACCD(x,y,z+1)]&1)*64) |
             128;
         }
         
-        if (equi==data[x+1][y][z] and equi==data[x][y+1][z] and equi==data[x][y][z+1]) {
-            if (equi==data[x+1][y+1][z] and equi==data[x+1][y][z+1] and equi==data[x][y+1][z+1] and equi==data[x+1][y+1][z+1]) {
-                return new OctreeBud(data[x][y][z]);
+        if (equi==ACCD(x+1,y,z) and equi==ACCD(x,y+1,z) and equi==ACCD(x,y,z+1)) {
+            if (equi==ACCD(x+1,y+1,z) and equi==ACCD(x+1,y,z+1) and equi==ACCD(x,y+1,z+1) and equi==ACCD(x+1,y+1,z+1)) {
+                return new OctreeBud(equi);
             } else {
-                return new OctreeFeature(data[x][y][z],connectionflag);
+                return new OctreeFeature(equi,connectionflag);
             }
         } else {
-            return new OctreeLeaf(data[x][y][z],connectionflag);
+            return new OctreeLeaf(equi,connectionflag);
         }
     }
-    int add = (1<<recur)+1;
-    BlockId equi = data[x][y][z];
-    for (int xi=x;xi<x+add;xi++) {
-        for (int yi=y;yi<y+add;yi++) {
-            for (int zi=z;zi<z+add;zi++) {
-                if (data[xi][yi][zi] != equi) {
+    int add = (1<<recur);
+    for (int xi=x;xi<=x+add;xi++) {
+        for (int yi=y;yi<=y+add;yi++) {
+            for (int zi=z;zi<=z+add;zi++) {
+                if (ACCD(xi,yi,zi) != equi) {
                     int k = (1<<(recur-1));
                     OctreeSegment* a = makeOctree(data,x  ,y  ,z  ,recur-1);
                     OctreeSegment* b = makeOctree(data,x+k,y  ,z  ,recur-1);
@@ -339,6 +339,7 @@ OctreeSegment* makeOctree(BlockId (*data)[CHSIZE+1][CHSIZE+1],int x,int y,int z,
     }
     return new OctreeBud(equi);
 }
+#undef ACCD
 //Octree::Octree(std::string name,glm::mat4& trans,Environment& backref,int pop) : matrixRef(trans), currenttests(backref), popular(pop), depth(CHPOWER) {
 //    std::ifstream file = std::ifstream(SAVEDIR "/"+name+"/massfile",std::ios::in|std::ios::binary);
 //    if (file) {

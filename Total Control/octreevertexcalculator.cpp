@@ -83,8 +83,7 @@ glm::vec3 MatrixCarriage::evaluate(int lod) {
     else return x;
 }
 glm::vec3 MatrixCarriage::evaluatenormal() {
-    float js = sqrt(Vx*Vx+Vy*Vy+Vz*Vz);
-    return glm::vec3(Vx/js,Vy/js,Vz/js);
+    return glm::normalize(glm::vec3(Vx,Vy,Vz));
 }
 
 void OctreeSegment::prepare(int x,int y,int z) {}
@@ -110,20 +109,13 @@ void OctreePortionAwareBranch::prepare(int x,int y,int z) {
             g_world->serloadedat(x,y+CHSIZE,z+CHSIZE) and
             g_world->serloadedat(x+CHSIZE,y,z+CHSIZE) and
             g_world->serloadedat(x+CHSIZE,y+CHSIZE,z)) {
-//            hermitify(x,y,z);
-            std::cout<<"AJAJAJAJAJ\n";
             for (int g=0;g<=MAX_WORLDFILE_GEOMSAVE;g++) {
                 vertecies[g].clear();
                 normals[g].clear();
             }
             g_vertecies = vertecies;
             g_normals = normals;
-            
-//            std::cout<<Location(x,y,z).tostring()<<"\n";
-            
-//                std::cout<<Location((x-ASBLOCKLOC(0))/CHSIZE,(y-ASBLOCKLOC(0))/CHSIZE,(z-ASBLOCKLOC(0))/CHSIZE).tostring()<<"\n";
             vertify(x,y,z);
-//            testcoherence();
             baked = false;
             prepared=true;
         }

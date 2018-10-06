@@ -13,35 +13,6 @@ void glassert();
 
 using namespace std;
 
-GLuint LoadComputeShader(const char * compute_file_path){
-    std::cout<<"_+_+_+_+_+_+_+_+_\n";
-    
-    glassert();
-    GLuint ComputerShaderID = glCreateShader(GL_COMPUTE_SHADER);
-    
-    glassert();
-    GLint Result = GL_FALSE;
-    int InfoLogLength = 0;
-    
-    LoadSingleShader(ComputerShaderID, compute_file_path, Result, InfoLogLength);
-    
-    
-    printf("Linking program\n");
-    GLuint ProgramID = glCreateProgram();
-    glAttachShader(ProgramID, ComputerShaderID);
-    glLinkProgram(ProgramID);
-    glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
-    glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-    if ( InfoLogLength > 0 ){
-        std::vector<char> ProgramErrorMessage(InfoLogLength+1);
-        glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-        printf("%s\n", &ProgramErrorMessage[0]);
-    }
-
-    glDeleteShader(ComputerShaderID);
-    
-    return ProgramID;
-}
 void LoadSingleShader(GLint shaderID,const char * file_path,GLint &Result, int &InfoLogLength) {
     std::string ShaderCode;
     std::ifstream ShaderStream(file_path, std::ios::in);

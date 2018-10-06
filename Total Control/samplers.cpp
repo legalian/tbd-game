@@ -8,247 +8,586 @@
 
 #include "samplers.h"
 
+using std::function;
+using glm::vec4;
+using glm::vec3;
+using glm::vec2;
+using std::string;
+using std::to_string;
+using glm::length;
+using glm::dot;
+using glm::cross;
+using glm::normalize;
+using glm::max;
+using glm::min;
+using glm::abs;
+#define Gen1 Gen
+#define STYPE1 float
+#define STYPE2 vec2
+#define STYPE3 vec3
+#define STYPE4 vec4
+#define FUNC(k) [=](vec3 e)throw()->STYPE##k
+#define DERIV(k) [=](vec3 e)throw()->Triplet<STYPE##k >
+#define GEN(k,A,B,C) {return Gen##k (FUNC(k){A},DERIV(k){B},C);}
+#define ASSEMBLE(k) return Triplet<STYPE##k>(D1,D2,D3)
 
-NoiseVolume sample1;
-NoiseVolume sample2;
-NoiseVolume sample3;
+#define GENMAKE0(k,O,M)GEN(k,return O;,return 0;,M)
+#define GENMAKE1(k,O,D,M)GEN(k,auto a=ai.func(e);return O;,\
+auto a=ai.func(e);auto dda=ai.deriv(e);auto da=dda.x;auto D1=D;da=dda.y;auto D2=D;da=dda.z;auto D3=D;ASSEMBLE(k);,M)
+#define GENMAKE2(k,O,D,M) GEN(k,auto a=ai.func(e);auto b=bi.func(e);return O;,\
+auto a=ai.func(e);auto b=bi.func(e);auto dda=ai.deriv(e);auto ddb=bi.deriv(e);\
+auto da=dda.x;auto db=ddb.x;auto D1=D;da=dda.y;db=ddb.y;auto D2=D;da=dda.z;db=ddb.z;auto D3=D;ASSEMBLE(k);,M)
+
+#define CONSTMAKE1(k,O,M) GEN(k,auto a=ai.func(e);return O;,return 0;,M)
+#define CONSTMAKE2(k,O,M) GEN(k,auto a=ai.func(e);auto b=bi.func(e);return O;,return 0;,M)
+
+#define LINEARMAKE1(k,O,D,M)GEN(k,auto a=ai.func(e);return O;,\
+auto dda=ai.deriv(e);auto da=dda.x;auto D1=D;da=dda.y;auto D2=D;da=dda.z;auto D3=D;ASSEMBLE(k);,M)
+#define LINEARMAKE2(k,O,D,M)GEN(k,auto a=ai.func(e);auto b=bi.func(e);return O;,auto dda=ai.deriv(e);auto ddb=bi.deriv(e);\
+auto da=dda.x;auto db=ddb.x;auto D1=D;da=dda.y;db=ddb.y;auto D2=D;da=dda.z;db=ddb.z;auto D3=D;ASSEMBLE(k);,M)
+
+#define MEMBERACC(k,A,M) GEN(k,return func(e).A;,auto a = deriv(e);return Triplet<STYPE##k>(a.x.A,a.y.A,a.z.A);,M);
+
+string tostring(float a) {return to_string(a);}
+string tostring(float a,float b) {return "(float2)("+to_string(a)+","+to_string(b)+")";}
+string tostring(float a,float b,float c) {return "(float3)("+to_string(a)+","+to_string(b)+","+to_string(c)+")";}
+string tostring(float a,float b,float c,float d) {return "(float4)("+to_string(a)+","+to_string(b)+","+to_string(c)+","+to_string(d)+")";}
+string tostring(vec2 ab) {return tostring(ab.x,ab.y);}
+string tostring(vec3 abc) {return tostring(abc.x,abc.y,abc.z);}
+string tostring(vec4 abcd) {return tostring(abcd.x,abcd.y,abcd.z,abcd.w);}
+
+Gen::Gen(function<float(vec3)>f,function<Triplet<float>(vec3)>d,string m):func(f),deriv(d),mountable(m){}
+Gen::Gen(float a):func(FUNC(1){return a;}),deriv(DERIV(1){return 0;}),mountable(tostring(a)) {}
+Gen2::Gen2(function<vec2(vec3)>f,function<Triplet<vec2>(vec3)>d,string m):func(f),deriv(d),mountable(m){}
+Gen2::Gen2(float a,float b):func(FUNC(2){return vec2(a,b);}),deriv(DERIV(2){return 0;}),mountable(tostring(a,b)) {}
+Gen2::Gen2(vec2 ab):func(FUNC(2){return ab;}),deriv(DERIV(2){return 0;}),mountable(tostring(ab)) {}
+Gen2::Gen2(Gen a,Gen b):
+    func(FUNC(2){return vec2(a.func(e),b.func(e));}),
+    deriv(DERIV(2){return tripletassemble(a.deriv(e),b.deriv(e));}),
+    mountable("vec2("+a.mountable+","+b.mountable+")") {}
+Gen Gen2::x() MEMBERACC(1,x,mountable+".x")
+Gen Gen2::y() MEMBERACC(1,y,mountable+".y")
+Gen3::Gen3(function<vec3(vec3)>f,function<Triplet<vec3>(vec3)>d,string m):func(f),deriv(d),mountable(m){}
+Gen3::Gen3(float a,float b,float c):func(FUNC(3){return vec3(a,b,c);}),deriv(DERIV(3){return 0;}),mountable(tostring(a,b,c)) {}
+Gen3::Gen3(vec3 abc):func(FUNC(3){return abc;}),deriv(DERIV(3){return 0;}),mountable(tostring(abc)) {}
+Gen3::Gen3(Gen a,Gen b,Gen c):
+    func(FUNC(3){return vec3(a.func(e),b.func(e),c.func(e));}),
+    deriv(DERIV(3){return tripletassemble(a.deriv(e),b.deriv(e),c.deriv(e));}),
+    mountable("vec3("+a.mountable+","+b.mountable+","+c.mountable+")") {}
+Gen Gen3::x() MEMBERACC(1,x,mountable+".x")
+Gen Gen3::y() MEMBERACC(1,y,mountable+".y")
+Gen Gen3::z() MEMBERACC(1,z,mountable+".z")
+Gen4::Gen4(function<vec4(vec3)>f,function<Triplet<vec4>(vec3)>d,string m):func(f),deriv(d),mountable(m){}
+Gen4::Gen4(float a,float b,float c,float d):func(FUNC(4){return vec4(a,b,c,d);}),deriv(DERIV(4){return 0;}),mountable(tostring(a,b,c,d)) {}
+Gen4::Gen4(vec4 abcd):func(FUNC(4){return abcd;}),deriv(DERIV(4){return 0;}),mountable(tostring(abcd)) {}
+Gen4::Gen4(Gen a,Gen b,Gen c,Gen d):
+    func([=](vec3 e)throw()->vec4{return vec4(a.func(e),b.func(e),c.func(e),d.func(e));}),
+    deriv(DERIV(4){return tripletassemble(a.deriv(e),b.deriv(e),c.deriv(e),d.deriv(e));}),
+    mountable("vec4("+a.mountable+","+b.mountable+","+c.mountable+","+d.mountable+")") {}
+Gen Gen4::x() MEMBERACC(1,x,mountable+".x")
+Gen Gen4::y() MEMBERACC(1,y,mountable+".y")
+Gen Gen4::z() MEMBERACC(1,z,mountable+".z")
+Gen Gen4::w() MEMBERACC(1,w,mountable+".w")
+
+Gen sin(const Gen& ai) GENMAKE1(1,sin(a)  ,          da*cos(a),"sin((float)"+ai.mountable+")")
+Gen cos(const Gen& ai) GENMAKE1(1,cos(a)  ,         -da*sin(a),"cos((float)"+ai.mountable+")")
+Gen tan(const Gen& ai) GENMAKE1(1,tan(a)  , da/(cos(a)*cos(a)),"tan((float)"+ai.mountable+")")
+Gen cot(const Gen& ai) GENMAKE1(1,1/tan(a),-da/(sin(a)*sin(a)),"cot((float)"+ai.mountable+")")
+Gen sec(const Gen& ai) GENMAKE1(1,1/cos(a),   da*tan(a)/cos(a),"sec((float)"+ai.mountable+")")
+Gen csc(const Gen& ai) GENMAKE1(1,1/sin(a),-da/(sin(a)*tan(a)),"csc((float)"+ai.mountable+")")
+Gen ln(const Gen& ai)  GENMAKE1(1,log(a),da/a,"ln((float)"+ai.mountable+")")
+Gen pow(const Gen& ai) GENMAKE1(1,exp(a),da*exp(a),"exp("+ai.mountable+")")
+Gen pow(const Gen& ai,float b) GENMAKE1(1,pow(a,b),da*(b-1)*pow(a,b-1),"pow("+ai.mountable+","+to_string(b)+")")
+Gen pow(float b,const Gen& ai) GENMAKE1(1,pow(b,a),da*pow(b,a)*log(b),"pow("+ai.mountable+","+to_string(b)+")")
+Gen pow(const Gen& ai,const Gen& bi) GENMAKE2(1,pow(a,b),da*(b-1)*pow(a,b-1)+db*pow(a,b)*log(a),"pow("+ai.mountable+","+bi.mountable+")")
+
+Gen floor(const Gen& ai)   CONSTMAKE1(1,floor(a),"floor("+ai.mountable+")")
+Gen2 floor(const Gen2& ai) CONSTMAKE1(2,floor(a),"floor("+ai.mountable+")")
+Gen3 floor(const Gen3& ai) CONSTMAKE1(3,floor(a),"floor("+ai.mountable+")")
+Gen4 floor(const Gen4& ai) CONSTMAKE1(4,floor(a),"floor("+ai.mountable+")")
+Gen ceil(const Gen& ai)    CONSTMAKE1(1,ceil(a),"ceil("+ai.mountable+")")
+Gen2 ceil(const Gen2& ai)  CONSTMAKE1(2,ceil(a),"ceil("+ai.mountable+")")
+Gen3 ceil(const Gen3& ai)  CONSTMAKE1(3,ceil(a),"ceil("+ai.mountable+")")
+Gen4 ceil(const Gen4& ai)  CONSTMAKE1(4,ceil(a),"ceil("+ai.mountable+")")
+Gen fract(const Gen& ai)   LINEARMAKE1(1,a-floor(a),da,"fract("+ai.mountable+")")
+Gen2 fract(const Gen2& ai) LINEARMAKE1(2,a-floor(a),da,"fract("+ai.mountable+")")
+Gen3 fract(const Gen3& ai) LINEARMAKE1(3,a-floor(a),da,"fract("+ai.mountable+")")
+Gen4 fract(const Gen4& ai) LINEARMAKE1(4,a-floor(a),da,"fract("+ai.mountable+")")
+Gen magnitude(const Gen2& ai) GENMAKE1(1,length(a),dot(da,a)/length(a),"fast_length("+ai.mountable+")")
+Gen magnitude(const Gen3& ai) GENMAKE1(1,length(a),dot(da,a)/length(a),"fast_length("+ai.mountable+")")
+Gen magnitude(const Gen4& ai) GENMAKE1(1,length(a),dot(da,a)/length(a),"fast_length("+ai.mountable+")")
+Gen squaredmagnitude(const Gen2& ai) GENMAKE1(1,dot(a,a),2*dot(da,a),"dot("+ai.mountable+","+ai.mountable+")")
+Gen squaredmagnitude(const Gen3& ai) GENMAKE1(1,dot(a,a),2*dot(da,a),"dot("+ai.mountable+","+ai.mountable+")")
+Gen squaredmagnitude(const Gen4& ai) GENMAKE1(1,dot(a,a),2*dot(da,a),"dot("+ai.mountable+","+ai.mountable+")")
+Gen2 normalize(const Gen2& ai) GENMAKE1(2,normalize(a),(a*dot(da,a)+vec2(1,1))/length(a),"fast_normalize("+ai.mountable+","+ai.mountable+")")
+Gen3 normalize(const Gen3& ai) GENMAKE1(3,normalize(a),(a*dot(da,a)+vec3(1,1,1))/length(a),"fast_normalize("+ai.mountable+","+ai.mountable+")")
+Gen4 normalize(const Gen4& ai) GENMAKE1(4,normalize(a),(a*dot(da,a)+vec4(1,1,1,1))/length(a),"fast_normalize("+ai.mountable+","+ai.mountable+")")
+Gen3 cross(const Gen3& ai,const Gen3& bi) GENMAKE2(3,cross(a,b),cross(da,b)-cross(db,a),"cross("+ai.mountable+","+bi.mountable+")")
 
 
+Gen  max(const Gen&  ai,const Gen& bi)  GENMAKE2(1,max(a,b),a>b?da:db,"fmax("+ai.mountable+","+bi.mountable+")")
+Gen2 max(const Gen2& ai,const Gen2& bi) GENMAKE2(2,max(a,b),vec2(a.x>b.x?da.x:db.x,a.y>b.y?da.y:db.y),"fmax("+ai.mountable+","+bi.mountable+")")
+Gen3 max(const Gen3& ai,const Gen3& bi) GENMAKE2(3,max(a,b),
+vec3(a.x>b.x?da.x:db.x,a.y>b.y?da.y:db.y,a.z>b.z?da.z:db.z),"fmax("+ai.mountable+","+bi.mountable+")")
+Gen4 max(const Gen4& ai,const Gen4& bi) GENMAKE2(4,max(a,b),
+vec4(a.x>b.x?da.x:db.x,a.y>b.y?da.y:db.y,a.z>b.z?da.z:db.z,a.w>b.w?da.w:db.w),"fmax("+ai.mountable+","+bi.mountable+")")
+Gen  min(const Gen&  ai,const Gen& bi)  GENMAKE2(1,min(a,b),a<b?da:db,"fmin("+ai.mountable+","+bi.mountable+")")
+Gen2 min(const Gen2& ai,const Gen2& bi) GENMAKE2(2,min(a,b),vec2(a.x<b.x?da.x:db.x,a.y<b.y?da.y:db.y),"fmin("+ai.mountable+","+bi.mountable+")")
+Gen3 min(const Gen3& ai,const Gen3& bi) GENMAKE2(3,min(a,b),
+vec3(a.x<b.x?da.x:db.x,a.y<b.y?da.y:db.y,a.z<b.z?da.z:db.z),"fmin("+ai.mountable+","+bi.mountable+")")
+Gen4 min(const Gen4& ai,const Gen4& bi) GENMAKE2(4,min(a,b),
+vec4(a.x<b.x?da.x:db.x,a.y<b.y?da.y:db.y,a.z<b.z?da.z:db.z,a.w<b.w?da.w:db.w),"fmin("+ai.mountable+","+bi.mountable+")")
+Gen  abs(const Gen&  ai) GENMAKE1(1,abs(a),a<0?-da:da,"fabs("+ai.mountable+")")
+Gen2 abs(const Gen2& ai) GENMAKE1(2,abs(a),vec2(a.x<0?-da.x:da.x,a.y<0?-da.y:da.y),"fmin("+ai.mountable+")")
+Gen3 abs(const Gen3& ai) GENMAKE1(3,abs(a),
+vec3(a.x<0?-da.x:da.x,a.y<0?-da.y:da.y,a.z<0?-da.z:da.z),"fmin("+ai.mountable+")")
+Gen4 abs(const Gen4& ai) GENMAKE1(4,abs(a),
+vec4(a.x<0?-da.x:da.x,a.y<0?-da.y:da.y,a.z<0?-da.z:da.z,a.w<0?-da.w:da.w),"fmin("+ai.mountable+")")
 
 
+Gen  operator+(const Gen&  ai,const Gen&  bi) LINEARMAKE2(1,a+b,da+db,"("+ai.mountable+"+"+bi.mountable+")")
+Gen2 operator+(const Gen2& ai,const Gen2& bi) LINEARMAKE2(2,a+b,da+db,"("+ai.mountable+"+"+bi.mountable+")")
+Gen3 operator+(const Gen3& ai,const Gen3& bi) LINEARMAKE2(3,a+b,da+db,"("+ai.mountable+"+"+bi.mountable+")")
+Gen4 operator+(const Gen4& ai,const Gen4& bi) LINEARMAKE2(4,a+b,da+db,"("+ai.mountable+"+"+bi.mountable+")")
+Gen  operator+(const Gen&  ai,float b) LINEARMAKE1(1,a+b,da,"("+ai.mountable+"+"+tostring(b)+")")
+Gen2 operator+(const Gen2& ai,vec2 b ) LINEARMAKE1(2,a+b,da,"("+ai.mountable+"+"+tostring(b)+")")
+Gen3 operator+(const Gen3& ai,vec3 b ) LINEARMAKE1(3,a+b,da,"("+ai.mountable+"+"+tostring(b)+")")
+Gen4 operator+(const Gen4& ai,vec4 b ) LINEARMAKE1(4,a+b,da,"("+ai.mountable+"+"+tostring(b)+")")
+Gen  operator+(float ai,const Gen&  bi) {return bi+ai;}
+Gen2 operator+(vec2  ai,const Gen2& bi) {return bi+ai;}
+Gen3 operator+(vec3  ai,const Gen3& bi) {return bi+ai;}
+Gen4 operator+(vec4  ai,const Gen4& bi) {return bi+ai;}
+Gen  operator-(const Gen&  ai,const Gen&  bi) LINEARMAKE2(1,a-b,da-db,"("+ai.mountable+"-"+bi.mountable+")")
+Gen2 operator-(const Gen2& ai,const Gen2& bi) LINEARMAKE2(2,a-b,da-db,"("+ai.mountable+"-"+bi.mountable+")")
+Gen3 operator-(const Gen3& ai,const Gen3& bi) LINEARMAKE2(3,a-b,da-db,"("+ai.mountable+"-"+bi.mountable+")")
+Gen4 operator-(const Gen4& ai,const Gen4& bi) LINEARMAKE2(4,a-b,da-db,"("+ai.mountable+"-"+bi.mountable+")")
+Gen  operator-(const Gen&  ai,float b) {return ai+(-b);}
+Gen2 operator-(const Gen2& ai,vec2 b ) {return ai+(-b);}
+Gen3 operator-(const Gen3& ai,vec3 b ) {return ai+(-b);}
+Gen4 operator-(const Gen4& ai,vec4 b ) {return ai+(-b);}
+Gen  operator-(float b,const Gen&  ai) LINEARMAKE1(1,b-a,-da,"("+tostring(b)+"-"+ai.mountable+")")
+Gen2 operator-(vec2  b,const Gen2& ai) LINEARMAKE1(2,b-a,-da,"("+tostring(b)+"-"+ai.mountable+")")
+Gen3 operator-(vec3  b,const Gen3& ai) LINEARMAKE1(3,b-a,-da,"("+tostring(b)+"-"+ai.mountable+")")
+Gen4 operator-(vec4  b,const Gen4& ai) LINEARMAKE1(4,b-a,-da,"("+tostring(b)+"-"+ai.mountable+")")
+Gen  operator*(const Gen& ai,const Gen& bi)  GENMAKE2(1,a*b,a*db+b*da,"("+ai.mountable+"*"+bi.mountable+")")
+Gen2 operator*(const Gen& ai,const Gen2& bi) GENMAKE2(2,a*b,a*db+b*da,"("+ai.mountable+"*"+bi.mountable+")")
+Gen3 operator*(const Gen& ai,const Gen3& bi) GENMAKE2(3,a*b,a*db+b*da,"("+ai.mountable+"*"+bi.mountable+")")
+Gen4 operator*(const Gen& ai,const Gen4& bi) GENMAKE2(4,a*b,a*db+b*da,"("+ai.mountable+"*"+bi.mountable+")")
+Gen  operator*(const Gen& ai,float b)   LINEARMAKE1(1,a*b,b*da,"("+ai.mountable+"*"+tostring(b)+")")
+Gen  operator*(float b,const Gen& ai) {return ai*b;}
+Gen2 operator*(const Gen& ai,vec2 b) LINEARMAKE1(2,a*b,b*da,"("+ai.mountable+"*"+tostring(b)+")")
+Gen3 operator*(const Gen& ai,vec3 b) LINEARMAKE1(3,a*b,b*da,"("+ai.mountable+"*"+tostring(b)+")")
+Gen4 operator*(const Gen& ai,vec4 b) LINEARMAKE1(4,a*b,b*da,"("+ai.mountable+"*"+tostring(b)+")")
+Gen2 operator*(const Gen2& ai,float b) LINEARMAKE1(2,a*b,b*da,"("+ai.mountable+"*"+tostring(b)+")")
+Gen3 operator*(const Gen3& ai,float b) LINEARMAKE1(3,a*b,b*da,"("+ai.mountable+"*"+tostring(b)+")")
+Gen4 operator*(const Gen4& ai,float b) LINEARMAKE1(4,a*b,b*da,"("+ai.mountable+"*"+tostring(b)+")")
+Gen2 operator*(const Gen2& ai,const Gen& bi) {return bi*ai;}
+Gen3 operator*(const Gen3& ai,const Gen& bi) {return bi*ai;}
+Gen4 operator*(const Gen4& ai,const Gen& bi) {return bi*ai;}
+Gen2 operator*(vec2 b,const Gen& ai) {return ai*b;}
+Gen3 operator*(vec3 b,const Gen& ai) {return ai*b;}
+Gen4 operator*(vec4 b,const Gen& ai) {return ai*b;}
+Gen2 operator*(float b,const Gen2& ai) {return ai*b;}
+Gen3 operator*(float b,const Gen3& ai) {return ai*b;}
+Gen4 operator*(float b,const Gen4& ai) {return ai*b;}
+Gen  operator/(const Gen&  ai,const Gen& bi) GENMAKE2(1,a/b,(da*b-db*a)/(b*b),"("+ai.mountable+"/"+bi.mountable+")")
+Gen2 operator/(const Gen2& ai,const Gen& bi) GENMAKE2(2,a/b,(da*b-db*a)/(b*b),"("+ai.mountable+"/"+bi.mountable+")")
+Gen3 operator/(const Gen3& ai,const Gen& bi) GENMAKE2(3,a/b,(da*b-db*a)/(b*b),"("+ai.mountable+"/"+bi.mountable+")")
+Gen4 operator/(const Gen4& ai,const Gen& bi) GENMAKE2(4,a/b,(da*b-db*a)/(b*b),"("+ai.mountable+"/"+bi.mountable+")")
+Gen  operator/(float b,const Gen& ai) GENMAKE1(1,a/b,-da*b/(a*a),"("+tostring(b)+"/"+ai.mountable+")")
+Gen2 operator/(vec2  b,const Gen& ai) GENMAKE1(2,a/b,-da*b/(a*a),"("+tostring(b)+"/"+ai.mountable+")")
+Gen3 operator/(vec3  b,const Gen& ai) GENMAKE1(3,a/b,-da*b/(a*a),"("+tostring(b)+"/"+ai.mountable+")")
+Gen4 operator/(vec4  b,const Gen& ai) GENMAKE1(4,a/b,-da*b/(a*a),"("+tostring(b)+"/"+ai.mountable+")")
+Gen  operator/(const Gen&  ai,float b) {return ai*(1/b);}
+Gen2 operator/(const Gen2& ai,float b) {return ai*(1/b);}
+Gen3 operator/(const Gen3& ai,float b) {return ai*(1/b);}
+Gen4 operator/(const Gen4& ai,float b) {return ai*(1/b);}
+Gen operator*(const Gen2& ai,const Gen2& bi) GENMAKE2(1,dot(a,b),dot(a,db)+dot(b,da),"dot("+ai.mountable+","+bi.mountable+")")
+Gen operator*(const Gen3& ai,const Gen3& bi) GENMAKE2(1,dot(a,b),dot(a,db)+dot(b,da),"dot("+ai.mountable+","+bi.mountable+")")
+Gen operator*(const Gen4& ai,const Gen4& bi) GENMAKE2(1,dot(a,b),dot(a,db)+dot(b,da),"dot("+ai.mountable+","+bi.mountable+")")
+Gen operator*(const Gen2& ai,vec2 b) LINEARMAKE1(1,dot(a,b),dot(b,da),"dot("+ai.mountable+","+tostring(b)+")")
+Gen operator*(const Gen3& ai,vec3 b) LINEARMAKE1(1,dot(a,b),dot(b,da),"dot("+ai.mountable+","+tostring(b)+")")
+Gen operator*(const Gen4& ai,vec4 b) LINEARMAKE1(1,dot(a,b),dot(b,da),"dot("+ai.mountable+","+tostring(b)+")")
+Gen operator*(vec2 b,const Gen2& ai) {return ai*b;}
+Gen operator*(vec3 b,const Gen3& ai) {return ai*b;}
+Gen operator*(vec4 b,const Gen4& ai) {return ai*b;}
 
-
-
-
-
-
-
-NoiseVolume::NoiseVolume() {
-    for (int xi=0;xi<RANDSIZE;xi++) {
-        for (int yi=0;yi<RANDSIZE;yi++) {
-            for (int zi=0;zi<RANDSIZE;zi++) {
-                data[xi][yi][zi] = (((float)std::rand())/(RAND_MAX/2))-1;
-            }
-        }
+void GenProgram::set(string id,const Gen& g) {
+    id1.push_back(id);
+    int z = (int)shrak1.size();
+    shrak1.push_back({0,0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak1[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak1[z] = {g.func(e),g.deriv(e)};};
+    premount = premount+"float "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::set2(string id,const Gen2& g) {
+    id2.push_back(id);
+    int z = (int)shrak2.size();
+    shrak2.push_back({vec2(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak2[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak2[z] = {g.func(e),g.deriv(e)};};
+    premount = premount+"float2 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::set3(string id,const Gen3& g) {
+    id3.push_back(id);
+    int z = (int)shrak3.size();
+    shrak3.push_back({vec3(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak3[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak3[z] = {g.func(e),g.deriv(e)};};
+    premount = premount+"float3 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::set4(string id,const Gen4& g) {
+    id4.push_back(id);
+    int z = (int)shrak4.size();
+    shrak4.push_back({vec4(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak4[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak4[z] = {g.func(e),g.deriv(e)};};
+    premount = premount+"float4 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setconst(string id,const Gen& g) {
+    id1.push_back(id);
+    int z = (int)shrak1.size();
+    shrak1.push_back({0,0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak1[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak1[z] = {g.func(e),0};};
+    premount = premount+"float "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setconst2(string id,const Gen2& g) {
+    id2.push_back(id);
+    int z = (int)shrak2.size();
+    shrak2.push_back({vec2(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak2[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak2[z] = {g.func(e),0};};
+    premount = premount+"float2 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setconst3(string id,const Gen3& g) {
+    id3.push_back(id);
+    int z = (int)shrak3.size();
+    shrak3.push_back({vec3(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak3[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak3[z] = {g.func(e),0};};
+    premount = premount+"float3 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setconst4(string id,const Gen4& g) {
+    id4.push_back(id);
+    int z = (int)shrak4.size();
+    shrak4.push_back({vec4(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak4[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak4[z] = {g.func(e),0};};
+    premount = premount+"float4 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setlinear(string id,const Gen& g) {
+    id1.push_back(id);
+    int z = (int)shrak1.size();
+    shrak1.push_back({0,0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak1[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak1[z] = {0,g.deriv(e)};};
+    premount = premount+"float "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setlinear2(string id,const Gen2& g) {
+    id2.push_back(id);
+    int z = (int)shrak2.size();
+    shrak2.push_back({vec2(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak2[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak2[z] = {vec2(0),g.deriv(e)};};
+    premount = premount+"float2 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setlinear3(string id,const Gen3& g) {
+    id3.push_back(id);
+    int z = (int)shrak3.size();
+    shrak3.push_back({vec3(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak3[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak3[z] = {vec3(0),g.deriv(e)};};
+    premount = premount+"float3 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setlinear4(string id,const Gen4& g) {
+    id4.push_back(id);
+    int z = (int)shrak4.size();
+    shrak4.push_back({vec4(0),0});
+    function<void(vec3)> pf = prefunc;
+    function<void(vec3)> pd = prederiv;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak4[z] = {g.func(e),0};};
+    prederiv = [=](vec3 e)throw()->void{pd(e);shrak4[z] = {vec4(0),g.deriv(e)};};
+    premount = premount+"float4 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setfunconly(string id,const Gen& g) {
+    id1.push_back(id);
+    int z = (int)shrak1.size();
+    shrak1.push_back({0,0});
+    function<void(vec3)> pf = prefunc;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak1[z] = {g.func(e),0};};
+    premount = premount+"float "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setfunconly2(string id,const Gen2& g) {
+    id2.push_back(id);
+    int z = (int)shrak2.size();
+    shrak2.push_back({vec2(0),0});
+    function<void(vec3)> pf = prefunc;
+    prefunc  = [=](vec3 e)throw()->void{pf(e); shrak2[z] = {g.func(e),0};};
+    premount = premount+"float2 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setfunconly3(string id,const Gen3& g) {
+    id3.push_back(id);
+    int z = (int)shrak3.size();
+    shrak3.push_back({vec3(0),0});
+    function<void(vec3)> pf = prefunc;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak3[z] = {g.func(e),0};};
+    premount = premount+"float3 "+id+" = "+g.mountable+";\n";
+}
+void GenProgram::setfunconly4(string id,const Gen4& g) {
+    id4.push_back(id);
+    int z = (int)shrak4.size();
+    shrak4.push_back({vec4(0),0});
+    function<void(vec3)> pf = prefunc;
+    prefunc  = [=](vec3 e)throw()->void{pf(e);shrak4[z] = {g.func(e),0};};
+    premount = premount+"float4 "+id+" = "+g.mountable+";\n";
+}
+Gen GenProgram::get(string id) {
+    for (int i=(int)id1.size()-1;i>=0;i--) if (id1[i]==id) {
+        return Gen(FUNC(1){return shrak1[i].first;},DERIV(1){return shrak1[i].second;},id);
     }
+    if (id=="x") {return Gen(FUNC(1){return e.x;},DERIV(1){return Triplet<float>(1,0,0);},"xyz.x");}
+    if (id=="y") {return Gen(FUNC(1){return e.y;},DERIV(1){return Triplet<float>(0,1,0);},"xyz.y");}
+    if (id=="z") {return Gen(FUNC(1){return e.z;},DERIV(1){return Triplet<float>(0,0,1);},"xyz.z");}
+    throw;
 }
-float NoiseVolume::sample(double x, double y, double z) {
-    //    std::cout<<x<<","<<y<<","<<z<<"\n";
-//    int xmax = MOD((int)ceil(x*RANDSIZE),RANDSIZE);
-//    int xmin = MOD((int)floor(x*RANDSIZE),RANDSIZE);
-    int xmax = (int)ceil(x*RANDSIZE)&63;
-    int xmin = (int)floor(x*RANDSIZE)&63;
-    float xi = (x*RANDSIZE)-floor(x*RANDSIZE);
-    int ymax = (int)ceil(y*RANDSIZE)&63;
-    int ymin = (int)floor(y*RANDSIZE)&63;
-    float yi = (y*RANDSIZE)-floor(y*RANDSIZE);
-    int zmax = (int)ceil(z*RANDSIZE)&63;
-    int zmin = (int)floor(z*RANDSIZE)&63;
-    float zi = (z*RANDSIZE)-floor(z*RANDSIZE);
-//    return 0.0;
-//    std::cout<<xmin<<","<<ymin<<","<<zmin<<"\n";
-//    return data[xmin][ymin][zmin];
-//    return interp(interp(interp(data[xmax][ymax][zmax],data[xmax][ymax][zmin],zi),interp(data[xmax][ymin][zmax],data[xmax][ymin][zmin],zi),yi),interp(interp(data[xmin][ymax][zmax],data[xmin][ymax][zmin],zi),interp(data[xmin][ymin][zmax],data[xmin][ymin][zmin],zi),yi),xi);
-    return
-    ((data[xmax][ymax][zmax]*zi+data[xmax][ymax][zmin]*(1-zi))*yi+
-    (data[xmax][ymin][zmax]*zi+data[xmax][ymin][zmin]*(1-zi))*(1-yi))*xi+
-    ((data[xmin][ymax][zmax]*zi+data[xmin][ymax][zmin]*(1-zi))*yi+
-    (data[xmin][ymin][zmax]*zi+data[xmin][ymin][zmin]*(1-zi))*(1-yi))*(1-xi);
+Gen2 GenProgram::get2(string id) {
+    for (int i=(int)id2.size()-1;i>=0;i--) if (id2[i]==id) {
+        return Gen2(FUNC(2){return shrak2[i].first;},DERIV(2){return shrak2[i].second;},id);
+    }
+    throw;
 }
-//
-void Sampler::populate(int x,int y, int z,Structure& world){throw;}
-//void EmptySampler::populate(BlockLoc x,BlockLoc y, BlockLoc z,Structure& world) {}
-//
-//void BoxSample::populate(BlockLoc x,BlockLoc y, BlockLoc z,Structure& world) {
-//
-//    BlockId (*test)[CHSIZE+1][CHSIZE+1] = new BlockId[CHSIZE+1][CHSIZE+1][CHSIZE+1]();
-//    //    long alt = (((LONG_MAX/3)<<1)|1);
-//    for (int xi=0;xi<CHSIZE+1;xi++) {
-//        for (int yi=0;yi<CHSIZE+1;yi++) {
-//            for (int zi=0;zi<CHSIZE+1;zi++) {
-//                if (12<xi and xi<17 and 12<yi and yi<17 and 12<zi and zi<17) {
-//                    test[xi][yi][zi] = 2;
-//                } else {
-//                    test[xi][yi][zi] = 1;
-//                }
-//            }
-//        }
-//    }
-//    world.loadportion(x,y,z,test);
-//    for (int xi=0;xi<CHSIZE-1;xi++) {
-//        for (int yi=0;yi<CHSIZE-1;yi++) {
-//            for (int zi=0;zi<CHSIZE-1;zi++) {
-//                BlockLoc xt = ASBLOCKLOC(xi + (x<<CHPOWER));
-//                BlockLoc yt = ASBLOCKLOC(yi + (y<<CHPOWER));
-//                BlockLoc zt = ASBLOCKLOC(zi + (z<<CHPOWER));
-//                if (test[xi][yi][zi] != test[xi+1][yi][zi]) {
-//                    world.data->xcon(xt,yt,zt) = Edgedat((float)1,(float)0,(float)0,(float).5);
-//                }
-//                if (test[xi][yi][zi] != test[xi][yi+1][zi]) {
-//                    world.data->ycon(xt,yt,zt) = Edgedat((float)0,(float)1,(float)0,(float).5);
-//                }
-//                if (test[xi][yi][zi] != test[xi][yi][zi+1]) {
-//                    world.data->zcon(xt,yt,zt) = Edgedat((float)0,(float)0,(float)1,(float).5);
-//                }
-//            }
-//        }
-//    }
-//    delete [] test;
+Gen3 GenProgram::get3(string id) {
+
+    for (int i=(int)id3.size()-1;i>=0;i--) if (id3[i]==id) {
+        return Gen3(FUNC(3){return shrak3[i].first;},DERIV(3){return shrak3[i].second;},id);
+    }
+    if (id=="xyz") {return Gen3(FUNC(3){return e;},DERIV(3){return Triplet<vec3>(vec3(1,0,0),vec3(0,1,0),vec3(0,0,1));},"xyz");}
+    throw;
+}
+Gen4 GenProgram::get4(string id) {
+    for (int i=(int)id4.size()-1;i>=0;i--) if (id4[i]==id) {
+        return Gen4(FUNC(4){return shrak4[i].first;},DERIV(4){return shrak4[i].second;},id);
+    }
+    throw;
+}
+
+
+Gen GenProgram::get(int rz,string id,char x) {
+    if (x=='x') x=0; if (x=='y') x=1; if (x=='z') x=2; if (x=='w') x=3;
+    if (x=='X') x=0; if (x=='Y') x=1; if (x=='Z') x=2; if (x=='W') x=3;
+    std::string postfix=".";
+    if (x==0) postfix+="x";if (x==1) postfix+="y";if (x==2) postfix+="z";if (x==3) postfix+="w";
+    switch (rz) {
+        case 1: for (int i=(int)id1.size()-1;i>=0;i--) if (id1[i]==id) {
+            return Gen(FUNC(1){return shrak1[i].first;},DERIV(1){return shrak1[i].second;},id+postfix);
+        } break;
+        case 2: for (int i=(int)id2.size()-1;i>=0;i--) if (id2[i]==id) {
+            return Gen(FUNC(1){return amtacc(x,shrak2[i].first);},DERIV(1){return tripletacc(x,shrak2[i].second);},id+postfix);
+        } break;
+        case 3: for (int i=(int)id3.size()-1;i>=0;i--) if (id3[i]==id) {
+            return Gen(FUNC(1){return amtacc(x,shrak3[i].first);},DERIV(1){return tripletacc(x,shrak3[i].second);},id+postfix);
+        } break;
+        case 4: for (int i=(int)id4.size()-1;i>=0;i--) if (id4[i]==id) {
+            return Gen(FUNC(1){return amtacc(x,shrak4[i].first);},DERIV(1){return tripletacc(x,shrak4[i].second);},id+postfix);
+        } break;
+    }
+    throw;
+}
+Gen2 GenProgram::get2(int rz,string id,char x,char y)  {
+    if (x=='x') x=0; if (x=='y') x=1; if (x=='z') x=2; if (x=='w') x=3;
+    if (x=='X') x=0; if (x=='Y') x=1; if (x=='Z') x=2; if (x=='W') x=3;
+    if (y=='x') y=0; if (y=='y') y=1; if (y=='z') y=2; if (y=='w') y=3;
+    if (y=='X') y=0; if (y=='Y') y=1; if (y=='Z') y=2; if (y=='W') y=3;
+    std::string postfix=".";
+    if (x==0) postfix+="x";if (x==1) postfix+="y";if (x==2) postfix+="z";if (x==3) postfix+="w";
+    if (y==0) postfix+="x";if (y==1) postfix+="y";if (y==2) postfix+="z";if (y==3) postfix+="w";
+    switch (rz) {
+        case 1: for (int i=(int)id1.size()-1;i>=0;i--) if (id1[i]==id) {
+            return Gen2(FUNC(2){return vec2(shrak1[i].first);},DERIV(2){return tripletassemble(shrak1[i].second,shrak1[i].second);},id+postfix);
+        } break;
+        case 2: for (int i=(int)id2.size()-1;i>=0;i--) if (id2[i]==id) {
+            return Gen2(FUNC(2){return vec2(amtacc(x,shrak2[i].first),amtacc(y,shrak2[i].first));},DERIV(2){return tripletassemble(tripletacc(x,shrak2[i].second),tripletacc(y,shrak2[i].second));},id+postfix);
+        } break;
+        case 3: for (int i=(int)id3.size()-1;i>=0;i--) if (id3[i]==id) {
+            return Gen2(FUNC(2){return vec2(amtacc(x,shrak3[i].first),amtacc(y,shrak3[i].first));},DERIV(2){return tripletassemble(tripletacc(x,shrak3[i].second),tripletacc(y,shrak3[i].second));},id+postfix);
+        } break;
+        case 4: for (int i=(int)id4.size()-1;i>=0;i--) if (id4[i]==id) {
+            return Gen2(FUNC(2){return vec2(amtacc(x,shrak4[i].first),amtacc(y,shrak4[i].first));},DERIV(2){return tripletassemble(tripletacc(x,shrak4[i].second),tripletacc(y,shrak4[i].second));},id+postfix);
+        } break;
+    }
+    throw;
+}
+Gen3 GenProgram::get3(int rz,string id,char x,char y,char z)  {
+    if (x=='x') x=0; if (x=='y') x=1; if (x=='z') x=2; if (x=='w') x=3;
+    if (x=='X') x=0; if (x=='Y') x=1; if (x=='Z') x=2; if (x=='W') x=3;
+    if (y=='x') y=0; if (y=='y') y=1; if (y=='z') y=2; if (y=='w') y=3;
+    if (y=='X') y=0; if (y=='Y') y=1; if (y=='Z') y=2; if (y=='W') y=3;
+    if (z=='x') z=0; if (z=='y') z=1; if (z=='z') z=2; if (z=='w') z=3;
+    if (z=='X') z=0; if (z=='Y') z=1; if (z=='Z') z=2; if (z=='W') z=3;
+    std::string postfix=".";
+    if (x==0) postfix+="x";if (x==1) postfix+="y";if (x==2) postfix+="z";if (x==3) postfix+="w";
+    if (y==0) postfix+="x";if (y==1) postfix+="y";if (y==2) postfix+="z";if (y==3) postfix+="w";
+    if (z==0) postfix+="x";if (z==1) postfix+="y";if (z==2) postfix+="z";if (z==3) postfix+="w";
+    switch (rz) {
+        case 1: for (int i=(int)id1.size()-1;i>=0;i--) if (id1[i]==id) {
+            return Gen3(FUNC(3){return vec3(shrak1[i].first);},DERIV(3){return tripletassemble(shrak1[i].second,shrak1[i].second,shrak1[i].second);},id+postfix);
+        } break;
+        case 2: for (int i=(int)id2.size()-1;i>=0;i--) if (id2[i]==id) {
+            return Gen3(FUNC(3){return vec3(amtacc(x,shrak2[i].first),amtacc(y,shrak2[i].first),amtacc(z,shrak2[i].first));},DERIV(3){return tripletassemble(tripletacc(x,shrak2[i].second),tripletacc(y,shrak2[i].second),tripletacc(z,shrak2[i].second));},id+postfix);
+        } break;
+        case 3: for (int i=(int)id3.size()-1;i>=0;i--) if (id3[i]==id) {
+            return Gen3(FUNC(3){return vec3(amtacc(x,shrak3[i].first),amtacc(y,shrak3[i].first),amtacc(z,shrak3[i].first));},DERIV(3){return tripletassemble(tripletacc(x,shrak3[i].second),tripletacc(y,shrak3[i].second),tripletacc(z,shrak3[i].second));},id+postfix);
+        } break;
+        case 4: for (int i=(int)id4.size()-1;i>=0;i--) if (id4[i]==id) {
+            return Gen3(FUNC(3){return vec3(amtacc(x,shrak3[i].first),amtacc(y,shrak3[i].first),amtacc(z,shrak3[i].first));},DERIV(3){return tripletassemble(tripletacc(x,shrak3[i].second),tripletacc(y,shrak3[i].second),tripletacc(z,shrak3[i].second));},id+postfix);
+        } break;
+    }
+    throw;
+}
+Gen4 GenProgram::get4(int rz,string id,char x,char y,char z,char w)  {
+    if (x=='x') x=0; if (x=='y') x=1; if (x=='z') x=2; if (x=='w') x=3;
+    if (x=='X') x=0; if (x=='Y') x=1; if (x=='Z') x=2; if (x=='W') x=3;
+    if (y=='x') y=0; if (y=='y') y=1; if (y=='z') y=2; if (y=='w') y=3;
+    if (y=='X') y=0; if (y=='Y') y=1; if (y=='Z') y=2; if (y=='W') y=3;
+    if (z=='x') z=0; if (z=='y') z=1; if (z=='z') z=2; if (z=='w') z=3;
+    if (z=='X') z=0; if (z=='Y') z=1; if (z=='Z') z=2; if (z=='W') z=3;
+    if (w=='x') w=0; if (w=='y') w=1; if (w=='z') w=2; if (w=='w') w=3;
+    if (w=='X') w=0; if (w=='Y') w=1; if (w=='Z') w=2; if (w=='W') w=3;
+    std::string postfix=".";
+    if (x==0) postfix+="x";if (x==1) postfix+="y";if (x==2) postfix+="z";if (x==3) postfix+="w";
+    if (y==0) postfix+="x";if (y==1) postfix+="y";if (y==2) postfix+="z";if (y==3) postfix+="w";
+    if (z==0) postfix+="x";if (z==1) postfix+="y";if (z==2) postfix+="z";if (z==3) postfix+="w";
+    if (w==0) postfix+="x";if (w==1) postfix+="y";if (w==2) postfix+="z";if (w==3) postfix+="w";
+    switch (rz) {
+        case 1: for (int i=(int)id1.size()-1;i>=0;i--) if (id1[i]==id) {
+            return Gen4(FUNC(4){return vec4(shrak1[i].first);},DERIV(4){return tripletassemble(shrak1[i].second,shrak1[i].second,shrak1[i].second,shrak1[i].second);},id+postfix);
+        } break;
+        case 2: for (int i=(int)id2.size()-1;i>=0;i--) if (id2[i]==id) {
+            return Gen4(FUNC(4){return vec4(amtacc(x,shrak2[i].first),amtacc(y,shrak2[i].first),amtacc(z,shrak2[i].first),amtacc(w,shrak2[i].first));},DERIV(4){return tripletassemble(tripletacc(x,shrak2[i].second),tripletacc(y,shrak2[i].second),tripletacc(z,shrak2[i].second),tripletacc(w,shrak2[i].second));},id+postfix);
+        } break;
+        case 3: for (int i=(int)id3.size()-1;i>=0;i--) if (id3[i]==id) {
+            return Gen4(FUNC(4){return vec4(amtacc(x,shrak3[i].first),amtacc(y,shrak3[i].first),amtacc(z,shrak3[i].first),amtacc(w,shrak3[i].first));},DERIV(4){return tripletassemble(tripletacc(x,shrak3[i].second),tripletacc(y,shrak3[i].second),tripletacc(z,shrak3[i].second),tripletacc(w,shrak3[i].second));},id+postfix);
+        } break;
+        case 4: for (int i=(int)id4.size()-1;i>=0;i--) if (id4[i]==id) {
+            return Gen4(FUNC(4){return vec4(amtacc(x,shrak4[i].first),amtacc(y,shrak4[i].first),amtacc(z,shrak4[i].first),amtacc(w,shrak4[i].first));},DERIV(4){return tripletassemble(tripletacc(x,shrak4[i].second),tripletacc(y,shrak4[i].second),tripletacc(z,shrak4[i].second),tripletacc(w,shrak4[i].second));},id+postfix);
+        } break;
+    }
+    throw;
+}
+void GenProgram::mount(const Gen& g) {
+    string prefix =
+    "__kernel void square(\n"
+    "__global float* output,\n"
+    "const int xc,\n"
+    "const int yc,\n"
+    "const int zc){\n"
+    "long combined = get_global_id(0)+get_global_id(1)*CHSIZE+get_global_id(2)*CHSIZE*CHSIZE;\n"
+    "int xwi = combined%(CHSIZE+1);\n"
+    "int ywi = (combined/(CHSIZE+1))%(CHSIZE+1);\n"
+    "int zwi = combined/((CHSIZE+1)*(CHSIZE+1));\n"
+    "if (combined<(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1))\n{"
+    "float3 xyz = (float3)(xc+xwi,yc+ywi,zc+zwi);\n";
+    string postfix = "}}";
+    mounted = Gen(FUNC(1){prefunc(e);return g.func(e);},DERIV(1){prederiv(e);return g.deriv(e);},
+    prefix+premount+"output[combined] = "+g.mountable+";\n"+postfix);
+}
+vec3 GenProgram::samplenormal(float x,float y,float z) {
+    Triplet<float> ag = mounted.deriv(glm::vec3(x,y,z));
+    return normalize(vec3(ag.x,ag.y,ag.z));
+}
+float GenProgram::sample(float x,float y,float z) {
+    return mounted.func(glm::vec3(x,y,z));
+}
+
+Triplet<float> tripletacc(int c,const Triplet<vec2>& r) {
+    if (c==0) return Triplet<float>(r.x.x,r.y.x,r.z.x);
+    if (c==1) return Triplet<float>(r.x.y,r.y.y,r.z.y);
+    throw;
+}
+Triplet<float> tripletacc(int c,const Triplet<vec3>& r) {
+    if (c==0) return Triplet<float>(r.x.x,r.y.x,r.z.x);
+    if (c==1) return Triplet<float>(r.x.y,r.y.y,r.z.y);
+    if (c==2) return Triplet<float>(r.x.z,r.y.z,r.z.z);
+    throw;
+}
+Triplet<float> tripletacc(int c,const Triplet<vec4>& r) {
+    if (c==0) return Triplet<float>(r.x.x,r.y.x,r.z.x);
+    if (c==1) return Triplet<float>(r.x.y,r.y.y,r.z.y);
+    if (c==2) return Triplet<float>(r.x.z,r.y.z,r.z.z);
+    if (c==3) return Triplet<float>(r.x.w,r.y.w,r.z.w);
+    throw;
+}
+float amtacc(int c,const vec2& r) {
+    if (c==0) return r.x;
+    if (c==1) return r.y;
+    throw;
+}
+float amtacc(int c,const vec3& r) {
+    if (c==0) return r.x;
+    if (c==1) return r.y;
+    if (c==2) return r.z;
+    throw;
+}
+float amtacc(int c,const vec4& r) {
+    if (c==0) return r.x;
+    if (c==1) return r.y;
+    if (c==2) return r.z;
+    if (c==3) return r.w;
+    throw;
+}
+
+Triplet<vec2> tripletassemble(Triplet<float> x,Triplet<float> y) {
+    return Triplet<vec2>(vec2(x.x,y.x),vec2(x.y,y.y),vec2(x.z,y.z));
+}
+Triplet<vec3> tripletassemble(Triplet<float> x,Triplet<float> y,Triplet<float> z) {
+    return Triplet<vec3>(vec3(x.x,y.x,z.x),vec3(x.y,y.y,z.y),vec3(x.z,y.z,z.z));
+}
+Triplet<vec4> tripletassemble(Triplet<float> x,Triplet<float> y,Triplet<float> z,Triplet<float> w) {
+    return Triplet<vec4>(vec4(x.x,y.x,z.x,w.x),vec4(x.y,y.y,z.y,w.y),vec4(x.z,y.z,z.z,w.z));
+}
+
+GenProgram::GenProgram() : mounted(0), prederiv([=](vec3 e)throw()->void{}), prefunc([=](vec3 e)throw()->void{}) {}
+
+#define ASSERT(b) {int err=b;if (err) {std::cout<<"FATAL ERROR: "<<err<<"\n";throw;}}
+#define ASSERT_ASSIGN(decl,exp) {int err=0;decl=exp;if (err or !decl) throw;}
+
+//vec3 Sampler::normal(double x,double y,double z,Structure&) {
+////    return normalize(vec3(cos(x)/10,-1,0));
+//    return normalize(vec3(x,y,z));
 //}
 
-inline float fGetOffset(float fValue1, float fValue2) {
-    float fDelta = fValue1 - fValue2;
-    if(fDelta == 0.0) {
-        return 0.5;
-    }
-    return fValue1/fDelta;
+
+
+Sampler::~Sampler() {
+    clReleaseMemObject(output);
+    clReleaseProgram(program);
+    clReleaseKernel(kernel);
 }
-//Sampler::Sampler() {
-//    test = LoadComputeShader("/Users/legalian/dev/wasteland_kings/Total Control/samplers/standard.comp");
-//    glGenBuffers(1, &ssbo);
-//    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-//    //just allocate enough amount of memory
-//    glBufferData(GL_SHADER_STORAGE_BUFFER,(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1)*sizeof(float),0, GL_DYNAMIC_READ);
-//}
-void SimpleTerrainSample::populate(int x,int y, int z,Structure& world) {
-    //assign both g_variables.
-//    g_sampler=this;
-//    glUseProgram(test);
-//    glUniform1f(glGetUniformLocation(computeHandle, "roll"), (float)frame*0.01f);
-//    glDispatchCompute(512/16, 512/16, 1); // 512^2 threads in blocks of 16^2
-//    checkErrors("Dispatch compute shader");
 
 
-   
-//    int blockIndex = glGetProgramResourceIndex(test,GL_SHADER_STORAGE_BLOCK,"OutputBuffer");
-//    if (blockIndex != GL_INVALID_INDEX) {
-//        glBindBufferBase(GL_SHADER_STORAGE_BUFFER,9,ssbo);
-//        glShaderStorageBlockBinding(test, blockIndex,9);
-//    } else {
-//        System.err.println("Warning: binding " + name + " not found");
-//    }
 
-//    g_idfield = new BlockId[(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1)];
-//    for (int x=0;x<=CHSIZE;x++) {
-//    for (int y=0;y<=CHSIZE;y++) {
-//    for (int z=0;z<=CHSIZE;z++) {
-//    g_idfield[x+y*(CHSIZE+1)+z*(CHSIZE+1)*(CHSIZE+1)] = (x>3 and x<50 and y>3 and y<50 and z>3 and z<50)?2:1;
-//    }
-//    }
-//    }
-//    std::cout<<"MARK\n";
-//
-//
-//    world.expandchunk(x,y,z);
-//    world.data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,world.depth,makeOctree(0,0,0,CHPOWER),world.data);
-//
-//    delete [] g_idfield;
 
-    float (*samplebuffer)[CHSIZE+1][CHSIZE+1] = new float[CHSIZE+1][CHSIZE+1][CHSIZE+1];
-    BlockId (*ids)[CHSIZE+1][CHSIZE+1] = new BlockId[CHSIZE+1][CHSIZE+1][CHSIZE+1];
-//    BlockId ids[CHSIZE+1][CHSIZE+1][CHSIZE+1];
-    //    long alt = (((LONG_MAX/3)<<1)|1);
-    for (int xi=0;xi<CHSIZE+1;xi++) {
-        for (int yi=0;yi<CHSIZE+1;yi++) {
-            for (int zi=0;zi<CHSIZE+1;zi++) {//,yi,zi);//
-                samplebuffer[xi][yi][zi] = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER),zi+(z<<CHPOWER));
-                if (samplebuffer[xi][yi][zi]>0) {
-                    ids[xi][yi][zi] = 2;
-                } else {
-                    ids[xi][yi][zi] = 1;
-                }
-            }
-        }
-    }
-    world.loadportion(x,y,z,ids);
-    float offset = .01;
-    for (int xi=0;xi<CHSIZE;xi++) {
-        for (int yi=0;yi<CHSIZE;yi++) {
-            for (int zi=0;zi<CHSIZE;zi++) {
-                int xt = ASBLOCKLOC(xi + (x<<CHPOWER));
-                int yt = ASBLOCKLOC(yi + (y<<CHPOWER));
-                int zt = ASBLOCKLOC(zi + (z<<CHPOWER));
-                if (ids[xi][yi][zi] != ids[xi+1][yi][zi]) {
-                    float push = fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi+1][yi][zi]);
-                    float xdelta = sample(xi+(x<<CHPOWER)+push+offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER)+push-offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER));
-                    float ydelta = sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER)+offset,zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER)-offset,zi+(z<<CHPOWER));
-                    float zdelta = sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER),zi+(z<<CHPOWER)+offset)-sample(xi+(x<<CHPOWER)+push,yi+(y<<CHPOWER),zi+(z<<CHPOWER)-offset);
-                    float delta = sqrt(xdelta*xdelta+ydelta*ydelta+zdelta*zdelta);
-                    world.data->xcon(xt,yt,zt) = Edgedat(xdelta/delta,ydelta/delta,zdelta/delta,push);
-//                    world.data->xcon(xt,yt,zt) = Edgedat(1,0,0,push);
-                }
-                if (ids[xi][yi][zi] != ids[xi][yi+1][zi]) {
-                    float push = fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi][yi+1][zi]);
-                    float xdelta = sample(xi+(x<<CHPOWER)+offset,yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER)-offset,yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER));
-                    float ydelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push+offset,zi+(z<<CHPOWER))-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push-offset,zi+(z<<CHPOWER));
-                    float zdelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER)+offset)-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+push,zi+(z<<CHPOWER)-offset);
-                    float delta = sqrt(xdelta*xdelta+ydelta*ydelta+zdelta*zdelta);
-                    world.data->ycon(xt,yt,zt) = Edgedat(xdelta/delta,ydelta/delta,zdelta/delta,push);
-//                    world.data->ycon(xt,yt,zt) = Edgedat(0,1,0,push);
-                }
-                if (ids[xi][yi][zi] != ids[xi][yi][zi+1]) {
-                    float push = fGetOffset(samplebuffer[xi][yi][zi],samplebuffer[xi][yi][zi+1]);
-                    float xdelta = sample(xi+(x<<CHPOWER)+offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push)-sample(xi+(x<<CHPOWER)-offset,yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push);
-                    float ydelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)+offset,zi+(z<<CHPOWER)+push)-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER)-offset,zi+(z<<CHPOWER)+push);
-                    float zdelta = sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push+offset)-sample(xi+(x<<CHPOWER),yi+(y<<CHPOWER),zi+(z<<CHPOWER)+push-offset);
-                    float delta = sqrt(xdelta*xdelta+ydelta*ydelta+zdelta*zdelta);
-                    world.data->zcon(xt,yt,zt) = Edgedat(xdelta/delta,ydelta/delta,zdelta/delta,push);
-//                    world.data->zcon(xt,yt,zt) = Edgedat(0,0,1,push);
-                }
-            }
-        }
-    }
-    delete [] samplebuffer;
-    delete [] ids;
-}
-inline float SimpleTerrainSample::fGetOffset(float fValue1, float fValue2)
-{
-    float fDelta = fValue1 - fValue2;
-    if(fDelta == 0.0)
-    {
-        return 0.5;
-    }
-    return fValue1/fDelta;
-}
-inline float SimpleTerrainSample::sample(float x,float y,float z) {
-    extern NoiseVolume sample1;
-    extern NoiseVolume sample2;
-    extern NoiseVolume sample3;
-    float density = -y/2.0;
-    const float mu = 128.0*3;
-    density -= 32*(TRUNC_DIV(y/2.0,32));
-    if (density < -127*3 or density > 127*3) {return density;}
-    density += sample3.sample(x/(mu*64),y/(mu*64),z/(mu*64))*148;
-    if (density < -63*3 or density > 63*3) {return density;}
-    density += sample3.sample(x/(mu*32),y/(mu*32),z/(mu*32))*72;
-    if (density < -31*3 or density > 31*3) {return density;}
-    density += sample2.sample(x/(mu*16),y/(mu*16),z/(mu*16))*48;
-    if (density < -15*3 or density > 15*3) {return density;}
-    density += sample1.sample(x/(mu*8 ),y/(mu*8 ),z/(mu*8 ))*24;
-    if (density < -7*3 or density > 7*3) {return density;}
-    density += sample3.sample(x/(mu*4 ),y/(mu*4 ),z/(mu*4 ))*12;
-    if (density < -3*3 or density > 3*3) {return density;}
-    density += sample2.sample(x/(mu*2 ),y/(mu*2 ),z/(mu*2 ))*6;
-    if (density < -1*3 or density > 1*3) {return density;}
-    density += sample1.sample(x/(mu   ),y/(mu   ),z/(mu   ))*3;
-//    float density = 40-sqrt((x*x)+(y*y)+(z*z));
-//    float density = 40-(abs(x)+abs(y)+abs(z));
-//    float density = 40-std::max(std::max(abs(x),abs(y)),abs(z));
-//    float density = 40-std::min(std::min(abs(x),abs(y)),abs(z));
-//    float density = cos(x/5.0)*sin(y/5.0)+cos(y/5.0)*sin(z/5.0)+cos(z/5.0)*sin(x/5.0);
-    return density;
-
-//    float xdif = fmodf(fabsf(x),CHSIZE) - (CHSIZE/2.0);
-//    float ydif = fmodf(fabsf(y),CHSIZE) - (CHSIZE/2.0);
-//    float zdif = fmodf(fabsf(z),CHSIZE) - (CHSIZE/2.0);
-////    float xdif = x - (CHSIZE/2.0);
-////    float ydif = y - (CHSIZE/2.0);
-////    float zdif = z - (CHSIZE/2.0);
-//
-//    float dist = sqrtf(xdif*xdif+ydif*ydif);
-////    float dist = fabsf(xdif)+fabsf(ydif)+fabsf(zdif);
-////    float dist = std::max(fabsf(zdif),std::max(fabsf(xdif),fabsf(ydif)));
-//    return 25-dist;
-
-}
 

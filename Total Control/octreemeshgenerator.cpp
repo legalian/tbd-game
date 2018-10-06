@@ -90,14 +90,12 @@ void OctreePortionAwareBranch::geomify(int x,int y,int z) {
             g_world->vertsloadedat(x-CHSIZE,y,z-CHSIZE) and
             g_world->vertsloadedat(x-CHSIZE,y-CHSIZE,z)) {
             if (surroundinglod(x,y,z)) {
-//                std::cout<<Location((x-ASBLOCKLOC(0))/CHSIZE,(y-ASBLOCKLOC(0))/CHSIZE,(z-ASBLOCKLOC(0))/CHSIZE).tostring()<<"<g\n";
                 for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
                     iterator->second.emptyExlay();
                 }
                 g_geometry = &geometry;
                 g_lod = lod;
                 g_olods = otherlods;
-//                std::cout<<otherlods[0]<<otherlods[1]<<otherlods[2]<<otherlods[3]<<otherlods[4]<<otherlods[5]<<lod<<"\n";
                 g_vertecies = vertecies;
                 g_normals = normals;
                 manifestgeomsnippets(x,y,z,7);
@@ -105,14 +103,10 @@ void OctreePortionAwareBranch::geomify(int x,int y,int z) {
                     iterator->second.exbaked = false;
                 }
             }
-//        }
-//        if (voxed) {
             for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
                 registergeom(iterator->first, GeomLense(this,&iterator->second,lod));
-//                registergeom(iterator->first, GeomLense(this,&iterator->second,iterator->second.coresize,iterator->second.size()));
             }
         }
-//        changed=false;
     }
 }
 

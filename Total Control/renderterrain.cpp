@@ -178,7 +178,6 @@ void DebugShader::mountshaders() {
 }
 void DebugShader::draw(GeomLense gl) {
     GeomTerrain* geom = gl.target;
-//    std::cout<<"debugshader drawn with :"<<geom->wiresize<<" vertecies.\n";
     glm::mat4 composed_matrix;
     extern glm::mat4 camera;
     composed_matrix = camera*(*geom->matrix);

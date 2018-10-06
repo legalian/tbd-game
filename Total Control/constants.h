@@ -17,7 +17,6 @@
 #define CHSIZE (1<<CHPOWER)
 #define CHMASK CHSIZE-1
 
-#define SCALE 1 //distance between voxels
 
 
 #include <stdint.h>

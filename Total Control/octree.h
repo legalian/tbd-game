@@ -18,6 +18,9 @@
 #include <fstream>
 #include <set>
 
+#include <OpenCL/opencl.h>
+
+
 struct Octree;
 struct OctreeSegment;
 struct OctreeBranch;
@@ -33,6 +36,9 @@ extern thread_local OctreeSegment* g_world;
 extern thread_local std::map<uint8_t,GeomTerrain>* g_geometry;
 extern thread_local std::vector<glm::vec3>* g_vertecies;
 extern thread_local std::vector<glm::vec3>* g_normals;
+extern cl_context gcl_context;
+extern cl_command_queue gcl_commands;
+extern cl_device_id gcl_device_id;
 
 //extern thread_local Sampler* g_sampler;
 //extern thread_local float* g_samplefield;
@@ -172,9 +178,14 @@ struct OctreeSegment {
     virtual uint8_t giveconflag(int,int,int);
     virtual uint8_t giveimconflag();
 };
+typedef union {
+    float f;
+    long l;
+    int i[2];
+} floatint;
 
 struct OctreeFeature : OctreeSegment {
-//    MatrixCarriage qef;
+    floatint data[4];
     int point;
     BlockId fillvalue;
     uint8_t conflag;
@@ -325,7 +336,7 @@ void glassert();
 OctreeSegment* loadWorldFile(std::ifstream& file,int x,int y,int z,int recur);
 void tearaway(int,int,int,int,OctreeSegment*,Environment*);
 bool testConnection(int,int,int,int,int,int,int,OctreeSegment*,Environment*);
-OctreeSegment* makeOctree(BlockId (*)[CHSIZE+1][CHSIZE+1],int,int,int,int);
+OctreeSegment* makeOctree(BlockId*,int,int,int,int);
 
 OctreeSegment* makeOctree(std::ifstream&,int);
 

@@ -20,6 +20,9 @@ Structure::Structure(std::string name,Environment& backref,bool load) : structur
     }
     expand(CHPOWER);
 }
+Structure::~Structure() {
+    delete source;
+}
 
 int Structure::underpressure(int x,int y,int z) {
     x ^= ASBLOCKLOC(0);
@@ -140,9 +143,11 @@ void Structure::updatequeue(double x, double y, double z) {
 //    }
     loadstage++;
 }
-void Structure::loadportion(int x,int y,int z,BlockId (*dat)[CHSIZE+1][CHSIZE+1]) {
+OctreeSegment* Structure::loadportion(int x,int y,int z,BlockId *dat) {
     expandchunk(x,y,z);
-    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(dat,0,0,0,CHPOWER),data);
+    OctreeSegment* sg = makeOctree(dat,0,0,0,CHPOWER);
+    data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,sg,data);
+    return sg;
 }
 void Structure::filepushportion(std::string filebase,int x,int y,int z) {
     std::ofstream file = std::ofstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::out|std::ios::binary|std::ios::trunc);
@@ -156,9 +161,7 @@ void Structure::filepushportion(std::string filebase,int x,int y,int z) {
     file.close();
 }
 void Structure::filepullportion(std::string filebase,int x,int y,int z) {
-    //    file =
     std::ifstream file = std::ifstream(filebase+"/"+(std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)),std::ios::in|std::ios::binary);
-//    std::cout<<filebase<<" was opened. \n";
     expandchunk(x,y,z);
     data->insertinto(ASCHUNKLOC(x),ASCHUNKLOC(y),ASCHUNKLOC(z),CHPOWER,depth,makeOctree(file,CHPOWER),data);
     file.close();
@@ -194,21 +197,18 @@ bool Structure::attain(Location pos,Location ppos) {
     OctreePortionAwareBranch* unit = data->getvoxunit(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z));
     
     if (unit!=NULL) {
-        if (generate) {
-            filepushportion(SAVEDIR "/"+structureid,pos.x,pos.y,pos.z);
-        }
-        if (load or generate) {
-            unit->testconnected(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),data,&currenttests);
-            currenttests.prune(data);
-        }
+//        if (generate) {
+//            filepushportion(SAVEDIR "/"+structureid,pos.x,pos.y,pos.z);
+//        }
+//        if (load or generate) {
+//            unit->testconnected(ASCHUNKLOC(pos.x),ASCHUNKLOC(pos.y),ASCHUNKLOC(pos.z),data,&currenttests);
+//            currenttests.prune(data);
+//        }
     }
     g_world=data;
     if (depth>CHPOWER+1) {
         data->prepare(ASBLOCKLOC(0),ASBLOCKLOC(0),ASBLOCKLOC(0));
     }
-//    if (load) std::cout<<"load";
-//    if (generate) std::cout<<"generate";
-//    std::cout<<"\n";
     if (load or generate) {
         std::ofstream file = std::ofstream(SAVEDIR "/"+structureid+"/massfile",std::ios::out|std::ios::binary|std::ios::trunc);
         file.write((char*)&(depth),sizeof(int));
