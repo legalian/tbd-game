@@ -55,7 +55,8 @@ Edgedat silence = Edgedat((float)0,0,0,.5);
 glm::vec3 errorpoint = glm::vec3(0,0,0);
 
 OctreePortionAwareBranch* OctreeSegment::getvoxunit(int x,int y,int z) {return NULL;}
-OctreeSegment* OctreeSegment::indivref(int x,int y,int z) {throw;}
+std::pair<BlockId,OctreeLeaf*> OctreeSegment::indivref(int x,int y,int z) {throw;}
+OctreeLeaf* OctreeSegment::getleaf(int x,int y,int z) {return NULL;}
 BlockId OctreeSegment::getser(int x,int y,int z) {throw;}
 Edgedat& OctreeSegment::xcon(int x,int y,int z) {std::cout<<"panic\n";return silence;}
 Edgedat& OctreeSegment::ycon(int x,int y,int z) {std::cout<<"panic\n";return silence;}
@@ -137,15 +138,18 @@ OctreeSegment* OctreePortionAwareBranch::pullaway(int x,int y,int z,int recur,Oc
     }
 }
 OctreePortionAwareBranch* OctreePortionAwareBranch::getvoxunit(int x,int y,int z) {
-//    if (this==NULL) throw;
     return this;
 }
-OctreeSegment* OctreeFeature::indivref(int x,int y,int z) {
-//    if (this==NULL) throw;
-    return this;
+std::pair<BlockId,OctreeLeaf*> OctreeFeature::indivref(int x,int y,int z) {
+    return {fillvalue,(OctreeLeaf*)1};
 }
-OctreeSegment* OctreeBud::indivref(int x,int y,int z) {
-//    if (this==NULL) throw;
+std::pair<BlockId,OctreeLeaf*> OctreeBud::indivref(int x,int y,int z) {
+    return {fillvalue,(OctreeLeaf*)2};
+}
+std::pair<BlockId,OctreeLeaf*> OctreeLeaf::indivref(int x,int y,int z) {
+    return {fillvalue,this};
+}
+OctreeLeaf* OctreeLeaf::getleaf(int x,int y,int z) {
     return this;
 }
 
@@ -220,8 +224,11 @@ OctreeBranch::OctreeBranch(BlockId a,int dep,glm::vec3 pof,glm::vec3 nof,uint8_t
 OctreePortionAwareBranch* OctreeBranch::getvoxunit(int x,int y,int z) {
     return subdivisions XYZINDEX->getvoxunit(x,y,z);
 }
-OctreeSegment* OctreeBranch::indivref(int x,int y,int z) {
+std::pair<BlockId,OctreeLeaf*> OctreeBranch::indivref(int x,int y,int z) {
     return subdivisions XYZINDEX->indivref(x,y,z);
+}
+OctreeLeaf* OctreeBranch::getleaf(int x,int y,int z) {
+    return subdivisions XYZINDEX->getleaf(x,y,z);
 }
 
 BlockId OctreeBranch::getser(int x,int y,int z) {

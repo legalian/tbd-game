@@ -8,6 +8,7 @@
 
 #include "samplers.h"
 
+#ifdef PLOTTER_MODE
 using std::function;
 using glm::vec4;
 using glm::vec3;
@@ -574,11 +575,8 @@ GenProgram::GenProgram() : mounted(0), prederiv([=](vec3 e)throw()->void{}), pre
 #define ASSERT(b) {int err=b;if (err) {std::cout<<"FATAL ERROR: "<<err<<"\n";throw;}}
 #define ASSERT_ASSIGN(decl,exp) {int err=0;decl=exp;if (err or !decl) throw;}
 
-//vec3 Sampler::normal(double x,double y,double z,Structure&) {
-////    return normalize(vec3(cos(x)/10,-1,0));
-//    return normalize(vec3(x,y,z));
-//}
 
+#endif
 
 
 Sampler::~Sampler() {

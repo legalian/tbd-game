@@ -24,6 +24,7 @@
 struct Octree;
 struct OctreeSegment;
 struct OctreeBranch;
+struct OctreeLeaf;
 struct OctreePortionAwareBranch;
 class Environment;
 class Sampler;
@@ -113,6 +114,7 @@ struct MatrixCarriage {
     QefPerc AAxz;
     QefPerc AAyz;
     friend MatrixCarriage operator+(const MatrixCarriage&, const MatrixCarriage&);
+    MatrixCarriage& operator+=(const MatrixCarriage& o);
     MatrixCarriage();
     MatrixCarriage(QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,QefPerc,int);
     MatrixCarriage translate(QefPerc,QefPerc,QefPerc);
@@ -149,7 +151,8 @@ struct OctreeSegment {
     virtual void geomify(int,int,int);
 //    virtual void hermitify(BlockLoc,BlockLoc,BlockLoc);
     virtual OctreePortionAwareBranch* getvoxunit(int,int,int);
-    virtual OctreeSegment* indivref(int,int,int);
+    virtual std::pair<BlockId,OctreeLeaf*> indivref(int,int,int);
+    virtual OctreeLeaf* getleaf(int,int,int);
     virtual BlockId getser(int,int,int);
     virtual void manifestgeom(int,int,int);
     virtual void manifestgeomsnippets(int,int,int,int);
@@ -192,7 +195,7 @@ struct OctreeFeature : OctreeSegment {
     OctreeFeature(BlockId,uint8_t);
 //    MatrixCarriage getqef() override;
     virtual int feat(int,int,int) override;
-    OctreeSegment* indivref(int,int,int) override;
+    std::pair<BlockId,OctreeLeaf*> indivref(int,int,int) override;
     BlockId getser(int,int,int) override;
     MatrixCarriage vertify(int,int,int) override;
     void filesave() override;
@@ -204,8 +207,11 @@ struct OctreeLeaf : OctreeFeature {
     Edgedat zcondat;
     OctreeLeaf(BlockId,uint8_t);
     OctreeLeaf(BlockId,uint8_t,int8_t[12]);
+    std::pair<BlockId,OctreeLeaf*> indivref(int,int,int) override;
+    OctreeLeaf* getleaf(int,int,int) override;
     void manifestgeom(int,int,int) override;
     void manifestgeomsnippets(int,int,int,int) override;
+    MatrixCarriage vertify(int,int,int) override;
     void filesave() override;
     Edgedat& xcon(int,int,int) override;
     Edgedat& ycon(int,int,int) override;
@@ -218,7 +224,7 @@ struct OctreeBud : OctreeSegment {
     void filesave() override;
     void worldfilesave(int,int,int) override;
     void insertinto(int,int,int,int,int,OctreeSegment*,OctreeSegment*&) override;
-    OctreeSegment* indivref(int,int,int) override;
+    std::pair<BlockId,OctreeLeaf*> indivref(int,int,int) override;
     uint8_t giveimconflag() override;
 };
 struct OctreeBranch : OctreeSegment {
@@ -254,7 +260,8 @@ struct OctreeBranch : OctreeSegment {
 
 //    void hermitify(BlockLoc,BlockLoc,BlockLoc) override;
     OctreePortionAwareBranch* getvoxunit(int x,int y,int z) override;
-    OctreeSegment* indivref(int,int,int) override;
+    std::pair<BlockId,OctreeLeaf*> indivref(int,int,int) override;
+    OctreeLeaf* getleaf(int,int,int) override;
     BlockId getser(int,int,int) override;
 
     void filesave() override;

@@ -84,6 +84,10 @@ public:
     void open();
     void close();
 };
+class ShaderGrass : public ShaderTerrain {
+    void mountshaders() override;
+    void draw(GeomLense) override;
+};
 #ifdef WIREFRAMEDEBUG
 class DebugShader : public ShaderTerrain {
 public:

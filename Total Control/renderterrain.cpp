@@ -9,7 +9,7 @@
 #include "renderterrain.h"
 #include "octree.h"
 
-int numberofmaterials = 3;
+int numberofmaterials = 4;
 
 ShaderTerrain* materials[] = {
 #ifdef WIREFRAMEDEBUG
@@ -18,7 +18,8 @@ ShaderTerrain* materials[] = {
     NULL,
 #endif
     NULL,
-    new ShaderTerrain()
+    new ShaderTerrain(),
+    new ShaderGrass()
 };
 
 glm::vec3 clipplanes[6];
@@ -28,6 +29,7 @@ uint8_t materialprops[] = {
     //precidence; don't draw polygons between values of equal precidence, otherwise use to determine polygon winding order
     0,
     0,
+    1,
     1
 };
 
@@ -35,7 +37,8 @@ uint8_t materialattribs[] = {
     //1stbit - structual stability
     0,
     0,
-    1
+    1,
+    0
 };
 
 glm::mat4 camera;
@@ -43,6 +46,7 @@ glm::mat4 clipcamera;
 glm::mat4* defaultmatrix=NULL;
 
 std::vector<GeomLense> thisframerender[] = {
+    std::vector<GeomLense>(),
     std::vector<GeomLense>(),
     std::vector<GeomLense>(),
     std::vector<GeomLense>()
@@ -130,13 +134,6 @@ void GeomTerrain::bake() {
 
 
 
-
-void ShaderTerrain::mountshaders() {
-    programID = LoadShaders( "/Users/legalian/dev/wasteland_kings/Total Control/shaders/vertshader.vert", "/Users/legalian/dev/wasteland_kings/Total Control/shaders/fragshader.frag" );
-    matrixID = glGetUniformLocation(programID, "MVP");
-    vertexPosition_modelspaceID = glGetAttribLocation(programID, "vertexPosition_modelspace");
-    vertexNormal_modelspaceID = glGetAttribLocation(programID, "vertexNormal_modelspace");
-}
 void ShaderTerrain::open() {
     glUseProgram(programID);
     glEnableVertexAttribArray(vertexPosition_modelspaceID);
@@ -149,13 +146,17 @@ void ShaderTerrain::close() {
 void ShaderTerrain::cleanup() {
     glDeleteProgram(programID);
 }
+void ShaderTerrain::mountshaders() {
+    programID = LoadShaders( "/Users/legalian/dev/wasteland_kings/Total Control/shaders/vertshader.vert", "/Users/legalian/dev/wasteland_kings/Total Control/shaders/fragshader.frag" );
+    matrixID = glGetUniformLocation(programID, "MVP");
+    vertexPosition_modelspaceID = glGetAttribLocation(programID, "vertexPosition_modelspace");
+    vertexNormal_modelspaceID = glGetAttribLocation(programID, "vertexNormal_modelspace");
+}
 void ShaderTerrain::draw(GeomLense gl) {
     glm::mat4 composed_matrix;
     extern glm::mat4 camera;
     composed_matrix = camera*(*gl.target->matrix);
-    
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &(composed_matrix[0][0]));
-    
     glBindBuffer(GL_ARRAY_BUFFER, gl.reference->vertbuffer[gl.lod]);
     glVertexAttribPointer(vertexPosition_modelspaceID, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glBindBuffer(GL_ARRAY_BUFFER, gl.reference->normbuffer[gl.lod]);
@@ -168,6 +169,32 @@ void ShaderTerrain::draw(GeomLense gl) {
     glVertexAttribPointer(vertexNormal_modelspaceID, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glDrawArrays(GL_TRIANGLES,0,(int)gl.target->exlay.size());
 }
+
+void ShaderGrass::mountshaders() {
+    programID = LoadShaders( "/Users/legalian/dev/wasteland_kings/Total Control/shaders/vertshader.vert", "/Users/legalian/dev/wasteland_kings/Total Control/shaders/fragshader.frag" );
+    matrixID = glGetUniformLocation(programID, "MVP");
+    vertexPosition_modelspaceID = glGetAttribLocation(programID, "vertexPosition_modelspace");
+    vertexNormal_modelspaceID = glGetAttribLocation(programID, "vertexNormal_modelspace");
+}
+void ShaderGrass::draw(GeomLense gl) {
+    glm::mat4 composed_matrix;
+    extern glm::mat4 camera;
+    composed_matrix = camera*(*gl.target->matrix);
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &(composed_matrix[0][0]));
+    glBindBuffer(GL_ARRAY_BUFFER, gl.reference->vertbuffer[gl.lod]);
+    glVertexAttribPointer(vertexPosition_modelspaceID, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glBindBuffer(GL_ARRAY_BUFFER, gl.reference->normbuffer[gl.lod]);
+    glVertexAttribPointer(vertexNormal_modelspaceID, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl.target->primbuffer[gl.lod]);
+    glDrawElements(GL_TRIANGLES,gl.target->totalsize[gl.lod],GL_UNSIGNED_INT,(void*)0);
+    glBindBuffer(GL_ARRAY_BUFFER, gl.target->exlaybuffer);
+    glVertexAttribPointer(vertexPosition_modelspaceID, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glBindBuffer(GL_ARRAY_BUFFER, gl.target->exlaynormalbuffer);
+    glVertexAttribPointer(vertexNormal_modelspaceID, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glDrawArrays(GL_TRIANGLES,0,(int)gl.target->exlay.size());
+}
+
+
 
 #ifdef WIREFRAMEDEBUG
 void DebugShader::mountshaders() {

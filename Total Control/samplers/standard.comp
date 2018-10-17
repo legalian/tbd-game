@@ -1,3 +1,36 @@
+float rand(float);
+float rand3(float,float,float);
+float cmix(float,float,float);
+float gridnoise(float3);
+
+
+float rand(float n) {
+    float o=sin(n)*58.5453123;//437
+    return o-floor(o);
+}
+float rand3(float n,float m,float o) {
+    return rand(o*78.233+n*12.9898+m*67.9482);
+}
+float cmix(float a,float b,float c) {
+    return a+(b-a)*sin((float)1.57079632679*c);
+}
+float gridnoise(float3 st) {
+    float3 c = ceil(st);
+    float3 f = floor(st);
+    float3 fpos = st-f;
+    return cmix(
+        cmix(
+            cmix(rand3(f.x,f.y,f.z),rand3(c.x,f.y,f.z),fpos.x),
+            cmix(rand3(f.x,c.y,f.z),rand3(c.x,c.y,f.z),fpos.x),
+            fpos.y),
+        cmix(
+            cmix(rand3(f.x,f.y,c.z),rand3(c.x,f.y,c.z),fpos.x),
+            cmix(rand3(f.x,c.y,c.z),rand3(c.x,c.y,c.z),fpos.x),
+            fpos.y),
+        fpos.z);
+}
+
+
 __kernel void square(
     __global float* output,
     const int xc,
@@ -9,7 +42,8 @@ __kernel void square(
         int ywi = (combined/(CHSIZE+1))%(CHSIZE+1);
         int zwi = combined/((CHSIZE+1)*(CHSIZE+1));
         float3 xyz = (float3)(xc+xwi,yc+ywi,zc+zwi);
-        output[combined] = 70-fast_length(xyz);
+        output[combined] = gridnoise(xyz/40)*8+gridnoise(xyz/20)*4+gridnoise(xyz/10)*2+gridnoise(xyz/5)+xyz.y/5;
+        //output[combined] = rand3(xyz.x,xyz.y,xyz.z)*5+fast_length(xyz)-70;
         //output[combined] = sin((float)xyz.x/60)*6+10-xyz.y;
     }
 }

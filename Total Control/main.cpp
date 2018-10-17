@@ -36,7 +36,7 @@ cl_context gcl_context;
 cl_command_queue gcl_commands;
 cl_device_id gcl_device_id;
 
-#define PLOTTER_MODE
+//#define PLOTTER_MODE
 
 Sampler::Sampler() {
 #ifndef PLOTTER_MODE
@@ -50,10 +50,12 @@ Sampler::Sampler() {
     Gen z = gp.get("z");
     Gen3 xyz = gp.get3("xyz");
 //    gp.mount(y-x);
-    gp.set("cube",50-max(max(abs(x),abs(y)),abs(z)));
-    gp.set("sphere",60-magnitude(xyz));
-    gp.mount(min(gp.get("cube"),0-gp.get("sphere")));
-//    gp.mount(abs(y)-10);
+//    gp.set("cube",50-max(max(abs(x),abs(y)),abs(z)));
+//    gp.set("sphere",60-magnitude(xyz));
+//    gp.mount(min(gp.get("cube"),0-gp.get("sphere")));
+//    gp.mount(60-magnitude(xyz));
+    gp.mount(x*x+y*y-z*z+x-80);
+//    gp.mount()
     std::string KernelSource = gp.mounted.mountable;
 #endif
     size_t start_pos = 0;
@@ -71,7 +73,7 @@ Sampler::Sampler() {
         buffer = new char[len];
         clGetProgramBuildInfo(program,gcl_device_id, CL_PROGRAM_BUILD_LOG, len, buffer, NULL);
         printf("%s\n", buffer);
-        throw;
+        exit(1);
     }
     ASSERT_ASSIGN(kernel,clCreateKernel(program, "square", &err));
     size_t maxWorkGroupSize;
@@ -79,6 +81,42 @@ Sampler::Sampler() {
 //    cl_mem input  = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * charn, NULL, NULL);
     ASSERT_ASSIGN(output,clCreateBuffer(gcl_context, CL_MEM_WRITE_ONLY, sizeof(float)*(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1), NULL, NULL));
 }
+#ifndef PLOTTER_MODE
+glm::vec3 operator/(const glm::vec3& a,const float& b) {return a*(1/b);}
+inline float clrand(float n) {float o=sin(n)*58.5453123;return o-floor(o);}//43758.5453123   437
+inline float clrand3(float n,float m,float o) {return clrand(o*78.233+n*12.9898+m*67.9482);}
+inline float clcmix(float a,float b,float c) {return a+(b-a)*sin(1.57079632679*c);}
+inline float clgridnoise(glm::vec3 st) {
+    glm::vec3 c = ceil(st);
+    glm::vec3 f = floor(st);
+    glm::vec3 fpos = st-f;
+    return clcmix(
+        clcmix(
+            clcmix(clrand3(f.x,f.y,f.z),clrand3(c.x,f.y,f.z),fpos.x),
+            clcmix(clrand3(f.x,c.y,f.z),clrand3(c.x,c.y,f.z),fpos.x),
+            fpos.y),
+        clcmix(
+            clcmix(clrand3(f.x,f.y,c.z),clrand3(c.x,f.y,c.z),fpos.x),
+            clcmix(clrand3(f.x,c.y,c.z),clrand3(c.x,c.y,c.z),fpos.x),
+            fpos.y),
+        fpos.z);
+}
+
+glm::vec3 Sampler::normal(float x,float y,float z) {
+    return normalize(glm::vec3(sample(x-.001,y,z)-sample(x+.001,y,z),sample(x,y-.001,z)-sample(x,y+.001,z),sample(x,y,z-.001)-sample(x,y,z+.001)));
+//    float o = abs(sample(x,y,z));
+//    if ((o>0 and v<0) or (o<0 and v>0)) {
+//        std::cout<<o<<","<<v<<"<aoidjfoaisjdf\n";
+////        throw;
+//    }
+//    return glm::vec3((o-v)/v);
+}
+float Sampler::sample(float x,float y,float z) {
+    glm::vec3 xyz = glm::vec3(x,y,z);
+    float o = clgridnoise(xyz/40)*8+clgridnoise(xyz/20)*4+clgridnoise(xyz/10)*2+clgridnoise(xyz/5)+y/5;
+    return o;
+}
+#endif
 void Sampler::populate(int xc,int yc,int zc,Structure& world) {
     float* results = new float[(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1)];
     // Write our data set into the input array in device memory
@@ -97,22 +135,52 @@ void Sampler::populate(int xc,int yc,int zc,Structure& world) {
     ASSERT(clSetKernelArg(kernel, 3, sizeof(cl_mem), &zcc));
     size_t glo[3]{128,128,256};
     size_t loc[3]{8,8,8};
-    clock_t begin = clock();
+//    clock_t begin = clock();
     ASSERT(clEnqueueNDRangeKernel(gcl_commands,kernel, 3, NULL, glo,loc, 0, NULL, NULL));
     uint8_t* realindecies = new uint8_t[(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1)];
     
     clFinish(gcl_commands);
-    clock_t end = clock();
-    std::cout<<end-begin<<"\n";
+//    clock_t end = clock();
+//    std::cout<<end-begin<<"\n";
     ASSERT(clEnqueueReadBuffer(gcl_commands,output,CL_TRUE,0,sizeof(float)*(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1),results,0,NULL,NULL));
     
-//    void SimpleSample::populate(long x,long y, long z,Octree& world) {
-//    uint8_t layerindecies[CHSIZE+1][CHSIZE+1][CHSIZE+1];
-//    uint8_t realindecies[CHSIZE+1][CHSIZE+1][CHSIZE+1];
-    //    long alt = (((LONG_MAX/3)<<1)|1);
-    for (int i=0;i<(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1);i++) realindecies[i] = results[i]>0?2:1;
-    OctreeSegment* fi = world.loadportion(xc,yc,zc,realindecies);
+//    for (int xi=0;xi<CHSIZE;xi++) {
+//        for (int yi=1;yi<CHSIZE;yi++) {
+//            for (int zi=0;zi<CHSIZE;zi++) {
+//                float o1 = sample(xcc+xi,ycc+yi,zcc+zi);
+//                float o2 = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+//                if ((o1<0 and o2>0) or (o1<0 and o2>0)) {
+//                    throw;
+//                }
+//            }
+//        }
+//    }
     
+    
+    for (int i=0;i<(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1);i++) {
+        realindecies[i] = results[i]>0?2:results[i]>-2?3:1;
+    }
+//    for (int i=0;i<(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1);i++) {
+//        realindecies[i] = results[i]>0?2:1;
+//    }
+//    for (int xi=0;xi<CHSIZE;xi++) {
+//        for (int yi=1;yi<CHSIZE;yi++) {
+//            for (int zi=0;zi<CHSIZE;zi++) {
+//                if (realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]==1 and realindecies[xi+(yi-1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]==2) {
+//                    realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]=3;
+//                }
+//            }
+//        }
+//    }
+//    for (int xi=0;xi<CHSIZE;xi++) {
+//        for (int zi=0;zi<CHSIZE;zi++) {
+//            if (realindecies[xi+zi*(CHSIZE+1)*(CHSIZE+1)]==1 and sample(xi+xcc,ycc-1,zi+zcc)>0) {
+//                std::cout<<"ththth\n";
+//                realindecies[xi+zi*(CHSIZE+1)*(CHSIZE+1)]=3;
+//            }
+//        }
+//    }
+    OctreeSegment* fi = world.loadportion(xc,yc,zc,realindecies);
 //    for (int xi=0;xi<CHSIZE;xi++) {
 //        for (int yi=0;yi<CHSIZE;yi++) {
 //            for (int zi=0;zi<CHSIZE;zi++) {
@@ -123,20 +191,37 @@ void Sampler::populate(int xc,int yc,int zc,Structure& world) {
     for (int xi=0;xi<CHSIZE;xi++) {
         for (int yi=0;yi<CHSIZE;yi++) {
             for (int zi=0;zi<CHSIZE;zi++) {
-                if (realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)] != realindecies[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
-                    float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                BlockId ma = realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                if (ma!=realindecies[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
                     float b = results[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+//                    std::cout<<"xdif\n";
+                    #ifdef PLOTTER_MODE
                     fi->xcon(xi,yi,zi) = Edgedat(gp.samplenormal(xc*CHSIZE+xi+a/(a-b),yc*CHSIZE+yi,zc*CHSIZE+zi),a/(a-b));
+                    #else
+                    fi->xcon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi+a/(a-b),yc*CHSIZE+yi,zc*CHSIZE+zi),a/(a-b));
+//                    fi->xcon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi,a),a/(a-b));
+                    #endif
                 }
-                if (realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)] != realindecies[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
-                    float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                if (ma!=realindecies[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
                     float b = results[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+//                    std::cout<<"ydif\n";
+                    #ifdef PLOTTER_MODE
                     fi->ycon(xi,yi,zi) = Edgedat(gp.samplenormal(xc*CHSIZE+xi,yc*CHSIZE+yi+a/(a-b),zc*CHSIZE+zi),a/(a-b));
+                    #else
+                    fi->ycon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi,yc*CHSIZE+yi+a/(a-b),zc*CHSIZE+zi),a/(a-b));
+//                    fi->ycon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi,a),a/(a-b));
+                    #endif
                 }
-                if (realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)] != realindecies[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)]) {
-                    float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                if (ma!=realindecies[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)]) {
                     float b = results[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)];
+//                    std::cout<<"zdif\n";
+                    #ifdef PLOTTER_MODE
                     fi->zcon(xi,yi,zi) = Edgedat(gp.samplenormal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi+a/(a-b)),a/(a-b));
+                    #else
+                    fi->zcon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi+a/(a-b)),a/(a-b));
+//                    fi->zcon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi,a),a/(a-b));
+                    #endif
                 }
             }
         }
@@ -201,7 +286,8 @@ void initialize(){
     
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+//    glEnable(GL_CULL_FACE);
+//    glCullFace(GL_FRONT_AND_BACK);
     // Accept fragment if it closer to the camera than the former one
     glDepthFunc(GL_LESS);
     glLineWidth(3.0);
@@ -376,7 +462,7 @@ int main() {
             sharp = true;
         } else {
             if (sharp) {
-                glPolygonMode( GL_FRONT, GL_FILL );
+                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
             }
             sharp = false;
 //            quaqua=true;
@@ -431,6 +517,8 @@ int main() {
     
     
     glfwTerminate();
+//    clFinish();
+    clFinish(gcl_commands);
     clReleaseCommandQueue(gcl_commands);
     clReleaseContext(gcl_context);
     return 0;

@@ -15,8 +15,8 @@
 #include "constants.h"
 class Structure;
 
-
-
+//#define PLOTTER_MODE
+#ifdef PLOTTER_MODE
 
 template <typename T> struct Triplet{
     T x,y,z;
@@ -229,16 +229,21 @@ struct GenProgram{
     glm::vec3 samplenormal(float,float,float);
     float sample(float,float,float);
 };
-
+#endif
 
 
 struct Sampler {
+#ifdef PLOTTER_MODE
     GenProgram gp;
+#endif
     cl_program program;
     cl_kernel kernel;
     cl_mem output;
     Sampler();
-//    glm::vec3 normal(double,double,double,Structure&);
+#ifndef PLOTTER_MODE
+    glm::vec3 normal(float,float,float);
+    float sample(float,float,float);
+#endif
     void populate(int,int,int,Structure&);
     ~Sampler();
 };

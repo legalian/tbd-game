@@ -37,6 +37,26 @@ MatrixCarriage Edgedat::calcqef(QefPerc df,QefPerc mx,QefPerc my,QefPerc mz) {
                         xf*yf,xf*zf,yf*zf,
                         mx,my,mz,1);
 }
+
+MatrixCarriage& MatrixCarriage::operator+=(const MatrixCarriage &o){
+    Vx+=o.Vx;
+    Vy+=o.Vy;
+    Vz+=o.Vz;
+    Abx+=o.Abx;
+    Aby+=o.Aby;
+    Abz+=o.Abz;
+    AAxx+=o.AAxx;
+    AAyy+=o.AAyy;
+    AAzz+=o.AAzz;
+    AAxy+=o.AAxy;
+    AAxz+=o.AAxz;
+    AAyz+=o.AAyz;
+    Mx+=o.Mx;
+    My+=o.My;
+    Mz+=o.Mz;
+    Mt+=o.Mt;
+    return *this;
+}
 MatrixCarriage operator+(const MatrixCarriage &m1, const MatrixCarriage &m2){
     return MatrixCarriage(m1.Vx+m2.Vx,
                           m1.Vy+m2.Vy,
@@ -84,6 +104,7 @@ glm::vec3 MatrixCarriage::evaluate(int lod) {
 }
 glm::vec3 MatrixCarriage::evaluatenormal() {
     return glm::normalize(glm::vec3(Vx,Vy,Vz));
+//    return glm::vec3(Vx,Vy,Vz);
 }
 
 void OctreeSegment::prepare(int x,int y,int z) {}
@@ -135,6 +156,7 @@ void OctreePortionAwareBranch::prepare(int x,int y,int z) {
         for (g_lod=0;g_lod<=MAX_WORLDFILE_GEOMSAVE;g_lod++) {
             manifestgeom(x,y,z);
             for(auto iterator = geometry.begin(); iterator != geometry.end(); iterator++) {
+//                std::cout<<iterator->second.indexed.size()<<"\n";
                 iterator->second.factor(g_lod);
             }
         }
@@ -156,47 +178,69 @@ void OctreeBranch::testcoherence() {
 MatrixCarriage OctreeSegment::vertify(int x,int y,int z) {return MatrixCarriage();}
 MatrixCarriage OctreeFeature::vertify(int x,int y,int z) {
     MatrixCarriage qef;
-    OctreeSegment* buf[2][2][2];
-//    buf[0][0][0] = g_world->indivref(x+xl,y+yl,z+zl);
-    buf[1][0][0] = g_world->indivref(x+1,y  ,z  );
-    buf[0][1][0] = g_world->indivref(x  ,y+1,z  );
-    buf[1][1][0] = g_world->indivref(x+1,y+1,z  );
-    buf[0][0][1] = g_world->indivref(x,  y  ,z+1);
-    buf[1][0][1] = g_world->indivref(x+1,y  ,z+1);
-    buf[0][1][1] = g_world->indivref(x  ,y+1,z+1);
-    buf[1][1][1] = g_world->indivref(x+1,y+1,z+1);
-    if (fillvalue!=buf[0][0][1]->getser(0,0,0)) qef = qef+zcon(0,0,0).calczqef();
-    if (buf[1][0][0]->getser(0,0,0)!=buf[1][0][1]->getser(0,0,0)) qef = qef+buf[1][0][0]->zcon(0,0,0).calczqef().translate(1,0,0);
-    if (buf[0][1][0]->getser(0,0,0)!=buf[0][1][1]->getser(0,0,0)) qef = qef+buf[0][1][0]->zcon(0,0,0).calczqef().translate(0,1,0);
-    if (buf[1][1][0]->getser(0,0,0)!=buf[1][1][1]->getser(0,0,0)) qef = qef+buf[1][1][0]->zcon(0,0,0).calczqef().translate(1,1,0);
-    if (fillvalue!=buf[0][1][0]->getser(0,0,0)) qef = qef+ycon(0,0,0).calcyqef();
-    if (buf[1][0][0]->getser(0,0,0)!=buf[1][1][0]->getser(0,0,0)) qef = qef+buf[1][0][0]->ycon(0,0,0).calcyqef().translate(1,0,0);
-    if (buf[0][0][1]->getser(0,0,0)!=buf[0][1][1]->getser(0,0,0)) qef = qef+buf[0][0][1]->ycon(0,0,0).calcyqef().translate(0,0,1);
-    if (buf[1][0][1]->getser(0,0,0)!=buf[1][1][1]->getser(0,0,0)) qef = qef+buf[1][0][1]->ycon(0,0,0).calcyqef().translate(1,0,1);
-    if (fillvalue!=buf[1][0][0]->getser(0,0,0)) qef = qef+xcon(0,0,0).calcxqef();
-    if (buf[0][1][0]->getser(0,0,0)!=buf[1][1][0]->getser(0,0,0)) qef = qef+buf[0][1][0]->xcon(0,0,0).calcxqef().translate(0,1,0);
-    if (buf[0][0][1]->getser(0,0,0)!=buf[1][0][1]->getser(0,0,0)) qef = qef+buf[0][0][1]->xcon(0,0,0).calcxqef().translate(0,0,1);
-    if (buf[0][1][1]->getser(0,0,0)!=buf[1][1][1]->getser(0,0,0)) qef = qef+buf[0][1][1]->xcon(0,0,0).calcxqef().translate(0,1,1);
+    OctreeLeaf* lef100 = g_world->getleaf(x+1,y  ,z  );
+    OctreeLeaf* lef010 = g_world->getleaf(x  ,y+1,z  );
+    OctreeLeaf* lef001 = g_world->getleaf(x,  y  ,z+1);
+    std::pair<BlockId,OctreeLeaf*> buf110 = g_world->indivref(x+1,y+1,z  );
+    std::pair<BlockId,OctreeLeaf*> buf101 = g_world->indivref(x+1,y  ,z+1);
+    std::pair<BlockId,OctreeLeaf*> buf011 = g_world->indivref(x  ,y+1,z+1);
+    BlockId ult = g_world->getser(x+1,y+1,z+1);
+    if (fillvalue!=buf101.first) qef += lef100->zcondat.calczqef().translate(1,0,0);
+    if (fillvalue!=buf011.first) qef += lef010->zcondat.calczqef().translate(0,1,0);
+    if (buf110.first!=ult)       qef += buf110.second->zcondat.calczqef().translate(1,1,0);
+    if (fillvalue!=buf110.first) qef += lef100->ycondat.calcyqef().translate(1,0,0);
+    if (fillvalue!=buf011.first) qef += lef001->ycondat.calcyqef().translate(0,0,1);
+    if (buf101.first!=ult)       qef += buf101.second->ycondat.calcyqef().translate(1,0,1);
+    if (fillvalue!=buf110.first) qef += lef010->xcondat.calcxqef().translate(0,1,0);
+    if (fillvalue!=buf101.first) qef += lef001->xcondat.calcxqef().translate(0,0,1);
+    if (buf011.first!=ult)       qef += buf011.second->xcondat.calcxqef().translate(0,1,1);
 
     point = (int)g_vertecies->size();
 //    g_vertecies->push_back(glm::vec3((x-ASBLOCKLOC(0))+0.5,(y-ASBLOCKLOC(0))+0.5,(z-ASBLOCKLOC(0))+0.5));
     g_vertecies->push_back(qef.evaluate(0)+glm::vec3(x-ASBLOCKLOC(0),y-ASBLOCKLOC(0),z-ASBLOCKLOC(0)));
     g_normals->push_back(qef.evaluatenormal());
-//    point = ;
+    return qef;
+}
+MatrixCarriage OctreeLeaf::vertify(int x,int y,int z) {
+    MatrixCarriage qef;
+    std::pair<BlockId,OctreeLeaf*> buf100 = g_world->indivref(x+1,y  ,z  );
+    std::pair<BlockId,OctreeLeaf*> buf010 = g_world->indivref(x  ,y+1,z  );
+    std::pair<BlockId,OctreeLeaf*> buf110 = g_world->indivref(x+1,y+1,z  );
+    std::pair<BlockId,OctreeLeaf*> buf001 = g_world->indivref(x,  y  ,z+1);
+    std::pair<BlockId,OctreeLeaf*> buf101 = g_world->indivref(x+1,y  ,z+1);
+    std::pair<BlockId,OctreeLeaf*> buf011 = g_world->indivref(x  ,y+1,z+1);
+    BlockId ult = g_world->getser(x+1,y+1,z+1);
+    if (fillvalue!=buf001.first)    qef += zcondat.calczqef();
+    if (buf100.first!=buf101.first) qef += buf100.second->zcondat.calczqef().translate(1,0,0);
+    if (buf010.first!=buf011.first) qef += buf010.second->zcondat.calczqef().translate(0,1,0);
+    if (buf110.first!=ult)          qef += buf110.second->zcondat.calczqef().translate(1,1,0);
+    if (fillvalue!=buf010.first)    qef += ycondat.calcyqef();
+    if (buf100.first!=buf110.first) qef += buf100.second->ycondat.calcyqef().translate(1,0,0);
+    if (buf001.first!=buf011.first) qef += buf001.second->ycondat.calcyqef().translate(0,0,1);
+    if (buf101.first!=ult)          qef += buf101.second->ycondat.calcyqef().translate(1,0,1);
+    if (fillvalue!=buf100.first)    qef += xcondat.calcxqef();
+    if (buf010.first!=buf110.first) qef += buf010.second->xcondat.calcxqef().translate(0,1,0);
+    if (buf001.first!=buf101.first) qef += buf001.second->xcondat.calcxqef().translate(0,0,1);
+    if (buf011.first!=ult)          qef += buf011.second->xcondat.calcxqef().translate(0,1,1);
+
+    point = (int)g_vertecies->size();
+//    g_vertecies->push_back(glm::vec3((x-ASBLOCKLOC(0))+0.5,(y-ASBLOCKLOC(0))+0.5,(z-ASBLOCKLOC(0))+0.5));
+    g_vertecies->push_back(qef.evaluate(0)+glm::vec3(x-ASBLOCKLOC(0),y-ASBLOCKLOC(0),z-ASBLOCKLOC(0)));
+    g_normals->push_back(qef.evaluatenormal());
     return qef;
 }
 MatrixCarriage OctreeBranch::vertify(int x,int y,int z) {
     int mask = 1<<depth;
     if (depth<MAX_WORLDFILE_GEOMSAVE) {
-        MatrixCarriage q =
-           subdivisions[0][0][0]->vertify(x     ,y     ,z     )+
-           subdivisions[1][0][0]->vertify(x|mask,y     ,z     ).translate(1<<(depth),0         ,0)+
-           subdivisions[0][1][0]->vertify(x     ,y|mask,z     ).translate(0         ,1<<(depth),0)+
-           subdivisions[1][1][0]->vertify(x|mask,y|mask,z     ).translate(1<<(depth),1<<(depth),0)+
-           subdivisions[0][0][1]->vertify(x     ,y     ,z|mask).translate(0         ,0         ,1<<(depth))+
-           subdivisions[1][0][1]->vertify(x|mask,y     ,z|mask).translate(1<<(depth),0         ,1<<(depth))+
-           subdivisions[0][1][1]->vertify(x     ,y|mask,z|mask).translate(0         ,1<<(depth),1<<(depth))+
-           subdivisions[1][1][1]->vertify(x|mask,y|mask,z|mask).translate(1<<(depth),1<<(depth),1<<(depth));
+        MatrixCarriage q;
+        q+=subdivisions[0][0][0]->vertify(x     ,y     ,z     );
+        q+=subdivisions[1][0][0]->vertify(x|mask,y     ,z     ).translate(1<<(depth),0         ,0);
+        q+=subdivisions[0][1][0]->vertify(x     ,y|mask,z     ).translate(0         ,1<<(depth),0);
+        q+=subdivisions[1][1][0]->vertify(x|mask,y|mask,z     ).translate(1<<(depth),1<<(depth),0);
+        q+=subdivisions[0][0][1]->vertify(x     ,y     ,z|mask).translate(0         ,0         ,1<<(depth));
+        q+=subdivisions[1][0][1]->vertify(x|mask,y     ,z|mask).translate(1<<(depth),0         ,1<<(depth));
+        q+=subdivisions[0][1][1]->vertify(x     ,y|mask,z|mask).translate(0         ,1<<(depth),1<<(depth));
+        q+=subdivisions[1][1][1]->vertify(x|mask,y|mask,z|mask).translate(1<<(depth),1<<(depth),1<<(depth));
         
         point = (int)g_vertecies[depth+1].size();
 //        g_vertecies[depth+1].push_back(glm::vec3((x-ASBLOCKLOC(0))+mask,(y-ASBLOCKLOC(0))+mask,(z-ASBLOCKLOC(0))+mask));
