@@ -158,7 +158,7 @@ void Sampler::populate(int xc,int yc,int zc,Structure& world) {
     
     
     for (int i=0;i<(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1);i++) {
-        realindecies[i] = results[i]>0?2:results[i]>-2?3:1;
+        realindecies[i] = results[i]>0?2:results[i]>-10?3:1;
     }
 //    for (int i=0;i<(CHSIZE+1)*(CHSIZE+1)*(CHSIZE+1);i++) {
 //        realindecies[i] = results[i]>0?2:1;
@@ -193,8 +193,12 @@ void Sampler::populate(int xc,int yc,int zc,Structure& world) {
             for (int zi=0;zi<CHSIZE;zi++) {
                 BlockId ma = realindecies[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
                 float a = results[xi+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
-                if (ma!=realindecies[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
+                BlockId xd = realindecies[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                BlockId yd = realindecies[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                BlockId zd = realindecies[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)];
+                if (ma!=xd) {
                     float b = results[(xi+1)+yi*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
+                    
 //                    std::cout<<"xdif\n";
                     #ifdef PLOTTER_MODE
                     fi->xcon(xi,yi,zi) = Edgedat(gp.samplenormal(xc*CHSIZE+xi+a/(a-b),yc*CHSIZE+yi,zc*CHSIZE+zi),a/(a-b));
@@ -203,7 +207,7 @@ void Sampler::populate(int xc,int yc,int zc,Structure& world) {
 //                    fi->xcon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi,a),a/(a-b));
                     #endif
                 }
-                if (ma!=realindecies[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)]) {
+                if (ma!=yd) {
                     float b = results[xi+(yi+1)*(CHSIZE+1)+zi*(CHSIZE+1)*(CHSIZE+1)];
 //                    std::cout<<"ydif\n";
                     #ifdef PLOTTER_MODE
@@ -213,7 +217,7 @@ void Sampler::populate(int xc,int yc,int zc,Structure& world) {
 //                    fi->ycon(xi,yi,zi) = Edgedat(normal(xc*CHSIZE+xi,yc*CHSIZE+yi,zc*CHSIZE+zi,a),a/(a-b));
                     #endif
                 }
-                if (ma!=realindecies[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)]) {
+                if (ma!=zd) {
                     float b = results[xi+yi*(CHSIZE+1)+(zi+1)*(CHSIZE+1)*(CHSIZE+1)];
 //                    std::cout<<"zdif\n";
                     #ifdef PLOTTER_MODE
